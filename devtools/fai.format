@@ -1,0 +1,43 @@
+0 i rec_len
+247 i rec_len2
+
+
+
+4 c LET
+5 i IEX
+9 d D0
+17 d Y0
+25 d T0
+33 d Z0
+41 d P0
+49 d X0
+
+57 d D
+
+# might be X, not used in FAI
+65 d ?
+
+73 d Y
+81 d T
+
+89 d Z
+
+97 d P
+105 d S
+113 d tof
+121 d KE
+
+129 i ID
+133 i IREP
+137 i SORT
+
+201 d BORO
+209 i PASS
+
+213 10s element_type
+223 10s element_label1
+233 10s element_label2
+
+243 i NOEL
+
+

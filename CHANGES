@@ -1,0 +1,19 @@
+* Reading of binary fai files, use get_all(file='bfai')
+* Twiss profile function from David
+* Disable sorting by D in OBJET2, can be enabled with .sorted=True
+	Makes it easier to keep track of which particle is which, but sorting is needed to group particles by energy, which is what zgoubi asks for. 
+* Increase precision of floats in .dat file.
+* Move the res(), res_fh(), save_res() etc functions to RESULTS object
+* silence option to Line.run() to redirected zgoubi output to files
+* Results.get_all() on FAI file gives -1 for X.
+* Fix install update on Ubuntu
+
+Changes 2.1 -> 2.2
+* Fix reading plt with get_all()
+
+Changes 2.0 -> 2.1
+* Improve error message when writing defs
+* Fix Line.full_tracking()
+* Improve messages when run without an input file
+* Include some changes from David Kelliher that got missed from 0.2
+* More documentation

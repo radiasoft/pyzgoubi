@@ -1,0 +1,10 @@
+zgoubi_path = "%(zgoubi_path)s"
+pyzgoubi_dir = "%(pyzgoubi_path)s"
+
+defs_dir = pyzgoubi_dir+"defs/"
+
+extra_defs_files = []
+#extra_defs_files = ['/home/sam/extra_defs']
+
+tmp_dir = '/tmp/'
+

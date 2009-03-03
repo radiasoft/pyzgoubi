@@ -1,0 +1,7 @@
+These are some scripts that were used in developing pyzgoubi
+
+test_def.py
+Used to compile a single element definition. Handy for writing element, and for writing zgoubi_makedefs.py
+
+format_to_code.py
+converts a list of byte offsets and types, into code that reads a chunk of binary data and puts the data into a dict
