@@ -231,7 +231,6 @@ def show_file(file_path,mode):
 
 def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-8, D=1):
 	#check line has an objet2
-	import numpy
 	for e in line.element_list:
 		if ("OBJET2" in str(type(e)).split("'")[1]):
 			objet = e
@@ -308,8 +307,7 @@ def get_twiss_profiles(line,file_result):
             Note - This calculation uses trajectories as measured in
 	the local coordinate system of the magnet."""
 
-	from math import *
-	from numpy import *
+	#from numpy import *
 
 	has_object5 = False
        	has_matrix = False
@@ -543,7 +541,7 @@ def get_twiss_profiles(line,file_result):
 		if abs(sine_angle) > 1: 
 			mu_y_list.append(mu_y_list[i-1])
 		else:
-			sign_sine_y = sign(asin(sine_angle))
+			sign_sine_y = numpy.sign(asin(sine_angle))
 			if sign_sine_y - sign_sine_y_old == -2:
 				n_pi_y = n_pi_y + 1
 			sign_sine_y_old = sign_sine_y
@@ -563,7 +561,7 @@ def get_twiss_profiles(line,file_result):
 		if abs(sine_angle) > 1:
 			mu_z_list.append(mu_z_list[i-1])
 		else:
-			sign_sine_z = sign(asin(sine_angle))
+			sign_sine_z = numpy.sign(asin(sine_angle))
 			if sign_sine_z - sign_sine_z_old == -2:
 				n_pi_z = n_pi_z + 1
 			sign_sine_z_old = sign_sine_z
@@ -584,7 +582,7 @@ def get_twiss_profiles(line,file_result):
 	fresults= open(file_result, 'w')
 	fresults.write(str(twiss_profiles))
 
-        return twiss_profiles
+	return twiss_profiles
 
 
 def plot_data_xy(data, filename, labels=["","",""]):
