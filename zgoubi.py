@@ -1441,25 +1441,5 @@ class Plotter(object):
 
 
 
-if __name__ == '__main__':
-	from zgoubi_utils import *
-	try:
-		input_file_name = sys.argv[1]
-	except IndexError:
-		print "No input file, try:"
-		print "pyzgoubi inputfile"
-		sys.exit()
-	
-	if not os.path.exists(input_file_name):
-		print "no such input file in current directory"
-		sys.exit()
-		
-	execfile(input_file_name)
-	
-
-	for left_over in locals().values():
-		if "Line"  in str(type(left_over)).split("'")[1]:
-			del(left_over)
-
 
 

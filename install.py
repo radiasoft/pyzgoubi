@@ -31,10 +31,11 @@ things_to_copy = ['zgoubi.py',
 				'zgoubi_makedefs.py',
 				'zgoubi_utils.py',
 				'zgoubi_constants.py',
+				'pyzgoubi.py',
 				'defs/simple_elements.defs',
 				'defs/static_defs.py'
 				]
-things_to_copy = glob('examples/*')
+things_to_copy += glob('examples/*')
 
 dirs_to_make = ['defs', 'examples']
 
@@ -49,6 +50,7 @@ def install_files(prefix, zgoubi_path, dirs_to_make, things_to_copy):
 
 	import shutil
 	for thing in things_to_copy:
+		print "Installing", thing
 		dest = os.path.join(prefix, thing)
 		shutil.copyfile(thing, dest)
 	
