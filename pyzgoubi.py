@@ -19,12 +19,47 @@
 
 
 from __future__ import division
+from math import *
+from zgoubi_utils import *
+from zgoubi import *
+from zgoubi_constants import *
 
+# create a set of functions that work on default_line and default_results objects
+# these will make it simpler to run simple simulations
+
+def make_line(*a, **k):
+	global default_line
+	default_line = Line(*a, **k)
+
+def run(*a, **k):
+	global default_line, default_result
+	default_result = default_line.run(*a, **k)
+
+# most of these functions can be built from a template
+
+function_template="""def %(func_name)s(*a, **k):
+	global default_%(class_name)s
+	return default_%(class_name)s.%(func_name)s(*a, **k)
+"""
+# templatable functions for the line class
+line_funcs = ['add', 'output', 'full_tracking', 'remove_looping', 'add_input_files', 'replace']
+
+for func_name in line_funcs:
+	code = function_template%dict(func_name=func_name, class_name='line')
+	exec(code)
+
+# templatable functions for the res class
+
+# this pattern builds all the file access functions by pattern
+res_funcs = [a%b for a in ['%s_fh', '%s', 'save_%s'] for b in ['res', 'fai', 'dat', 'plt', 'b_fai']]
+
+res_funcs += ['get_all', 'get_track', 'get_tune', 'get_twiss_parameters']
+
+for func_name in res_funcs:
+	code = function_template%dict(func_name=func_name, class_name='result')
+	exec(code)
 
 if __name__ == '__main__':
-	from zgoubi_utils import *
-	from zgoubi import *
-	from zgoubi_constants import *
 	try:
 		input_file_name = sys.argv[1]
 	except IndexError:
