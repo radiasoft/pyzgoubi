@@ -432,7 +432,7 @@ class Results(object):
 		self.rundir = rundir
 
 	# generic functions for accessing files in results folder
-	def get_fh(self, f):
+	def _get_fh(self, f):
 		"return f file handle"
 		path = os.path.join(self.rundir, f)
 		if not os.path.exists(path):
@@ -440,11 +440,11 @@ class Results(object):
 		fh = open(path)
 		return fh
 		
-	def get_str(self, f):
+	def _get_str(self, f):
 		"return f as a string"
 		return self.get_fh(f).read()
 	
-	def save_file(self,f, path):
+	def _save_file(self,f, path):
 		"save f to path"
 		spath = os.path.join(self.rundir, f)
 		if not os.path.exists(spath):
@@ -452,25 +452,25 @@ class Results(object):
 		shutil.copyfile(spath, path)
 	
 	#generate specific functions
-	def res_fh(self): return self.get_fh("zgoubi.res")
-	def res(self): return self.get_str("zgoubi.res")
-	def save_res(self, path): return self.save_file("zgoubi.res", path)
+	def res_fh(self): return self._get_fh("zgoubi.res")
+	def res(self): return self._get_str("zgoubi.res")
+	def save_res(self, path): return self._save_file("zgoubi.res", path)
 		
-	def plt_fh(self): return self.get_fh("zgoubi.plt")
-	def plt(self): return self.get_str("zgoubi.plt")
-	def save_plt(self, path): return self.save_file("zgoubi.plt", path)
+	def plt_fh(self): return self._get_fh("zgoubi.plt")
+	def plt(self): return self._get_str("zgoubi.plt")
+	def save_plt(self, path): return self._save_file("zgoubi.plt", path)
 		
-	def dat_fh(self): return self.get_fh("zgoubi.dat")
-	def dat(self): return self.get_str("zgoubi.dat")
-	def save_dat(self, path): return self.save_file("zgoubi.dat", path)
+	def dat_fh(self): return self._get_fh("zgoubi.dat")
+	def dat(self): return self._get_str("zgoubi.dat")
+	def save_dat(self, path): return self._save_file("zgoubi.dat", path)
 		
-	def fai_fh(self): return self.get_fh("zgoubi.fai")
-	def fai(self): return self.get_str("zgoubi.fai")
-	def save_fai(self, path): return self.save_file("zgoubi.fai", path)
+	def fai_fh(self): return self._get_fh("zgoubi.fai")
+	def fai(self): return self._get_str("zgoubi.fai")
+	def save_fai(self, path): return self._save_file("zgoubi.fai", path)
 		
-	def b_fai_fh(self): return self.get_fh("b_zgoubi.fai")
-	def b_fai(self): return self.get_str("b_zgoubi.fai")
-	def save_b_fai(self, path): return self.save_file("b_zgoubi.fai", path)
+	def b_fai_fh(self): return self._get_fh("b_zgoubi.fai")
+	def b_fai(self): return self._get_str("b_zgoubi.fai")
+	def save_b_fai(self, path): return self._save_file("b_zgoubi.fai", path)
 		
 	def _bad_float(self, text):
 		"""A wrapper around float to deal with zgoubi output numbers like
