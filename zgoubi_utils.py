@@ -258,6 +258,9 @@ def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-8,
 		#r = Results(line)
 
 		track = r.get_track('fai', ['Y','T','Z','P'])
+		if not r.run_success():
+			print "No stable orbit"
+			return None
 		track.insert(0, current_YTZP)
 		track_a = numpy.array(track)
 		tracks.append(track_a)

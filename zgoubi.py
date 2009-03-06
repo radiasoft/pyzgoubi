@@ -1115,6 +1115,15 @@ class Results(object):
 				return True
 		return False
 
+	def run_success(self):
+		"""Checks that zgoubi completed
+
+		"""
+		for line in self.res_fh():
+			if "MAIN PROGRAM : Execution ended upon key  END" in line:
+				return True
+		return False
+		
 class Plotter(object):
 	"""A plotter for beam lines and tracks.
 	

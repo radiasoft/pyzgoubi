@@ -53,7 +53,7 @@ for func_name in line_funcs:
 # this pattern builds all the file access functions by pattern
 res_funcs = [a%b for a in ['%s_fh', '%s', 'save_%s'] for b in ['res', 'fai', 'dat', 'plt', 'b_fai']]
 
-res_funcs += ['get_all', 'get_track', 'get_tune', 'get_twiss_parameters']
+res_funcs += ['get_all', 'get_track', 'get_tune', 'get_twiss_parameters', 'run_success']
 
 for func_name in res_funcs:
 	code = function_template%dict(func_name=func_name, class_name='result')
