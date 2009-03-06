@@ -442,7 +442,7 @@ class Results(object):
 		
 	def _get_str(self, f):
 		"return f as a string"
-		return self.get_fh(f).read()
+		return self._get_fh(f).read()
 	
 	def _save_file(self,f, path):
 		"save f to path"
