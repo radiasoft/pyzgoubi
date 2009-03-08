@@ -148,5 +148,5 @@ else:
 
 
 print "done"
-
+print "you may need to start a new terminal, or run 'source ~/.bashrc' before using pyzgoubi"
 
