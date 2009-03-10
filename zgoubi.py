@@ -423,6 +423,9 @@ class Line(object):
 class NoTrackError(Exception):
 	pass
 
+class BadLineError(Exception):
+	pass
+	
 class Results(object):
 	"""This class lets you analyse the results after running a line.
 
@@ -1018,7 +1021,7 @@ class Results(object):
 			if t == 'MATRIX':
 				has_matrix = True
 		if not (has_object5 and has_matrix):
-			raise NoTrackError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
+			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
 
 		found_matrix = False
 		for line in self.line.res_fh():
@@ -1061,7 +1064,7 @@ class Results(object):
 			if t == 'MATRIX':
 				has_matrix = True
 		if not (has_object5 and has_matrix):
-			raise NoTrackError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
+			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
 
 		found_matrix = False
 		found_twiss = False
@@ -1107,7 +1110,7 @@ class Results(object):
 			if t == 'REBELOTE':
 				has_reb = True
 		if not (has_reb):
-			raise NoTrackError, "beamline need to have a REBELOTE for this function"
+			raise BadLineError, "beamline need to have a REBELOTE for this function"
 
 		for line in self.line.res_fh():
 			if "End  of  'REBELOTE'  procedure" in line:

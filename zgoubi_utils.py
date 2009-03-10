@@ -321,7 +321,7 @@ def get_twiss_profiles(line,file_result):
        		if t == 'MATRIX':
        			has_matrix = True
        	if not (has_object5 and has_matrix):
-       		raise NoTrackError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
+       		raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
 
 	#run Zgoubi
 	r = line.run(xterm = False)
