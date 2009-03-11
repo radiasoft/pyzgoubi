@@ -1019,9 +1019,11 @@ class Results(object):
 			if t == 'OBJET5':
 				has_object5 = True
 			if t == 'MATRIX':
-				has_matrix = True
+				if e.IORD == 1 and e.IFOC>10:
+					has_matrix = True
+				
 		if not (has_object5 and has_matrix):
-			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
+			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX element with IORD=1 and IFOC>10 to get tune"
 
 		found_matrix = False
 		for line in self.line.res_fh():
@@ -1048,6 +1050,7 @@ class Results(object):
 						NU_Z = -1 
 					print "Tune: ", (NU_Y, NU_Z)
 					return (NU_Y, NU_Z)
+		raise NoTrackError, "Could not find MATRIX output, maybe beam lost"
 
 	def get_twiss_parameters(self):
 		"""Returns a tuple (BETA_X,GAMMA_X,BETA_Y,GAMMA_Y) from the twiss parameter matrix.
