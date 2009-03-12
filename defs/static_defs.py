@@ -8,6 +8,7 @@ class MARKER(zgoubi_element):
 		self._params = {}
 		self._params['plt'] = True
 		self._params['name'] = name
+		self._zgoubi_name = "MARKER"
 		object.__setattr__(self, "ready", True)
 		self.set(settings)
 
@@ -157,6 +158,7 @@ class OBJET5(zgoubi_element):
 class ELECTRON(zgoubi_element):
 	def __init__(self):
 		self._params = {}
+		self._zgoubi_name = "PARTICUL"
 		pass
 		
 	def output(self):
@@ -170,6 +172,7 @@ class ELECTRON(zgoubi_element):
 class PROTON(zgoubi_element):
 	def __init__(self):
 		self._params = {}
+		self._zgoubi_name = "PARTICUL"
 		pass
 		
 	def output(self):
@@ -183,6 +186,7 @@ class PROTON(zgoubi_element):
 class MUON(zgoubi_element):
 	def __init__(self):
 		self._params = {}
+		self._zgoubi_name = "PARTICUL"
 		pass
                
 	def output(self):
@@ -197,6 +201,7 @@ class IMMORTAL_MUON(zgoubi_element):
 	"non decaying muon"
 	def __init__(self):
 		self._params = {}
+		self._zgoubi_name = "PARTICUL"
 		pass
                
 	def output(self):

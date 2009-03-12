@@ -149,7 +149,7 @@ class zgoubi_element(object):
 			if key in self._params.keys():
 				self._params[key] = val
 			else:
-				raise ValueError,  "no such param: " + str(key)
+				raise ValueError,  "no such param: '" + str(key) + "' In element " + self._zgoubi_name
 	def get(self,key):
 		return self._params[key]
 
