@@ -163,6 +163,8 @@ def find_centre(ellipse):
 
 def calc_area_simple(ellipse, centre=(0,0)):
 	"can't handle noise. finds closest and furthest point from centre, assumes they are a and b"
+	if len(ellipse) < 2:
+		raise NoTrackError, "Not enough data points to measure area"
 	distances = []
 	for point in ellipse:
 		x, y = point
