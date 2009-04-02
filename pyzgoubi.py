@@ -34,6 +34,7 @@ def make_line(*a, **k):
 def run(*a, **k):
 	global default_line, default_result
 	default_result = default_line.run(*a, **k)
+	return default_result
 
 # most of these functions can be built from a template
 

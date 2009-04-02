@@ -109,6 +109,7 @@ def make_element_class(defs):
 	
 	class_code += "class %s(zgoubi_element):\n" % class_name
 	class_code += "\t_class_name='%s'\n" % class_name
+	class_code += "\t_zgoubi_name='%s'\n" % class_name
 	class_code += "\tdef __init__(self, label1='', label2='', **settings):\n"
 	class_code += "\t\tself._params={}\n"
 	class_code += "\t\tself._types={}\n"

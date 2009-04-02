@@ -300,6 +300,7 @@ class Line(object):
 		if exe_result != 0:
 			print "zgoubi failed to run"
 			print "It returned:", exe_result
+			if exe_result == 32512: print "check that fortran runtime libraries are installed"
 
 		if (xterm and not self.no_more_xterm):
 			print "Do you want an xterm? (y=yes/n=no/s=stop asking)"
