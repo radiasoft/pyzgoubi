@@ -24,6 +24,8 @@ from zgoubi_utils import *
 from zgoubi import *
 from zgoubi_constants import *
 
+zgoubi_version = "0.3dev"
+
 # create a set of functions that work on default_line and default_results objects
 # these will make it simpler to run simple simulations
 
@@ -61,6 +63,9 @@ for func_name in res_funcs:
 	exec(code)
 
 if __name__ == '__main__':
+	if sys.argv[1] in ['version', '--version']:
+		print "Pyzgoubi version:%s"%zgoubi_version
+		sys.exit(0)
 	try:
 		input_file_name = sys.argv[1]
 	except IndexError:
