@@ -182,6 +182,10 @@ class zgoubi_element(object):
 				pass
 		return object.__getattribute__(self, name)
 
+	def list_params(self):
+		return list(self._params)
+			
+
 execfile(static_defs)
 execfile(compiled_defs)
 		

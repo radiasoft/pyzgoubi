@@ -62,9 +62,44 @@ for func_name in res_funcs:
 	code = function_template%dict(func_name=func_name, class_name='result')
 	exec(code)
 
+def _show_help():
+	if len(sys.argv) == 2:
+		print "For docementation see http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/"
+		sys.exit(0)
+	if sys.argv[2].lower() == "elements":
+		print "avaliable elements"
+		elements = []
+
+		for k,v in globals().items():
+			try:
+				for b in v.__bases__:
+					if "zgoubi_element" in str(b):
+						elements.append(k)
+			except AttributeError:
+				pass
+		elements.sort()
+		print '\n'.join(elements)
+		sys.exit(0)
+
+	try:
+		help_elem = globals()[sys.argv[2].upper()]
+	except KeyError:
+		print "There is no help for %s"%sys.argv[2]
+		sys.exit(1)
+
+	print sys.argv[2].upper()
+	help_elem_inst = eval("%s()"%sys.argv[2].upper())
+	print "zgoubi name:",help_elem_inst._zgoubi_name
+	print "Parameters:"
+	print '\n'.join(help_elem_inst.list_params())
+
+
 if __name__ == '__main__':
 	if sys.argv[1] in ['version', '--version']:
 		print "Pyzgoubi version:%s"%zgoubi_version
+		sys.exit(0)
+	if sys.argv[1] in ['help', '--help']:
+		_show_help()
 		sys.exit(0)
 	try:
 		input_file_name = sys.argv[1]
