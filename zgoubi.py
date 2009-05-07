@@ -1156,10 +1156,11 @@ class Plotter(object):
 		self.width = 100 # physical size of canvas in cm
 		self.height = 100 
 		#self.last_added_elem = None
+		self.pretty_names={}
+		self.magnet_width = {}
 		self._scan_line()
 		#self.save_pdf('test.pdf')
-		self.pretty_names={}
-
+	
 	def _calc_physial_size(self):
 		self.min_x = 1e6
 		self.min_y = 1e6
@@ -1196,6 +1197,7 @@ class Plotter(object):
 		count = 0
 		angle = 0
 		position = [0,0]
+		self.elements = {}
 		for elem in self.line.element_list:
 			classtype =  str(type(elem))
 			classtype = classtype.split("'")[-2]
@@ -1242,6 +1244,8 @@ class Plotter(object):
 				#print section
 				element = {}
 				width = 5* elem.R_0
+				if self.magnet_width.has_key(section['label']):
+					width = self.magnet_width[section['label']]
 				length = elem.XL
 				a = self.transform(section['label'],(0, width/2))
 				b = self.transform(section['label'],(length, width/2))
@@ -1357,6 +1361,10 @@ class Plotter(object):
 	def set_pretty_names(self, pretty_names):
 		self.pretty_names = pretty_names
 	
+	def set_magnet_width(self, magwidth):
+		self.magnet_width = magwidth
+		self._scan_line() # need to go through the line again with the new widths
+		
 	def draw(self, cr, canv_width, canv_height, line_width=1):
 		"""Draw plot to a cairo surface.
 
