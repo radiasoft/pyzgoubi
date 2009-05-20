@@ -299,8 +299,10 @@ ul.auto-toc {
 </li>
 <li><a class="reference internal" href="#running-zgoubi" id="id5">Running Zgoubi</a></li>
 <li><a class="reference internal" href="#results-object" id="id6">Results Object</a></li>
-<li><a class="reference internal" href="#tips" id="id7">Tips</a><ul>
-<li><a class="reference internal" href="#python-hints" id="id8">Python hints</a></li>
+<li><a class="reference internal" href="#loops" id="id7">Loops</a></li>
+<li><a class="reference internal" href="#command-line-arguments" id="id8">Command line arguments</a></li>
+<li><a class="reference internal" href="#tips" id="id9">Tips</a><ul>
+<li><a class="reference internal" href="#python-hints" id="id10">Python hints</a></li>
 </ul>
 </li>
 </ul>
@@ -518,6 +520,19 @@ line.add(change)
 <li>REBELOTE</li>
 <li>TOSCA</li>
 </ul>
+<p>To find the full list of elements available in the current version run:</p>
+<pre class="literal-block">
+pyzgoubi help elements
+</pre>
+<p>To find the names of the parameters available for an element use:</p>
+<pre class="literal-block">
+pyzgoubi help element_name
+</pre>
+<p>e.g.:</p>
+<pre class="literal-block">
+pyzgoubi help MULTIPOL
+</pre>
+<p>Use this in combination with the Zgoubi manual.</p>
 </div>
 </div>
 <div class="section" id="running-zgoubi">
@@ -570,10 +585,59 @@ print res.get_all('fai')
 print res.get_track('fai', ['Y','T'])
 </pre>
 </div>
+<div class="section" id="loops">
+<h1><a class="toc-backref" href="#id7">Loops</a></h1>
+<p>For making complex lines it can be useful to use python features such as loops, e.g. to put 5 identical FODO cells you could use</p>
+<pre class="literal-block">
+line = Line(&quot;example&quot;)
+
+line.add( ... )
+line.add( ... )
+
+for x in range(5):
+    line.add(QUADRUPO( ... ))
+    line.add(DRIFT( ... ))
+    line.add(QUADRUPO( ... ))
+    line.add(DRIFT( ... ))
+
+line.add( ... )
+</pre>
+<p>Note that the for loop block lasts as long as the code is indented.</p>
+<p>If you want to make one iteration different then you can do a test based on the x</p>
+<pre class="literal-block">
+for x in range(5):
+    line.add(QUADRUPO( ... ))
+    line.add(DRIFT( ... ))
+    line.add(QUADRUPO( ... ))
+    line.add(DRIFT( ... ))
+    if (x == 2): #note x counts from zero
+        line.add(DIPOLE( ... )
+</pre>
+</div>
+<div class="section" id="command-line-arguments">
+<h1><a class="toc-backref" href="#id8">Command line arguments</a></h1>
+<p>There is a convenience function for using command line arguments. For example near the start of the code put:</p>
+<pre class="literal-block">
+number_of_laps = int(get_cmd_param('laps', 10))
+</pre>
+<p>Then when creating the line use:</p>
+<pre class="literal-block">
+l.add(REBELOTE(NPASS=number_of_laps-1, KWRIT=1, K=99))
+</pre>
+<p>to access the variable. When you run the your simulation use the command line argument:</p>
+<pre class="literal-block">
+pyzgoubi sim.py laps=50
+</pre>
+<p>I the second parameter to get_cmd_param() is the default. If you don't give a value as an argument then the default is used. If you don't give a default eg:</p>
+<pre class="literal-block">
+particle_energy = float(get_cmd_param('energy'))
+</pre>
+<p>then you will receive and error if you don't provide a value as an argument.</p>
+</div>
 <div class="section" id="tips">
-<h1><a class="toc-backref" href="#id7">Tips</a></h1>
+<h1><a class="toc-backref" href="#id9">Tips</a></h1>
 <div class="section" id="python-hints">
-<h2><a class="toc-backref" href="#id8">Python hints</a></h2>
+<h2><a class="toc-backref" href="#id10">Python hints</a></h2>
 <p>If there is a '#' character on a line, everything after it is treated as a comment.</p>
 <p>Python uses whitespace to delimit blocks (instead of braces '{' and '}' in C/C++). The PyZgoubi code uses tabs, so it is best to use tabs in your input files. If you get an 'IndentationError' check that you have not mixed spaces and tabs, or accidentally started a line with a space/tab.</p>
 <p>Python identifiers (variable, function, object names etc) are case sensitive, they must start with a letter and only contain letters, numbers and underscores.</p>

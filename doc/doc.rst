@@ -243,6 +243,19 @@ Available Elements
 - REBELOTE
 - TOSCA
 
+To find the full list of elements available in the current version run::
+
+    pyzgoubi help elements
+
+To find the names of the parameters available for an element use::
+
+    pyzgoubi help element_name
+
+e.g.::
+
+    pyzgoubi help MULTIPOL
+
+Use this in combination with the Zgoubi manual.
 
 Running Zgoubi
 --------------
@@ -300,6 +313,56 @@ get_all() and get_track(), let you get lists of the particle coordinates. They e
     print res.get_all('fai')
     print res.get_track('fai', ['Y','T'])
 
+
+Loops
+-----
+
+For making complex lines it can be useful to use python features such as loops, e.g. to put 5 identical FODO cells you could use ::
+
+    line = Line("example")
+
+    line.add( ... )
+    line.add( ... )
+    
+    for x in range(5):
+        line.add(QUADRUPO( ... ))
+        line.add(DRIFT( ... ))
+        line.add(QUADRUPO( ... ))
+        line.add(DRIFT( ... ))
+
+    line.add( ... )
+
+Note that the for loop block lasts as long as the code is indented.
+
+If you want to make one iteration different then you can do a test based on the x ::
+
+    for x in range(5):
+        line.add(QUADRUPO( ... ))
+        line.add(DRIFT( ... ))
+        line.add(QUADRUPO( ... ))
+        line.add(DRIFT( ... ))
+        if (x == 2): #note x counts from zero
+            line.add(DIPOLE( ... )
+
+Command line arguments
+----------------------
+There is a convenience function for using command line arguments. For example near the start of the code put::
+
+    number_of_laps = int(get_cmd_param('laps', 10))
+
+Then when creating the line use::
+
+    l.add(REBELOTE(NPASS=number_of_laps-1, KWRIT=1, K=99))
+
+to access the variable. When you run the your simulation use the command line argument::
+
+    pyzgoubi sim.py laps=50
+
+I the second parameter to get_cmd_param() is the default. If you don't give a value as an argument then the default is used. If you don't give a default eg::
+
+    particle_energy = float(get_cmd_param('energy'))
+
+then you will receive and error if you don't provide a value as an argument.
 
 Tips
 ----
