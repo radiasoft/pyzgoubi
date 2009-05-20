@@ -3,7 +3,7 @@
 		
 # beam line elements that are not generated from defs
 class MARKER(zgoubi_element):
-	def __init__(self, name ,**settings):
+	def __init__(self, name="" ,**settings):
 		self._name = name
 		self._params = {}
 		self._params['plt'] = True
@@ -159,7 +159,6 @@ class ELECTRON(zgoubi_element):
 	def __init__(self):
 		self._params = {}
 		self._zgoubi_name = "PARTICUL"
-		pass
 		
 	def output(self):
 		f = self.f2s
@@ -173,7 +172,6 @@ class PROTON(zgoubi_element):
 	def __init__(self):
 		self._params = {}
 		self._zgoubi_name = "PARTICUL"
-		pass
 		
 	def output(self):
 		f = self.f2s
@@ -187,7 +185,6 @@ class MUON(zgoubi_element):
 	def __init__(self):
 		self._params = {}
 		self._zgoubi_name = "PARTICUL"
-		pass
                
 	def output(self):
 		f = self.f2s
@@ -202,7 +199,6 @@ class IMMORTAL_MUON(zgoubi_element):
 	def __init__(self):
 		self._params = {}
 		self._zgoubi_name = "PARTICUL"
-		pass
                
 	def output(self):
 		f = self.f2s
@@ -213,8 +209,10 @@ class IMMORTAL_MUON(zgoubi_element):
 		return out
 		
 class FAKE_ELEM(zgoubi_element):
-	def __init__(self, data):
+	def __init__(self, data=""):
 		self.data = data
+		self._params = {}
+		self._zgoubi_name = "####"
 
 	def output(self):
 		return self.data+'\n'
