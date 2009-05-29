@@ -3,7 +3,13 @@
 #
 # run './install.py' to start installer
 #
-import sys, readline, os
+import sys, os
+try:
+	import readline
+except ImportError:
+	# Python on Mac has no readline
+	pass
+
 from glob import glob
 
 try:
