@@ -14,6 +14,65 @@ http://sourceforge.net/projects/zgoubi Zgoubi is a particle tracking code mainta
 
 A basic knowledge of http://python.org/ Python is useful to use PyZgoubi. Python is a general purpose, high level, interpreted programing language. I recommend the http://www.python.org/doc/2.5.2/tut/tut.html Official Python Tutorial.
 
+Quick Start
+-----------
+
+Put the following in a text file named quickstart.py::
+
+    make_line('line')
+
+    # create and OBJET2 and add 1 electron to it
+    ob = OBJET2()
+    ob.set(BORO=ke_to_rigidity(10e6, ELECTRON_MASS))
+    ob.add(Y=0, T=0.1, D=1)
+    add(ob)
+
+    add(FAISCNL(FNAME='zgoubi.fai')) # record point
+    d1 = DRIFT(XL=50)
+    q1 = QUADRUPO(XL=20, B_0=5, R_0=10, XPAS=(10,20,10))
+    d2 = DRIFT(XL=50)
+    q2 = QUADRUPO(XL=20, B_0=-5, R_0=10, XPAS=(10,20,10))
+    add(d1, q1, d2, q2)
+    add(FAISCNL(FNAME='zgoubi.fai')) # record point
+    add(END())
+
+    print output() # file fed to zgoubi (zgoubi.dat)
+    run() # run the line in zgoubi
+    print res() # show the zgoubi.res file
+    print get_all('fai') # so the data recorded with FAISCNL
+
+The file can also be found in examples/quickstart.py
+
+Run it with::
+
+    pyzgoubi quickstart.py
+
+You should see the zgoubi data file, the output from zgoubi, the res file from zgoubi, and the coordinates at the 2 FAISCNL points displayed to the terminal.
+
+For more advance use it may be better store the Line with a name, this allows you to work with multiple Lines simultaneously. The following shows the same file, but with a named line::
+
+    myline = Line('line')
+
+    # create and OBJET2 and add 1 electron to it
+    ob = OBJET2()
+    ob.set(BORO=ke_to_rigidity(10e6, ELECTRON_MASS))
+    ob.add(Y=0, T=0.1, D=1)
+    myline.add(ob)
+
+    myline.add(FAISCNL(FNAME='zgoubi.fai')) # record point
+    d1 = DRIFT(XL=50)
+    q1 = QUADRUPO(XL=20, B_0=5, R_0=10, XPAS=(10,20,10))
+    d2 = DRIFT(XL=50)
+    q2 = QUADRUPO(XL=20, B_0=-5, R_0=10, XPAS=(10,20,10))
+    myline.add(d1, q1, d2, q2)
+    myline.add(FAISCNL(FNAME='zgoubi.fai')) # record point
+    myline.add(END())
+
+    print myline.output() # file fed to zgoubi (zgoubi.dat)
+    myresults = myline.run() # run the line in zgoubi
+    print myresults.res() # show the zgoubi.res file
+    print myresults.get_all('fai') # so the data recorded with FAISCNL 
+
 Generating zgoubi.dat files
 ---------------------------
 
