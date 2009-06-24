@@ -18,6 +18,6 @@ pyzgoubi emma
 To update an existing installation use
 ./install update
 
-
+Documentation is avaliable at http://www.hep.man.ac.uk/u/sam/pyzgoubi/doc.html or in the doc/ directory. More information can be found at http://www.hep.man.ac.uk/u/sam/pyzgoubi/ or https://sourceforge.net/projects/pyzgoubi/
 
 
