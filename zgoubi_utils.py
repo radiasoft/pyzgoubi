@@ -341,11 +341,7 @@ def get_twiss_profiles(line,file_result):
 	X = transpose_plt_track[13]
 
 	#read labels
-	labelraw = flatten(r.get_track('plt', ['element_label1']))
-        #strip out trailing blanks in label string
-	label = []
-	for lab in labelraw:
-		label.append(lab.rstrip())
+	label = [x[0].strip() for x in r.get_track('plt', ['element_label1'])]
 
 	#sort out individual tracks
 	alphabet = "A,B,C,D,E,F,G,H,I,J,K,L,M,N,P,Q,R,S,T,U,V,W,X,Y,Z"
@@ -603,15 +599,13 @@ def find_indices(list,list_element):
 	
 	return indices
 
-
-def plot_data_xy(data, filename, labels=["","",""]):
+def plot_data_xy(data, filename, labels=["","",""], style='b-'):
 	import pylab
 	data_a = numpy.array(data)
 	print data_a
 	pylab.hold(False)
-	pylab.plot(data_a[:,0], data_a[:,1])
+	pylab.plot(data_a[:,0], data_a[:,1],style)
 	pylab.title(labels[0])
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])
 	pylab.savefig(filename)
-
