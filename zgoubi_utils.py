@@ -296,23 +296,16 @@ def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-8,
 
 
 def get_twiss_profiles(line,file_result):
-	""" Calculates the twiss parameters at all points written to
-	zgoubi.plt. 11 particle trajectories are used to calculate the
-	transfer matrix, just as is done in zgoubi. The code mirrors
-	that found in mat1.f, mksa.f. The twiss parameters are first
-	calculated at the end of the cell using get_twiss_parameters
-	and then mapped to the magnets using the transfer matrix at
-	each point. The results are stored in list twiss_profiles
-	where each row represents a point in the zgoubi.plt file and
-	has format [s_coord, mu_y,beta_y, alpha_y, gamma_y, mu_z,
-	beta_z, alpha_z, gamma_z]
+	""" Calculates the twiss parameters at all points written to zgoubi.plt. 11 particle trajectories are used to calculate the
+	transfer matrix, just as is done in zgoubi. The code mirrors that found in mat1.f, mksa.f. The twiss parameters are first
+	calculated at the end of the cell using get_twiss_parameters and then mapped to the magnets using the transfer matrix at
+	each point. The results are stored in list twiss_profiles where each row represents a point in the zgoubi.plt file and
+	has format [s_coord, label,  mu_y, beta_y, alpha_y, gamma_y, mu_z, beta_z, alpha_z, gamma_z]
 
-	    Needs a beam line is an OBJET type 5, and a MATRIX element.
+	Requires an OBJET type 5, and a MATRIX element.
 
-            Note - This calculation uses trajectories as measured in
-	the local coordinate system of the magnet."""
+        Note - This calculation uses trajectories as measured in the local coordinate system of the magnet."""
 
-	#from numpy import *
 
 	has_object5 = False
        	has_matrix = False
@@ -347,6 +340,13 @@ def get_twiss_profiles(line,file_result):
 	S = transpose_plt_track[12]
 	X = transpose_plt_track[13]
 
+	#read labels
+	labelraw = flatten(r.get_track('plt', ['element_label1']))
+        #strip out trailing blanks in label string
+	label = []
+	for lab in labelraw:
+		label.append(lab.rstrip())
+
 	#sort out individual tracks
 	alphabet = "A,B,C,D,E,F,G,H,I,J,K,L,M,N,P,Q,R,S,T,U,V,W,X,Y,Z"
 	alphabet = alphabet.split(",")
@@ -361,6 +361,7 @@ def get_twiss_profiles(line,file_result):
 	P_alltracks = []
 	P0_alltracks = []		
 	S_alltracks = []
+	label_ref = []
 	Y_track = []
 	T_track = []
 	Z_track = []
@@ -378,7 +379,8 @@ def get_twiss_profiles(line,file_result):
 		T_track.append(T[i])
 		Z_track.append(Y[i])
 		P_track.append(T[i])
-		S_track.append(S[i])	
+		S_track.append(S[i])
+		label_ref.append(label[i])
 	Y_alltracks.append(Y_track)
 	T_alltracks.append(T_track)
 	Z_alltracks.append(Z_track)
@@ -428,11 +430,11 @@ def get_twiss_profiles(line,file_result):
 
         #Transfer matrix elements R(J-1,6), J in range (2,6)
 	# FORTRAN (mat1.f)   R(J-1,6)  = (F(J,I10) - F(J,I11)) /DP
-	R16_list = [x/DP for x in map(subtract,Y_alltracks[9],Y_alltracks[10])]
-	R26_list = [x/DP for x in map(subtract,T_alltracks[9],T_alltracks[10])]
-	R36_list = [x/DP for x in map(subtract,Z_alltracks[9],Z_alltracks[10])]
-	R46_list = [x/DP for x in map(subtract,P_alltracks[9],P_alltracks[10])]
-	R56_list = [x/DP for x in map(subtract,S_alltracks[9],S_alltracks[10])]
+	R16_list = [x/DP for x in map(numpy.subtract,Y_alltracks[9],Y_alltracks[10])]
+	R26_list = [x/DP for x in map(numpy.subtract,T_alltracks[9],T_alltracks[10])]
+	R36_list = [x/DP for x in map(numpy.subtract,Z_alltracks[9],Z_alltracks[10])]
+	R46_list = [x/DP for x in map(numpy.subtract,P_alltracks[9],P_alltracks[10])]
+	R56_list = [x/DP for x in map(numpy.subtract,S_alltracks[9],S_alltracks[10])]
 	#-----------------------------------------------------------------------------------------
 
 	#assume it1=1
@@ -445,32 +447,32 @@ def get_twiss_profiles(line,file_result):
 		i3 = i3 - 1
 		if i == 1:
 			UO = Y0_alltracks[i2]-Y0_alltracks[i3]
-			R11_list =  [x/UO for x in map(subtract,Y_alltracks[i2],Y_alltracks[i3])]
-			R21_list =  [x/UO for x in map(subtract,T_alltracks[i2],T_alltracks[i3])]
-			R31_list =  [x/UO for x in map(subtract,Z_alltracks[i2],Z_alltracks[i3])]
-			R41_list =  [x/UO for x in map(subtract,P_alltracks[i2],P_alltracks[i3])]
-			R51_list =  [x/UO for x in map(subtract,S_alltracks[i2],S_alltracks[i3])]
+			R11_list =  [x/UO for x in map(numpy.subtract,Y_alltracks[i2],Y_alltracks[i3])]
+			R21_list =  [x/UO for x in map(numpy.subtract,T_alltracks[i2],T_alltracks[i3])]
+			R31_list =  [x/UO for x in map(numpy.subtract,Z_alltracks[i2],Z_alltracks[i3])]
+			R41_list =  [x/UO for x in map(numpy.subtract,P_alltracks[i2],P_alltracks[i3])]
+			R51_list =  [x/UO for x in map(numpy.subtract,S_alltracks[i2],S_alltracks[i3])]
 		elif i == 2:
 			UO = T0_alltracks[i2]-T0_alltracks[i3]
-			R12_list =  [x/UO for x in map(subtract,Y_alltracks[i2],Y_alltracks[i3])]
-			R22_list =  [x/UO for x in map(subtract,T_alltracks[i2],T_alltracks[i3])]
-			R32_list =  [x/UO for x in map(subtract,Z_alltracks[i2],Z_alltracks[i3])]
-			R42_list =  [x/UO for x in map(subtract,P_alltracks[i2],P_alltracks[i3])]
-			R52_list =  [x/UO for x in map(subtract,S_alltracks[i2],S_alltracks[i3])]
+			R12_list =  [x/UO for x in map(numpy.subtract,Y_alltracks[i2],Y_alltracks[i3])]
+			R22_list =  [x/UO for x in map(numpy.subtract,T_alltracks[i2],T_alltracks[i3])]
+			R32_list =  [x/UO for x in map(numpy.subtract,Z_alltracks[i2],Z_alltracks[i3])]
+			R42_list =  [x/UO for x in map(numpy.subtract,P_alltracks[i2],P_alltracks[i3])]
+			R52_list =  [x/UO for x in map(numpy.subtract,S_alltracks[i2],S_alltracks[i3])]
 		elif i == 3:
 			UO = Z0_alltracks[i2]-Z0_alltracks[i3]
-			R13_list =  [x/UO for x in map(subtract,Y_alltracks[i2],Y_alltracks[i3])]
-			R23_list =  [x/UO for x in map(subtract,T_alltracks[i2],T_alltracks[i3])]
-			R33_list =  [x/UO for x in map(subtract,Z_alltracks[i2],Z_alltracks[i3])]
-			R43_list =  [x/UO for x in map(subtract,P_alltracks[i2],P_alltracks[i3])]
-			R53_list =  [x/UO for x in map(subtract,S_alltracks[i2],S_alltracks[i3])]
+			R13_list =  [x/UO for x in map(numpy.subtract,Y_alltracks[i2],Y_alltracks[i3])]
+			R23_list =  [x/UO for x in map(numpy.subtract,T_alltracks[i2],T_alltracks[i3])]
+			R33_list =  [x/UO for x in map(numpy.subtract,Z_alltracks[i2],Z_alltracks[i3])]
+			R43_list =  [x/UO for x in map(numpy.subtract,P_alltracks[i2],P_alltracks[i3])]
+			R53_list =  [x/UO for x in map(numpy.subtract,S_alltracks[i2],S_alltracks[i3])]
 		elif i == 4:
 			UO = P0_alltracks[i2]-P0_alltracks[i3]
-			R14_list =  [x/UO for x in map(subtract,Y_alltracks[i2],Y_alltracks[i3])]
-			R24_list =  [x/UO for x in map(subtract,T_alltracks[i2],T_alltracks[i3])]
-			R34_list =  [x/UO for x in map(subtract,Z_alltracks[i2],Z_alltracks[i3])]
-			R44_list =  [x/UO for x in map(subtract,P_alltracks[i2],P_alltracks[i3])]
-			R54_list =  [x/UO for x in map(subtract,S_alltracks[i2],S_alltracks[i3])]
+			R14_list =  [x/UO for x in map(numpy.subtract,Y_alltracks[i2],Y_alltracks[i3])]
+			R24_list =  [x/UO for x in map(numpy.subtract,T_alltracks[i2],T_alltracks[i3])]
+			R34_list =  [x/UO for x in map(numpy.subtract,Z_alltracks[i2],Z_alltracks[i3])]
+			R44_list =  [x/UO for x in map(numpy.subtract,P_alltracks[i2],P_alltracks[i3])]
+			R54_list =  [x/UO for x in map(numpy.subtract,S_alltracks[i2],S_alltracks[i3])]
 		
 	#----------------------------------
 	# Adjust units to SI (as in mksa.f)
@@ -506,7 +508,6 @@ def get_twiss_profiles(line,file_result):
         # Get inital twiss paramters
 	#------------------------------------------------------
 	twissparam = r.get_twiss_parameters()
-	print "twissparam ",twissparam
 	beta_y_0 = twissparam[0]
 	alpha_y_0 = twissparam[1]
         gamma_y_0 = twissparam[2]
@@ -521,7 +522,9 @@ def get_twiss_profiles(line,file_result):
 	#  - e.g. S.Y.Lee Accelerator physics equation 2.54
 	#  - The phase advance can be found by applying a Floquet transformation to the transfer matrix (S.Y.Lee eqn 2.65)
         #-----------------------------------------------------------------------------------------------------------------
-               
+ 
+	fresults= open(file_result, 'w')
+              
 	mu_y_list = []
 	beta_y_list= []
 	alpha_y_list = []
@@ -534,7 +537,6 @@ def get_twiss_profiles(line,file_result):
 	sign_sine_z_old = 1.0
 	n_pi_y = 0
 	n_pi_z = 0
-	print "beta_z_0", beta_z_0
 	for i in range(len(R11_list)):
 		# Horizontal plane
 		#-----------------
@@ -570,7 +572,6 @@ def get_twiss_profiles(line,file_result):
 			if sign_sine_z - sign_sine_z_old == -2:
 				n_pi_z = n_pi_z + 1
 			sign_sine_z_old = sign_sine_z
-			#mu_z_list.append(asin(R34_list[i]/sqrt(beta_z*beta_z_0)))
 			if sign_sine_z >= 0:
 				mu_z_list.append(n_pi_z*2*pi+acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
 			else: 
@@ -578,16 +579,29 @@ def get_twiss_profiles(line,file_result):
 		alpha_z_list.append(-R33_list[i]*R43_list[i]*beta_z_0 + (R33_list[i]*R44_list[i]+R34_list[i]*R43_list[i])*alpha_z_0 \
 			- R34_list[i]*R44_list[i]*gamma_z_0)
 		gamma_z_list.append((R43_list[i]**2)*beta_z_0-2*R43_list[i]*R44_list[i]*alpha_z_0+(R44_list[i]**2)*gamma_z_0)
+		print >>fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], mu_y_list[i],beta_y,alpha_y_list[i],\
+			gamma_y_list[i],mu_z_list[i],beta_z,alpha_z_list[i],gamma_z_list[i])
 
 	#put twiss parameters together. Each row has format [s_coord, mu_y,beta_y, alpha_y, gamma_y, mu_z,beta_z, alpha_z, gamma_z]. Units are SI
-        twiss_profiles = map(list,zip(*[[s*cm for s in S_alltracks[0]],mu_y_list,beta_y_list,alpha_y_list,gamma_y_list,mu_z_list,beta_z_list,alpha_z_list,gamma_z_list]))
+	twiss_profiles = numpy.transpose([[s*cm for s in S_alltracks[0]],label_ref,mu_y_list,beta_y_list,alpha_y_list,gamma_y_list,mu_z_list,beta_z_list,alpha_z_list,gamma_z_list])
 
+        return twiss_profiles
+
+
+
+def find_indices(list,list_element):
+	""" Find all occurences of list_element in list. Return the indices.
+	"""
+	indices = []
+	i = -1
+	try:
+		while 1:
+			i = list.index(list_element, i+1)
+			indices.append(i)
+	except ValueError:
+		pass
 	
-	#write to file
-	fresults= open(file_result, 'w')
-	fresults.write(str(twiss_profiles))
-
-	return twiss_profiles
+	return indices
 
 
 def plot_data_xy(data, filename, labels=["","",""]):
