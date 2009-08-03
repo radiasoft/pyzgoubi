@@ -320,6 +320,7 @@ class Line(object):
 		self.dat_file = tmpdir+"/zgoubi.dat"
 		self.plt_file = tmpdir+"/zgoubi.plt"
 		self.fai_file = tmpdir+"/zgoubi.fai"
+		self.spn_file = tmpdir+"/zgoubi.spn"
 		#output = outfile.read()
 		
 		os.chdir(orig_cwd)
@@ -360,6 +361,12 @@ class Line(object):
 		fh= open(self.fai_file)
 		return fh.read()
 
+	def spn(self):
+		"return zgoubi.spn as a string"
+		if (not self.has_run): print "Line has not been run"
+		fh= open(self.spn_file)
+		return fh.read()
+
 	def res_fh(self):
 		"return zgoubi.res file handle"
 		if (not self.has_run): print "Line has not been run"
@@ -384,6 +391,12 @@ class Line(object):
 		fh= open(self.fai_file)
 		return fh
 
+	def spn_fh(self):
+		"return zgoubi.spn file handle"
+		if (not self.has_run): print "Line has not been run"
+		fh= open(self.spn_file)
+		return fh
+
 	def save_res(self, path):
 		"save zgoubi.res to path"
 		if (not self.has_run): print "Line has not been run"
@@ -400,9 +413,14 @@ class Line(object):
 		shutil.copyfile(self.plt_file, path)
 		
 	def save_fai(self, path):
-		"save zgoubi.plt to path"
+		"save zgoubi.fai to path"
 		if (not self.has_run): print "Line has not been run"
 		shutil.copyfile(self.fai_file, path)
+
+	def save_spn(self, path):
+		"save zgoubi.spn to path"
+		if (not self.has_run): print "Line has not been run"
+		shutil.copyfile(self.spn_file, path)
 
 	def add_input_files(self, file_paths=[], pattern=None):
 		"""Add some extra input files to the directory where zgoubi is run.
@@ -503,6 +521,10 @@ class Results(object):
 	def fai_fh(self): return self._get_fh("zgoubi.fai")
 	def fai(self): return self._get_str("zgoubi.fai")
 	def save_fai(self, path): return self._save_file("zgoubi.fai", path)
+
+	def spn_fh(self): return self._get_fh("zgoubi.spn")
+	def spn(self): return self._get_str("zgoubi.spn")
+	def save_spn(self, path): return self._save_file("zgoubi.spn", path)
 		
 	def b_fai_fh(self): return self._get_fh("b_zgoubi.fai")
 	def b_fai(self): return self._get_str("b_zgoubi.fai")
@@ -628,6 +650,8 @@ class Results(object):
 			fh = self.plt_fh()
 		elif(file == 'fai'):
 			fh = self.fai_fh()
+		elif(file == 'spn'):
+			fh = self.spn_fh()
 		elif(file == 'bfai'):
 			return self.get_all_bin(file=file)
 		else:
@@ -649,8 +673,17 @@ class Results(object):
 		l4_re =     trans_to_regex('%f +%d %8c %8c%8c +%d')
 		l4_re_plt = trans_to_regex('%f +%f +%f +%f +%d %8c %8c %8c +%d')
 
+		l0_spn =    trans_to_regex('%d +%f +%f +%f +%f +%f +%f +%f +%f')
+		l1_spn =    trans_to_regex('%f +%d +%d +%d +%d')
+
+		#no of lines per fai, plt or spn data point
+		if file != 'spn':
+			n_lines = 5
+		else:
+			n_lines = 2
+
 		plt_data = []
-		for lines in yield_n_lines(fh, 5):
+		for lines in yield_n_lines(fh, n_lines):
 			
 			if (id != None):
 				try:
@@ -660,39 +693,49 @@ class Results(object):
 					print lines
 					continue
 
-			if (len(lines) == 5): # dont go through this if we have just few dangling lines on the end of the file
+			if (len(lines) == n_lines): # dont go through this if we have just few dangling lines on the end of the file
 				# fill dictionary with the bits that have been identified
 				#
 				p = {}
-				
+
 				# line 0
-				l0 = scanf(lines[0], l0_re)
-				p['LET'] = l0[0] 
-				p['IEX'] = int(l0[1]) #flag
-				p['D0'] = float(l0[2]) #initial D-1
-				p['Y0'] = self._bad_float(l0[3]) #initial Y
-				p['T0'] = self._bad_float(l0[4]) #initial T (remember that T is dY/dX not time)
-				p['Z0'] = float(l0[5]) #initial Z
-				p['P0'] = float(l0[6]) #initial P
-				p['X0'] = self._bad_float(float(l0[7])) # path length at origin of structure ?
-				
-				
+				if file == 'spn':
+					l0 = scanf(lines[0], l0_spn)
+					p['SPIN_X'] = float(l0[5])
+					p['SPIN_Y'] = float(l0[6])
+					p['SPIN_Z'] = float(l0[7])
+				else:
+					l0 = scanf(lines[0], l0_re)
+					p['LET'] = l0[0] 
+					p['IEX'] = int(l0[1]) #flag
+					p['D0'] = float(l0[2]) #initial D-1
+					p['Y0'] = self._bad_float(l0[3]) #initial Y
+					p['T0'] = self._bad_float(l0[4]) #initial T (remember that T is dY/dX not time)
+					p['Z0'] = float(l0[5]) #initial Z
+					p['P0'] = float(l0[6]) #initial P
+					p['X0'] = self._bad_float(float(l0[7])) # path length at origin of structure ?
+
 				# line 1
-				l1 = scanf(lines[1], l1_re)
-				p['D'] = float(l1[0]) #D-1
-				p['Y'] = self._bad_float(l1[1]) #current corrods
-				p['T'] = self._bad_float(l1[2])
+				if file == 'spn':
+					l1 = scanf(lines[1], l1_spn)
+					p['PASS'] = int(l1[3])
+				else:
+					l1 = scanf(lines[1], l1_re)
+					p['D'] = float(l1[0]) #D-1
+					p['Y'] = self._bad_float(l1[1]) #current corrods
+					p['T'] = self._bad_float(l1[2])
 
 				#line 2
-				l2 = scanf(lines[2], l2_re)
-				p['Z'] = self._bad_float(l2[0])
-				p['P'] = self._bad_float(l2[1])
-				p['S'] = self._bad_float(l2[2])
-				p['tof'] = self._bad_float(l2[3]) # time of flight
-				if file=='plt': # a strange bug prehaps. anyways this makes it so that you get microseconds
-					p['tof'] = p['tof'] / 1e5
-				if file=='fai':
-					p['KE'] = self._bad_float(l2[4]) # Kinetic energy
+				if file != 'spn':
+					l2 = scanf(lines[2], l2_re)
+					p['Z'] = self._bad_float(l2[0])
+					p['P'] = self._bad_float(l2[1])
+					p['S'] = self._bad_float(l2[2])
+					p['tof'] = self._bad_float(l2[3]) # time of flight
+					if file=='plt': # a strange bug prehaps. anyways this makes it so that you get microseconds
+						p['tof'] = p['tof'] / 1e5
+					if file=='fai':
+						p['KE'] = self._bad_float(l2[4]) # Kinetic energy
 				
 				#line 3
 				# see 20080501 in lab book
