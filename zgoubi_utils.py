@@ -599,13 +599,16 @@ def find_indices(list,list_element):
 	
 	return indices
 
-def plot_data_xy(data, filename, labels=["","",""], style='b-'):
+def plot_data_xy(data, filename, labels=["","",""], style='b-', xlim = [0,0], ylim = [0,0]):
 	import pylab
 	data_a = numpy.array(data)
-	print data_a
 	pylab.hold(False)
-	pylab.plot(data_a[:,0], data_a[:,1],style)
+	pylab.plot(data_a[:,0], data_a[:,1], style)
 	pylab.title(labels[0])
+	if xlim != [0,0]:
+		pylab.xlim( (xlim[0] ,xlim[1]) )
+	if ylim != [0,0]:
+		pylab.ylim( (ylim[0] ,ylim[1]) )
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])
 	pylab.savefig(filename)
