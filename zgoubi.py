@@ -703,6 +703,7 @@ class Results(object):
 					p['IREP'] = l3[2]
 					p['SORT'] = l3[3]
 					p['X'] = float(l3[4])
+					p['By'] = float(l3[6])
 					p['Bz'] = float(l3[7])
 				elif (file=='fai'):
 					l3 = scanf(lines[3], l3_re)
