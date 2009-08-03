@@ -105,6 +105,7 @@ def get_cmd_param_bool(key, default=None):
 	print "please run with "+ str(key) +"=x as an argument"
 	raise ValueError
 
+
 def readArray(filename, skipchar = '#', dtype=float):
 	"""
 	# PURPOSE: read an array from a file. Skip empty lines or lines
@@ -178,6 +179,7 @@ def calc_area_simple(ellipse, centre=(0,0)):
 
 	return a * b * pi
 
+
 def ke_to_rigidity(ke, mass):
 	"""ke in eV, mass in eV/c^2
 	gives result in kGauss cm, which is handy for OBJET
@@ -189,6 +191,7 @@ def ke_to_rigidity(ke, mass):
 
 	return rigidity
 
+
 def mom_to_rigidity(mom):
 	"""mom in eV/c
 	gives result in kGauss cm, which is handy for OBJET
@@ -197,6 +200,7 @@ def mom_to_rigidity(mom):
 	rigidity = mom / SPEED_OF_LIGHT * 1000 # to give kG cm
 
 	return rigidity
+
 
 def ke_to_relativistic_beta_gamma(ke, mass):
 	"""ke in eV, mass in eV/c^2
@@ -207,6 +211,7 @@ def ke_to_relativistic_beta_gamma(ke, mass):
 	beta_gamma_rel = mom / mass
 
 	return beta_gamma_rel
+
 
 def show_file(file_path,mode):
 	"""shows a file. mode can be:
@@ -584,7 +589,6 @@ def get_twiss_profiles(line,file_result):
         return twiss_profiles
 
 
-
 def find_indices(list,list_element):
 	""" Find all occurences of list_element in list. Return the indices.
 	"""
@@ -598,6 +602,7 @@ def find_indices(list,list_element):
 		pass
 	
 	return indices
+
 
 def plot_data_xy(data, filename, labels=["","",""], style='b-', xlim = [0,0], ylim = [0,0]):
 	import pylab

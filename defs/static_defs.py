@@ -119,7 +119,55 @@ class OBJET2(zgoubi_element):
 		
 		#print out
 		return out
+
 		
+class OBJET3(zgoubi_element):
+	"""Read beam coordinates from file. KOBJ=3 read from formatted file.
+		KOBJ=3.01 read from simple text file
+	"""
+	def __init__(self ,**settings):
+		self._zgoubi_name = "OBJET"
+		self._params = {}
+		self._params['BORO'] = 0
+		self._params['IT1'] = 1
+		self._params['IT2'] = 1
+		self._params['ITStep'] = 1
+		self._params['IP1'] = 1
+		self._params['IP2'] = 1
+		self._params['IPStep'] = 1
+		self._params['TAG'] = '*'
+		self._params['FNAME'] = 'nofilename'
+		self._params['FTYPE'] = 'unspecified'
+		for p in ['Y','T','Z','P','X','D','Ti']:
+			self._params[str(p+'F')] = 1.0
+			self._params[str(p+'R')] = 0.0
+		self._params['InitC'] = 0
+		object.__setattr__(self, "ready", True)
+		self.set(settings)
+
+	def output(self):
+		# local short cuts for long function names
+		f = self.f2s
+		i = self.i2s
+		
+		out = "'OBJET'" +nl
+		out += f(self.BORO) +nl
+		if self.FTYPE == 'unformatted':
+			out += "3.01" + nl
+		elif self.FTYPE == 'formatted':
+			out += "3" + nl
+		else:
+			print "Error - specify FTYPE, formatted or unformatted"
+			sys.exit()
+
+		out += i(self.IT1) +' '+ i(self.IT2) +' '+ i(self.ITStep) +nl
+		out += i(self.IP1) +' '+ i(self.IP2) +' '+ i(self.IPStep) +nl
+		out += f(self.YF)+' '+f(self.TF)+' '+f(self.ZF)+' '+ f(self.PF) +' '+ f(self.XF)+' '+f(self.DF)+' '+ f(self.TiF)+' '+ self.TAG +nl
+		out += f(self.YR) +' '+ f(self.TR) +' '+ f(self.ZR) +' '+ f(self.PR) +' '+ f(self.XR) +' '+ f(self.DR)+' '+f(self.TiR)+nl
+		out += i(self.InitC) +nl
+		out += self.FNAME +nl
+		return out
+
 
 class OBJET5(zgoubi_element):
 	"""Beam made of particles, for use with matrix
