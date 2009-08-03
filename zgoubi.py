@@ -434,6 +434,24 @@ class Line(object):
 
 		self.element_list.pop(index)
 		self.element_list.insert(index,elementnew)
+
+	def insert(self, index, *elements):
+		"Insert elements into the line before position given by index"
+		for element in elements:
+			self.element_list.insert(index,element)
+
+	def find_elements(self, element):
+		"Find elements in the line and return the indices"
+		indices = []
+		i = -1
+		try:
+			while 1:
+				i = self.element_list.index(element, i+1)
+				indices.append(i)
+		except ValueError:
+			pass	
+
+		return indices
 			
 class NoTrackError(Exception):
 	pass
