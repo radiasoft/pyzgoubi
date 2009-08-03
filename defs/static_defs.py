@@ -147,6 +147,62 @@ class OBJET5(zgoubi_element):
 		out += f(self.PY) +' '+ f(self.PT) +' '+ f(self.PZ) +' '+ f(self.PP) +' '+ f(self.PX) +' '+ f(self.PD) +nl
 		out += f(self.YR) +' '+ f(self.TR) +' '+ f(self.ZR) +' '+ f(self.PR) +' '+ f(self.XR) +' '+ f(self.DR) +nl
 		return out
+
+
+class MCOBJET3(zgoubi_element):
+	"""Monte Carlo generation of a 6-D object on a phase space ellipse
+	Equivilent to MCOBJET with a KOBJ=3
+	"""
+	def __init__(self ,**settings):
+		self._zgoubi_name = "MCOBJET"
+		self._params = {}
+		self._params['BORO'] = 0
+		self._params['IMAX'] = 0
+		self._params['particles'] = []
+		for p in ['Y','T','Z','P','X','D']:
+			self._params[str('K'+p)] = 1
+			self._params[str(p+'0')] = 0
+		for p in ['y','z','x']:
+			self._params[str('alpha_'+p)] = 0
+			self._params[str('beta_'+p)] = 0
+			self._params[str('emit_'+p)] = 0
+			self._params[str('n_cutoff_'+p)] = 0
+			self._params[str('n_cutoff2_'+p)] = 0
+		self._params[str('I1')] = 139339
+		self._params[str('I2')] = 139397
+		self._params[str('I3')] = 178393
+		object.__setattr__(self, "ready", True)
+		self.set(settings)
+
+	def output(self):
+		# local short cuts for long function names
+		f = self.f2s
+		i = self.i2s
+		
+		out = "'MCOBJET'" +nl
+		out += f(self.BORO) +nl
+		out += "3" + nl
+		out += i(self.IMAX) + nl
+		out += i(self.KY) +' '+ i(self.KT) +' '+ i(self.KZ) +' '+ i(self.KP) +' '+ i(self.KX) +' '+ i(self.KD) +nl
+		out += f(self.Y0) +' '+ f(self.T0) +' '+ f(self.Z0) +' '+ f(self.P0) +' '+ f(self.X0) +' '+ f(self.D0) +nl
+
+		if self.n_cutoff_y < 0:
+			out += f(self.alpha_y) +' '+ f(self.beta_y) +' '+ f(self.emit_y) +' '+ i(self.n_cutoff_y) +' '+i(self.n_cutoff2_y) +nl
+		else:
+			out += f(self.alpha_y) +' '+ f(self.beta_y) +' '+ f(self.emit_y) +' '+ i(self.n_cutoff_y) +nl
+
+		if self.n_cutoff_z < 0:
+			out += f(self.alpha_z) +' '+ f(self.beta_z) +' '+ f(self.emit_z) +' '+ i(self.n_cutoff_z) +' '+i(self.n_cutoff2_z) +nl
+		else:
+			out += f(self.alpha_z) +' '+ f(self.beta_z) +' '+ f(self.emit_z) +' '+ i(self.n_cutoff_z) +nl
+
+		if self.n_cutoff_x < 0:
+			out += f(self.alpha_x) +' '+ f(self.beta_x) +' '+ f(self.emit_x) +' '+ i(self.n_cutoff_x) +' '+i(self.n_cutoff2_x) +nl
+		else:
+			out += f(self.alpha_x) +' '+ f(self.beta_x) +' '+ f(self.emit_x) +' '+ i(self.n_cutoff_x) +nl
+
+		out += i(self.I1) +' '+ i(self.I2) +' '+ i(self.I3) +nl
+		return out
 		
 # generate classes defined in the defs file
 #exec(generate_classes())
