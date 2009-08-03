@@ -419,10 +419,20 @@ class Line(object):
 			file_paths += globbed_files
 		self.input_files += file_paths
 		
-	def replace(self, elementold, elementnew):
-		"Replace an element in the line"
-		index=self.element_list.index(elementold)
-		self.element_list.remove(elementold)
+	def replace(self, elementold, elementnew, select_index=0):
+		"Replace an element in the line. setting select_index to n will replace the nth occurence of that item. If select index is not set, the first occurence is replaced"
+
+		indices = []
+		i = -1
+		try:
+			while 1:
+				i = self.element_list.index(elementold, i+1)
+				indices.append(i)
+		except ValueError:
+			pass
+		index = indices[select_index]
+
+		self.element_list.pop(index)
 		self.element_list.insert(index,elementnew)
 			
 class NoTrackError(Exception):
