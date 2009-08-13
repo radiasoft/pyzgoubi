@@ -1,11 +1,10 @@
 #!/usr/bin/env python
-
 from __future__ import division
 from math import *
 import numpy
 import sys
 from glob import glob
-from zgoubi_constants import *
+from constants import *
 # use these to convert things to metres and tesla
 m = 1
 cm = 0.01
@@ -587,6 +586,43 @@ def get_twiss_profiles(line,file_result):
 	twiss_profiles = numpy.transpose([[s*cm for s in S_alltracks[0]],label_ref,mu_y_list,beta_y_list,alpha_y_list,gamma_y_list,mu_z_list,beta_z_list,alpha_z_list,gamma_z_list])
 
         return twiss_profiles
+
+def emittance_to_coords(normemit_horizontal, normemit_vertical, gammayz, betayz, relbetgamma):
+	"""Given some initial normalised emittance in horizonal and vertical space, return points where phase
+	space ellipse crosses the y,y' and z,z' axis. Can use these points, returned in coords_YTZP to start
+	tracking at the desired emittance assuming that the optical functions don't change with amplitude.
+
+	Normalised emittance in both the horizontal and vertical planes must be supplied. Twiss parameters beta and gamma in 
+	both places may be determined calling get_twiss_parameters beforehand i.e.
+			twissparam = r.get_twiss_parameters()
+			betayz = [twissparam[0],twissparam[3]]
+			gammayz = [twissparam[2],twissparam[5]]"""
+	import numpy
+	
+	coords_YTZP = []
+
+	#maximum y or z value at sqrt(emit*beta)
+ 	maxy=cm_*sqrt(normemit_horizontal*betayz[0]/relbetgamma)       
+	maxz=cm_*sqrt(normemit_vertical*betayz[1]/relbetgamma)
+
+	#crosses y or z axis at  sqrt(emit/gamma)
+	initialy=cm_*sqrt(normemit_horizontal/(gammayz[0]*relbetgamma))       
+	initialz=cm_*sqrt(normemit_vertical/(gammayz[1]*relbetgamma))
+	
+	initial_YTZP=[initialy,0,initialz,0]
+	coords_YTZP.append(initial_YTZP)
+
+	#maximum y' or z' value at sqrt(emit*gamma)
+ 	maxt=mm_*sqrt(normemit_horizontal*gammayz[0]/relbetgamma)       
+	maxp=mm_*sqrt(normemit_vertical*gammayz[1]/relbetgamma)
+
+	#crosses y' or z' axis at sqrt(emit/beta) and convert to mrad (same as scaling by mm)
+ 	initialt=mm_*sqrt(normemit_horizontal/(betayz[0]*relbetgamma))       
+	initialp=mm_*sqrt(normemit_vertical/(betayz[1]*relbetgamma))
+	initial_YTZP=[0,initialt,0,initialp]
+	coords_YTZP.append(initial_YTZP)
+
+	return coords_YTZP
 
 
 def find_indices(list,list_element):
