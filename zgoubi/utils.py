@@ -1,11 +1,10 @@
 #!/usr/bin/env python
-
 from __future__ import division
 from math import *
 import numpy
 import sys
 from glob import glob
-from zgoubi_constants import *
+from constants import *
 # use these to convert things to metres and tesla
 m = 1
 cm = 0.01

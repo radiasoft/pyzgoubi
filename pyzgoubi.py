@@ -20,9 +20,9 @@
 
 from __future__ import division
 from math import *
-from zgoubi_utils import *
-from zgoubi import *
-from zgoubi_constants import *
+from zgoubi.utils import *
+from zgoubi.core import *
+from zgoubi.constants import *
 
 zgoubi_version = "0.3dev"
 
@@ -95,6 +95,12 @@ def _show_help():
 
 
 if __name__ == '__main__':
+	if len(sys.argv) == 1:
+		print "Usage:"
+		print sys.argv[0], "input_file_name"
+		print sys.argv[0], "--help"
+		sys.exit(1)
+	
 	if sys.argv[1] in ['version', '--version']:
 		print "Pyzgoubi version:%s"%zgoubi_version
 		sys.exit(0)

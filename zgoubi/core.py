@@ -42,36 +42,54 @@ except:
 	pass
 #	print "cairo not found, no plotting available"
 
-from zgoubi_constants import *
+from constants import *
 
-import zgoubi_settings 
 
-zgoubi_path = zgoubi_settings.zgoubi_path
+from settings import zgoubi_settings
 
-definitions_paths = [os.path.join(zgoubi_settings.defs_dir, x) for x in os.listdir(zgoubi_settings.defs_dir) if x.endswith('.defs')]
+zgoubi_module_path = os.path.dirname( os.path.realpath( __file__ ) )
+zgoubi_path = zgoubi_settings['zgoubi_path']
 
-definitions_paths += zgoubi_settings.extra_defs_files
+
+static_defs = os.path.join(zgoubi_module_path,'..','..','..','..' ,"share","pyzgoubi","definitions", "static_defs.py")
+
+
+#definitions of elements
+home = os.path.expanduser('~')
+config_dir = os.path.join(home, ".pyzgoubi")
+if not os.path.exists(config_dir):
+	os.mkdir(config_dir)
+
+def_cache_dir = os.path.join(config_dir, "def_cache")
+if not os.path.exists(def_cache_dir):
+	os.mkdir(def_cache_dir)
+
+compiled_defs_path = os.path.join(config_dir, "def_cache","defs.py")
+
+definitions_paths = [os.path.join(config_dir, x) for x in os.listdir(config_dir) if x.endswith('.defs')]
+definitions_paths.append(os.path.join(zgoubi_module_path, "defs", "simple_elements.defs"))
+definitions_paths += zgoubi_settings['extra_defs_files']
 nl = '\n'
 
-compiled_defs = os.path.join(zgoubi_settings.defs_dir,"defs.py")
-static_defs = os.path.join(zgoubi_settings.defs_dir,"static_defs.py")
-
+#print "definitions at", definitions_paths
 #if needed recompile defs
-if not os.path.exists(compiled_defs):
+if not os.path.exists(compiled_defs_path):
 	print "no compiled defs. compiling"
-	import zgoubi_makedefs
-	zgoubi_makedefs.make_element_classes(definitions_paths, compiled_defs)
+	need_def_compile = True
 else:
 	need_def_compile = False
 	for f in definitions_paths:
 #		print "checking ", f
-		if os.path.exists(f) and os.path.getmtime(f) >= os.path.getmtime(compiled_defs):
+		if os.path.exists(f) and os.path.getmtime(f) >= os.path.getmtime(compiled_defs_path):
 			print "need to recompile", f
 			need_def_compile = True
-	if need_def_compile:
-		import zgoubi_makedefs
-		print "Recompiling definitions"
-		zgoubi_makedefs.make_element_classes(definitions_paths, compiled_defs)
+if need_def_compile:
+	from zgoubi import makedefs
+	print "Compiling definitions"
+	makedefs.make_element_classes(definitions_paths, compiled_defs_path)
+
+
+
 
 #force rebuild everytime
 #import zgoubi_makedefs
@@ -185,11 +203,8 @@ class zgoubi_element(object):
 	def list_params(self):
 		return list(self._params)
 			
-
 execfile(static_defs)
-execfile(compiled_defs)
-		
-
+execfile(compiled_defs_path)
 
 class Line(object):
 	def __init__(self, name):
@@ -271,7 +286,7 @@ class Line(object):
 		out += seg
 		return out
 		
-	def run(self, xterm=False, tmp_prefix=zgoubi_settings.tmp_dir, silence=False):
+	def run(self, xterm=False, tmp_prefix=zgoubi_settings['tmp_dir'], silence=False):
 		"Run zgoubi on line. If break is true, stop after running zgoubi, and open an xterm for the user in the tmp dir. From here zpop can be run."
 		orig_cwd = os.getcwd()
 		self.tmpdir = tempfile.mkdtemp("zgoubi", prefix=tmp_prefix)
@@ -291,13 +306,13 @@ class Line(object):
 		infile.close()
 		
 		#os.system('ls -la')
-		if not os.path.exists(zgoubi_settings.zgoubi_path):
+		if not os.path.exists(zgoubi_settings['zgoubi_path']):
 			error = "Zgoubi executable does not exist at:\n"
-			error += zgoubi_settings.zgoubi_path
+			error += zgoubi_settings['zgoubi_path']
 			error += "\nPlease modify the settings file\n"
 			raise ValueError, error
 
-		command = zgoubi_settings.zgoubi_path
+		command = zgoubi_settings['zgoubi_path']
 		if silence:
 			command += " > zgoubi.stdout 2> zgoubi.sdterr"
 		exe_result = os.system(command)
