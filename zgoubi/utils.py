@@ -634,6 +634,72 @@ def emittance_to_coords(normemit_horizontal, normemit_vertical, gammayz, betayz,
 	return coords_YTZP
 
 
+def fourier_tune(line,initial_YTZP,D_in,nfourierturns):
+	"""Calculate tune using FFT. nfourierturns determines the number of passes through the lattice. 
+	"""
+	#check line has an objet2
+	for e in line.element_list:
+		if ("OBJET2" in str(type(e)).split("'")[1]):
+			objet = e
+			break
+	else:
+		raise ValueError, "Line has no OBJET2 element"
+	
+	for e in line.element_list:
+		if ("FAISCNL" in str(type(e)).split("'")[1]):
+			break
+	else:
+		raise ValueError, "Line has no FAISCNL element"
+
+
+	#check line has a REBELOTE
+	for e in line.element_list:
+		if ("REBELOTE" in str(type(e)).split("'")[1]):
+			reb=e
+			break
+	else:
+		raise ValueError, "Line has no REBELOTE element"
+
+	objet.clear()	# remove existing particles
+	#start at closed orbit with a small amplitude added to vertical component to get tune readings
+	objet.add(Y=initial_YTZP[0], T=initial_YTZP[1], Z=initial_YTZP[2]+1e-5, P=initial_YTZP[3], LET='A', D=D_in)
+			
+	reb.set(NPASS=nfourierturns-1)	
+	r = line.run(xterm = False)
+	YZ = r.get_track('fai', ['Y','Z'])
+	ycoords = numpy.transpose(YZ)[0]
+	zcoords = numpy.transpose(YZ)[1]
+
+	#perform FFT
+	import pylab
+	yfft = pylab.fft(ycoords)
+	zfft = pylab.fft(zcoords)
+	#extract amplitudes
+	yampfreq = numpy.abs(yfft)
+	zampfreq = numpy.abs(zfft)
+
+	import operator
+	ysortfreqamp = sorted(enumerate(yampfreq), key=operator.itemgetter(1))
+	ysortfreqamp.reverse()
+	zsortfreqamp = sorted(enumerate(zampfreq), key=operator.itemgetter(1))
+	zsortfreqamp.reverse()
+
+	#drop peak at index 0
+	if ysortfreqamp[0][0] == 0:
+		del ysortfreqamp[0]
+	if zsortfreqamp[0][0] == 0:
+		del zsortfreqamp[0]
+
+	ypeaksloc = sorted([ysortfreqamp[0][0],ysortfreqamp[1][0]])
+	zpeaksloc = sorted([zsortfreqamp[0][0],zsortfreqamp[1][0]])
+
+
+	yfouriertune = ypeaksloc[0]/nfourierturns
+	zfouriertune = zpeaksloc[0]/nfourierturns
+
+	return yfouriertune, zfouriertune
+
+
 def find_indices(list,list_element):
 	""" Find all occurences of list_element in list. Return the indices.
 	"""
