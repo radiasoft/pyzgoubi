@@ -75,6 +75,11 @@ MATRIX
 MATRIX
 IORD, IFOC :2I
 
+MCDESINT
+MCDESINT
+M2, M3 : 2E
+I1, I2, I3 : 3I
+
 MULTIPOL
 MULTIPOL
 IL : I  
@@ -106,6 +111,16 @@ REBELOTE
 REBELOTE
 NPASS, KWRIT, K : 3I
 
+SPNTRK1 #SPNTRK with KSO = 1 to 3
+SPNTRK
+KSO : I
+
+SPNPRNL #store spin coordinates into file FNAME
+SPNPRNL
+FNAME : A80
+
+SPNPRT #print spin coordinates wherever this appears
+SPNPRT
 
 TOSCA
 TOSCA

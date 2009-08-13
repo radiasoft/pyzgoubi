@@ -104,6 +104,7 @@ def get_cmd_param_bool(key, default=None):
 	print "please run with "+ str(key) +"=x as an argument"
 	raise ValueError
 
+
 def readArray(filename, skipchar = '#', dtype=float):
 	"""
 	# PURPOSE: read an array from a file. Skip empty lines or lines
@@ -177,6 +178,7 @@ def calc_area_simple(ellipse, centre=(0,0)):
 
 	return a * b * pi
 
+
 def ke_to_rigidity(ke, mass):
 	"""ke in eV, mass in eV/c^2
 	gives result in kGauss cm, which is handy for OBJET
@@ -188,6 +190,7 @@ def ke_to_rigidity(ke, mass):
 
 	return rigidity
 
+
 def mom_to_rigidity(mom):
 	"""mom in eV/c
 	gives result in kGauss cm, which is handy for OBJET
@@ -196,6 +199,16 @@ def mom_to_rigidity(mom):
 	rigidity = mom / SPEED_OF_LIGHT * 1000 # to give kG cm
 
 	return rigidity
+
+
+def mom_to_ke(mom,mass):
+	"""mom in eV/c
+	gives results in eV
+	"""
+	ke = sqrt(mom**2 + mass**2) - mass
+
+	return ke
+
 
 def ke_to_relativistic_beta_gamma(ke, mass):
 	"""ke in eV, mass in eV/c^2
@@ -206,6 +219,7 @@ def ke_to_relativistic_beta_gamma(ke, mass):
 	beta_gamma_rel = mom / mass
 
 	return beta_gamma_rel
+
 
 def show_file(file_path,mode):
 	"""shows a file. mode can be:
@@ -582,6 +596,108 @@ def get_twiss_profiles(line,file_result):
 
         return twiss_profiles
 
+def emittance_to_coords(normemit_horizontal, normemit_vertical, gammayz, betayz, relbetgamma):
+	"""Given some initial normalised emittance in horizonal and vertical space, return points where phase
+	space ellipse crosses the y,y' and z,z' axis. Can use these points, returned in coords_YTZP to start
+	tracking at the desired emittance assuming that the optical functions don't change with amplitude.
+
+	Normalised emittance in both the horizontal and vertical planes must be supplied. Twiss parameters beta and gamma in 
+	both places may be determined calling get_twiss_parameters beforehand i.e.
+			twissparam = r.get_twiss_parameters()
+			betayz = [twissparam[0],twissparam[3]]
+			gammayz = [twissparam[2],twissparam[5]]"""
+	import numpy
+	
+	coords_YTZP = []
+
+	#maximum y or z value at sqrt(emit*beta)
+ 	maxy=cm_*sqrt(normemit_horizontal*betayz[0]/relbetgamma)       
+	maxz=cm_*sqrt(normemit_vertical*betayz[1]/relbetgamma)
+
+	#crosses y or z axis at  sqrt(emit/gamma)
+	initialy=cm_*sqrt(normemit_horizontal/(gammayz[0]*relbetgamma))       
+	initialz=cm_*sqrt(normemit_vertical/(gammayz[1]*relbetgamma))
+	
+	initial_YTZP=[initialy,0,initialz,0]
+	coords_YTZP.append(initial_YTZP)
+
+	#maximum y' or z' value at sqrt(emit*gamma)
+ 	maxt=mm_*sqrt(normemit_horizontal*gammayz[0]/relbetgamma)       
+	maxp=mm_*sqrt(normemit_vertical*gammayz[1]/relbetgamma)
+
+	#crosses y' or z' axis at sqrt(emit/beta) and convert to mrad (same as scaling by mm)
+ 	initialt=mm_*sqrt(normemit_horizontal/(betayz[0]*relbetgamma))       
+	initialp=mm_*sqrt(normemit_vertical/(betayz[1]*relbetgamma))
+	initial_YTZP=[0,initialt,0,initialp]
+	coords_YTZP.append(initial_YTZP)
+
+	return coords_YTZP
+
+
+def fourier_tune(line,initial_YTZP,D_in,nfourierturns):
+	"""Calculate tune using FFT. nfourierturns determines the number of passes through the lattice. 
+	"""
+	#check line has an objet2
+	for e in line.element_list:
+		if ("OBJET2" in str(type(e)).split("'")[1]):
+			objet = e
+			break
+	else:
+		raise ValueError, "Line has no OBJET2 element"
+	
+	for e in line.element_list:
+		if ("FAISCNL" in str(type(e)).split("'")[1]):
+			break
+	else:
+		raise ValueError, "Line has no FAISCNL element"
+
+
+	#check line has a REBELOTE
+	for e in line.element_list:
+		if ("REBELOTE" in str(type(e)).split("'")[1]):
+			reb=e
+			break
+	else:
+		raise ValueError, "Line has no REBELOTE element"
+
+	objet.clear()	# remove existing particles
+	#start at closed orbit with a small amplitude added to vertical component to get tune readings
+	objet.add(Y=initial_YTZP[0], T=initial_YTZP[1], Z=initial_YTZP[2]+1e-5, P=initial_YTZP[3], LET='A', D=D_in)
+			
+	reb.set(NPASS=nfourierturns-1)	
+	r = line.run(xterm = False)
+	YZ = r.get_track('fai', ['Y','Z'])
+	ycoords = numpy.transpose(YZ)[0]
+	zcoords = numpy.transpose(YZ)[1]
+
+	#perform FFT
+	import pylab
+	yfft = pylab.fft(ycoords)
+	zfft = pylab.fft(zcoords)
+	#extract amplitudes
+	yampfreq = numpy.abs(yfft)
+	zampfreq = numpy.abs(zfft)
+
+	import operator
+	ysortfreqamp = sorted(enumerate(yampfreq), key=operator.itemgetter(1))
+	ysortfreqamp.reverse()
+	zsortfreqamp = sorted(enumerate(zampfreq), key=operator.itemgetter(1))
+	zsortfreqamp.reverse()
+
+	#drop peak at index 0
+	if ysortfreqamp[0][0] == 0:
+		del ysortfreqamp[0]
+	if zsortfreqamp[0][0] == 0:
+		del zsortfreqamp[0]
+
+	ypeaksloc = sorted([ysortfreqamp[0][0],ysortfreqamp[1][0]])
+	zpeaksloc = sorted([zsortfreqamp[0][0],zsortfreqamp[1][0]])
+
+
+	yfouriertune = ypeaksloc[0]/nfourierturns
+	zfouriertune = zpeaksloc[0]/nfourierturns
+
+	return yfouriertune, zfouriertune
 
 
 def find_indices(list,list_element):
@@ -598,13 +714,17 @@ def find_indices(list,list_element):
 	
 	return indices
 
-def plot_data_xy(data, filename, labels=["","",""], style='b-'):
+
+def plot_data_xy(data, filename, labels=["","",""], style='b-', xlim = [0,0], ylim = [0,0]):
 	import pylab
 	data_a = numpy.array(data)
-	print data_a
 	pylab.hold(False)
-	pylab.plot(data_a[:,0], data_a[:,1],style)
+	pylab.plot(data_a[:,0], data_a[:,1], style)
 	pylab.title(labels[0])
+	if xlim != [0,0]:
+		pylab.xlim( (xlim[0] ,xlim[1]) )
+	if ylim != [0,0]:
+		pylab.ylim( (ylim[0] ,ylim[1]) )
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])
 	pylab.savefig(filename)
