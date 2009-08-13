@@ -120,7 +120,7 @@ class OBJET2(zgoubi_element):
 		#print out
 		return out
 
-		
+
 class OBJET3(zgoubi_element):
 	"""Read beam coordinates from file. KOBJ=3 read from formatted file.
 		KOBJ=3.01 read from simple text file
@@ -251,10 +251,6 @@ class MCOBJET3(zgoubi_element):
 
 		out += i(self.I1) +' '+ i(self.I2) +' '+ i(self.I3) +nl
 		return out
-		
-# generate classes defined in the defs file
-#exec(generate_classes())
-
 
 
 # define some useful particles
@@ -269,7 +265,7 @@ class ELECTRON(zgoubi_element):
 		i = self.i2s
 		
 		out = "'PARTICUL'" +nl
-		out += f(ELECTRON_MASS/1e6) +' '+ f(ELECTRON_CHARGE) +' '+ f(ELECTRON_ANOM_MAG_MOM) +' '+ f(ELECTRON_HALF_LIFE) +' 0' +nl
+		out += f(ELECTRON_MASS/1e6) +' '+ f(ELECTRON_CHARGE) +' '+ f(ELECTRON_ANOM_MAG_MOM) +' '+ f(ELECTRON_MEAN_LIFE) +' 0' +nl
 		return out
 
 class PROTON(zgoubi_element):
@@ -282,7 +278,7 @@ class PROTON(zgoubi_element):
 		i = self.i2s
 		
 		out = "'PARTICUL'" +nl
-		out += f(PROTON_MASS/1e6) +' '+ f(PROTON_CHARGE) +' '+ f(PROTON_ANOM_MAG_MOM) +' '+ f(PROTON_HALF_LIFE) +' 0' +nl
+		out += f(PROTON_MASS/1e6) +' '+ f(PROTON_CHARGE) +' '+ f(PROTON_ANOM_MAG_MOM) +' '+ f(PROTON_MEAN_LIFE) +' 0' +nl
 		return out
 
 class MUON(zgoubi_element):
@@ -295,7 +291,7 @@ class MUON(zgoubi_element):
 		i = self.i2s
 
 		out = "'PARTICUL'" +nl
-		out += f(MUON_MASS/1e6) +' '+ f(MUON_CHARGE) +' '+ f(MUON_ANOM_MAG_MOM) +' '+ f(MUON_HALF_LIFE) +' 0' +nl
+		out += f(MUON_MASS/1e6) +' '+ f(MUON_CHARGE) +' '+ f(MUON_ANOM_MAG_MOM) +' '+ f(MUON_MEAN_LIFE) +' 0' +nl
 		return out
 
 class IMMORTAL_MUON(zgoubi_element):
