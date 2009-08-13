@@ -201,6 +201,15 @@ def mom_to_rigidity(mom):
 	return rigidity
 
 
+def mom_to_ke(mom,mass):
+	"""mom in eV/c
+	gives results in eV
+	"""
+	ke = sqrt(mom**2 + mass**2) - mass
+
+	return ke
+
+
 def ke_to_relativistic_beta_gamma(ke, mass):
 	"""ke in eV, mass in eV/c^2
 	"""
