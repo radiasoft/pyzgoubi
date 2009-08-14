@@ -314,13 +314,6 @@ class Line(object):
 		infile.write(self.output())
 		infile.close()
 		
-		#os.system('ls -la')
-		if not os.path.exists(zgoubi_settings['zgoubi_path']):
-			error = "Zgoubi executable does not exist at:\n"
-			error += zgoubi_settings['zgoubi_path']
-			error += "\nPlease modify the settings file\n"
-			raise ValueError, error
-
 		command = zgoubi_settings['zgoubi_path']
 		if silence:
 			command += " > zgoubi.stdout 2> zgoubi.sdterr"
