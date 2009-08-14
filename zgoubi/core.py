@@ -27,6 +27,7 @@ import os
 import sys
 import re
 import struct
+from glob import glob
 try:
 	import numpy
 except:
@@ -50,6 +51,7 @@ from settings import zgoubi_settings
 zgoubi_module_path = os.path.dirname( os.path.realpath( __file__ ) )
 zgoubi_path = zgoubi_settings['zgoubi_path']
 
+pyzgoubi_egg_path = glob(os.path.dirname(zgoubi_module_path) + "/pyzgoubi*egg-info")
 
 static_defs = os.path.join(zgoubi_module_path,'..','..','..','..' ,"share","pyzgoubi","definitions", "static_defs.py")
 simple_defs = os.path.join(zgoubi_module_path,'..','..','..','..' ,"share","pyzgoubi","definitions", "simple_elements.defs")
@@ -84,6 +86,12 @@ else:
 		if os.path.exists(f) and os.path.getmtime(f) >= os.path.getmtime(compiled_defs_path):
 			print "need to recompile", f
 			need_def_compile = True
+	if not need_def_compile: # also need to recompile after a install or update
+		for f in pyzgoubi_egg_path:
+			if os.path.exists(f) and os.path.getmtime(f) >= os.path.getmtime(compiled_defs_path):
+				print "pyzgoubi first run, compiling defs"
+				need_def_compile = True
+				break
 if need_def_compile:
 	from zgoubi import makedefs
 	print "Compiling definitions"
