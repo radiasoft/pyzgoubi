@@ -13,7 +13,7 @@ setup(name='pyzgoubi',
 	#package_data={'zgoubi': ['defs/*.py', 'defs/*.defs']},
 	data_files=[('share/pyzgoubi/definitions',glob('defs/*')),
 	            ('share/pyzgoubi/examples',glob('examples/*')),
-	            ('share/pyzgoubi/test',glob('tests/*')),
+	            ('share/pyzgoubi/test',glob('tests/*.py')),
 	            ('share/pyzgoubi/doc', glob('doc/*'))
 	            ]
 	)
