@@ -85,13 +85,13 @@ print "beta Y,Z at end of cell ",betayz
 twiss_profiles = get_twiss_profiles(emma,'twiss_profiles.txt')
 
 #extract s coordinate and beta_y from twiss_profiles and create figure beta_y_profile.png
-s = numpy.transpose(twiss_profiles)[0]
-beta_y = numpy.transpose(twiss_profiles)[3]
+s = twiss_profiles[0]
+beta_y = twiss_profiles[3]
 plot_data = map(list,zip(*[s,beta_y]))
 plot_data_xy(plot_data, 'beta_y_profile', labels=["beta_y profile","s [m]","beta_y [m]"],style='b+')
 
 #plot horizontal phase advance mu_y
-mu_y = numpy.transpose(twiss_profiles)[2]
+mu_y = twiss_profiles[2]
 plot_data = map(list,zip(*[s,mu_y]))
 plot_data_xy(plot_data, 'mu_y_profile', labels=["mu_y profile","s [m]","mu_y [rad]"],style='g+')
 

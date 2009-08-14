@@ -139,6 +139,31 @@ def readArray(filename, skipchar = '#', dtype=float):
 	return(a)
 
 
+def flatten(x):
+	"""flatten(sequence) -> list
+
+	Returns a single, flat list which contains all elements retrieved
+	from the sequence and all recursively contained sub-sequences
+	(iterables).
+
+	http://kogs-www.informatik.uni-hamburg.de/~meine/python_tricks
+
+	Examples:
+	>>> [1, 2, [3,4], (5,6)]
+	[1, 2, [3, 4], (5, 6)]
+	>>> flatten([[[1,2,3], (42,None)], [4,5], [6], 7, MyVector(8,9,10)])
+	[1, 2, 3, 42, None, 4, 5, 6, 7, 8, 9, 10]"""
+
+	result = []
+	for el in x:
+	    #if isinstance(el, (list, tuple)):
+	    if hasattr(el, "__iter__") and not isinstance(el, basestring):
+		result.extend(flatten(el))
+	    else:
+		result.append(el)
+	return result
+
+
 def find_centre(ellipse):
 	"find centre by using mean of coords, this assumes that point are evenly distributed around ellipse"
 	try:
@@ -519,7 +544,7 @@ def get_twiss_profiles(line,file_result):
 	twissparam = r.get_twiss_parameters()
 	beta_y_0 = twissparam[0]
 	alpha_y_0 = twissparam[1]
-        gamma_y_0 = twissparam[2]
+	gamma_y_0 = twissparam[2]
 	beta_z_0 = twissparam[3]
 	alpha_z_0 = twissparam[4]
 	gamma_z_0 = twissparam[5]
@@ -591,10 +616,10 @@ def get_twiss_profiles(line,file_result):
 		print >>fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], mu_y_list[i],beta_y,alpha_y_list[i],\
 			gamma_y_list[i],mu_z_list[i],beta_z,alpha_z_list[i],gamma_z_list[i])
 
-	#put twiss parameters together. Each row has format [s_coord, mu_y,beta_y, alpha_y, gamma_y, mu_z,beta_z, alpha_z, gamma_z]. Units are SI
-	twiss_profiles = numpy.transpose([[s*cm for s in S_alltracks[0]],label_ref,mu_y_list,beta_y_list,alpha_y_list,gamma_y_list,mu_z_list,beta_z_list,alpha_z_list,gamma_z_list])
+	#put twiss parameters together. Format [s_coord, mu_y, beta_y, alpha_y, gamma_y, mu_z, beta_z, alpha_z, gamma_z]. Units are SI
+	twiss_profiles = [[s*cm for s in S_alltracks[0]],label_ref,mu_y_list,beta_y_list,alpha_y_list,gamma_y_list,mu_z_list,beta_z_list,alpha_z_list,gamma_z_list]
 
-        return twiss_profiles
+	return twiss_profiles
 
 def emittance_to_coords(normemit_horizontal, normemit_vertical, gammayz, betayz, relbetgamma):
 	"""Given some initial normalised emittance in horizonal and vertical space, return points where phase
