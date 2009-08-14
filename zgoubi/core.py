@@ -52,6 +52,7 @@ zgoubi_path = zgoubi_settings['zgoubi_path']
 
 
 static_defs = os.path.join(zgoubi_module_path,'..','..','..','..' ,"share","pyzgoubi","definitions", "static_defs.py")
+simple_defs = os.path.join(zgoubi_module_path,'..','..','..','..' ,"share","pyzgoubi","definitions", "simple_elements.defs")
 
 
 #definitions of elements
@@ -67,7 +68,7 @@ if not os.path.exists(def_cache_dir):
 compiled_defs_path = os.path.join(config_dir, "def_cache","defs.py")
 
 definitions_paths = [os.path.join(config_dir, x) for x in os.listdir(config_dir) if x.endswith('.defs')]
-definitions_paths.append(os.path.join(zgoubi_module_path, "defs", "simple_elements.defs"))
+definitions_paths.append(simple_defs)
 definitions_paths += zgoubi_settings['extra_defs_files']
 nl = '\n'
 
