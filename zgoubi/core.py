@@ -473,6 +473,10 @@ class Line(object):
 		for element in elements:
 			self.element_list.insert(index,element)
 
+	def remove(self,index):
+		"Remove element at index"
+		self.element_list.pop(index)
+
 	def find_elements(self, element):
 		"Find elements in the line and return the indices"
 		indices = []
