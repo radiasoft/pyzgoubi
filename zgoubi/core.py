@@ -692,7 +692,7 @@ class Results(object):
 		l3_re =     trans_to_regex('%d +%d +%f +%f +%f +%f +%f +%f +%f +%f')
 		l3_re_plt = trans_to_regex('%d +%d +%d +%f +%f +%f +%f +%f +%f +%f')
 		l4_re =     trans_to_regex('%f +%d %8c %8c%8c +%d')
-		l4_re_plt = trans_to_regex('%f +%f +%f +%f +%d %8c %8c %8c +%d')
+		l4_re_plt = trans_to_regex('%f +%f +%f +%f +%d %8c %8c%8c +%d')
 
 		l0_spn =    trans_to_regex('%d +%f +%f +%f +%f +%f +%f +%f +%f')
 		l1_spn =    trans_to_regex('%f +%d +%d +%d +%d')
