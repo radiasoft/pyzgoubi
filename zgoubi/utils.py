@@ -304,6 +304,9 @@ def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-8,
 		track.insert(0, current_YTZP)
 		track_a = numpy.array(track)
 		tracks.append(track_a)
+
+		#clean up tmp directory
+		line.clean()
 		
 		centre_h = find_centre(track_a[:,0:2])
 		area_h = calc_area_simple(track_a[:,0:2], centre=centre_h)
