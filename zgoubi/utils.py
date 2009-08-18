@@ -336,16 +336,19 @@ def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-8,
 		return None
 
 
-def get_twiss_profiles(line,file_result):
+def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0]):
 	""" Calculates the twiss parameters at all points written to zgoubi.plt. 11 particle trajectories are used to calculate the
 	transfer matrix, just as is done in zgoubi. The code mirrors that found in mat1.f, mksa.f. The twiss parameters are first
-	calculated at the end of the cell using get_twiss_parameters and then mapped to the magnets using the transfer matrix at
-	each point. The results are stored in list twiss_profiles where each row represents a point in the zgoubi.plt file and
-	has format [s_coord, label,  mu_y, beta_y, alpha_y, gamma_y, mu_z, beta_z, alpha_z, gamma_z]
+	calculated at the end of the cell using either input_twiss_parameters (format [beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z]) 
+	or, if this is not supplied, it assumes the cell is periodic and uses get_twiss_parameters to find the boundary condition. 
+
+	The twiss parameters are then mapped to all points in the magnets using the transfer matrix calculated at each point. The results are stored
+	in list twiss_profiles where each row represents a point in the zgoubi.plt file and has format 
+	[s_coord, label,  mu_y, beta_y, alpha_y, gamma_y, mu_z, beta_z, alpha_z, gamma_z]
 
 	Requires an OBJET type 5, and a MATRIX element.
 
-        Note - This calculation uses trajectories as measured in the local coordinate system of the magnet."""
+	Note - This calculation uses trajectories as measured in the local coordinate system of the magnet."""
 
 
 	has_object5 = False
@@ -541,16 +544,24 @@ def get_twiss_profiles(line,file_result):
 	R46_list = [x*unit_list[3]/unit_list[5] for x in R46_list]
 	R56_list = [x*unit_list[4]/unit_list[5] for x in R56_list]
 	
-        #------------------------------------------------------
-        # Get inital twiss paramters
-	#------------------------------------------------------
-	twissparam = r.get_twiss_parameters()
-	beta_y_0 = twissparam[0]
-	alpha_y_0 = twissparam[1]
-	gamma_y_0 = twissparam[2]
-	beta_z_0 = twissparam[3]
-	alpha_z_0 = twissparam[4]
-	gamma_z_0 = twissparam[5]
+	#---------------------------------------------------------------------------------------------------------------------------------------
+	# Get inital twiss paramters. If no input_twiss_parameters supplied, assume cell is periodic and find results using get_twiss_parameters
+	#---------------------------------------------------------------------------------------------------------------------------------------
+	if input_twiss_parameters == [0,0,0,0,0,0]:
+		twissparam = r.get_twiss_parameters()
+		beta_y_0 = twissparam[0]
+		alpha_y_0 = twissparam[1]
+		gamma_y_0 = twissparam[2]
+		beta_z_0 = twissparam[3]
+		alpha_z_0 = twissparam[4]
+		gamma_z_0 = twissparam[5]
+	else:
+		beta_y_0 = input_twiss_parameters[0]
+		alpha_y_0 = input_twiss_parameters[1]
+		gamma_y_0 = input_twiss_parameters[2]
+		beta_z_0 = input_twiss_parameters[3]
+		alpha_z_0 = input_twiss_parameters[4]
+		gamma_z_0 = input_twiss_parameters[5]
 
         #----------------------------------------------------------------------------------------------------------------
         # Calculate twiss parameters at all points in plt file 

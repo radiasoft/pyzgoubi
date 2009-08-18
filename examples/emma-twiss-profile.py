@@ -84,6 +84,9 @@ print "beta Y,Z at end of cell ",betayz
 #get_twiss_profiles has format [s_coord, label, mu_y, beta_y, alpha_y, gamma_y, mu_z,beta_z, alpha_z, gamma_z]
 twiss_profiles = get_twiss_profiles(emma,'twiss_profiles.txt')
 
+#Note - Could specify twiss parameters at beginning of cell
+#twiss_profiles = get_twiss_profiles(emma,'twiss_profiles.txt',input_twiss_parameters = [beta_y,alpha_y,gamma_y,beta_z,alpha_z,gamma_z])
+
 #extract s coordinate and beta_y from twiss_profiles and create figure beta_y_profile.png
 s = twiss_profiles[0]
 beta_y = twiss_profiles[3]
