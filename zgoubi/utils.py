@@ -754,6 +754,31 @@ def find_indices(list,list_element):
 	return indices
 
 
+def get_enclosing_circle(ellipse_data):
+	""" Find smallest circle that encloses a set of ellipses centred on the midplane. The ellipses are defined by their horizontal and vertical radii and by their centre along the horizontal axis (a,b,c). The algorithm optimised both the centre of the enclosing circle and its radius. 
+
+	Ellipse algorithm by J. Scott Berg (BNL)
+	
+	Reference - J. Scott Berg. 'Finding the Circular Magnet Aperture which Encloses and Arbitrary number of midplace-centered Beam Ellipses', Proc. EPAC04, 5-9 July, Lucerne Congress Centre, Lucerne, Switzerland
+
+	""" 
+
+	import Ellipse
+
+	bc = Ellipse.BestCircle()
+
+	for edata in ellipse_data:
+		a = edata[0]
+		b = edata[1]
+		c = edata[2]
+		bc.append((a,b,c))
+
+	(zz,rr) = bc.get_circle()
+	print 'centre of enclosing circle =', zz, ", with radius =", rr
+
+	return
+
+
 def plot_data_xy(data, filename, labels=["","",""], style='b-', xlim = [0,0], ylim = [0,0]):
 	import pylab
 	data_a = numpy.array(data)
