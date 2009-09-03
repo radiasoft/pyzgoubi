@@ -754,6 +754,41 @@ def find_indices(list,list_element):
 	return indices
 
 
+def scaling_to_dipole(k, r0, b0_in, d_r0=0, scale_factor=1.0, terms=4):
+	"""
+		A scaling FFAG has field given by B/B0 = (r/r0)^k where k is the scaling factor.
+		The Taylor expansion about r0 yields
+		
+		B(r)/B0 = (k!/(n!(k-n)!)) * (r-r0)^n/r0^n for each multipole n
+
+		In DIPOLES the magnetic field (ignoring fringe field factor) is given by
+	
+		B(r)/B0 = bcoef[n] (r-r0)^n/r0^n for each multipole n
+
+		It follows that setting bcoef[n] = (k!/(n!(k-n)!)) will create a DIPOLE magnet whose field approximates the scaling law.
+		Routine returns bcoef up to number of terms specified. 
+
+		If r0 is scaled by scale_factor, the coefficients are scaled accordingly. 
+		If r0 is shifted by d_r0, the routine will update B0 (b0_in) according to the scaling law"""
+
+
+	#calculate k*(k-1)*(k-2)*.../n!
+	bcoef = [k]
+	kfac = k
+	for i in range(terms-1):
+		kfac = kfac*(k-i-1)/(i+2)
+		bcoef.append(kfac)
+		
+	#scale coefficients to be consistent with radius scaling
+	for index in range(len(bcoef)):
+		bcoef[index] = bcoef[index]*scale_factor**(index+1)
+
+	#adjust B0 if r0 is shifted by d_r0
+	b0 = b0_in*(1 + d_r0/r0)**k
+
+	return bcoef, b0
+
+
 def get_enclosing_circle(ellipse_data):
 	""" Find smallest circle that encloses a set of ellipses centred on the midplane. The ellipses are defined by their horizontal and vertical radii and by their centre along the horizontal axis (a,b,c). The algorithm optimised both the centre of the enclosing circle and its radius. 
 
