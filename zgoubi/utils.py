@@ -827,3 +827,58 @@ def plot_data_xy(data, filename, labels=["","",""], style='b-', xlim = [0,0], yl
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])
 	pylab.savefig(filename)
+
+
+def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["","",""], style='', xlim = [0,0], ylim = [0,0]):
+	import pylab
+	""" Plots multiple sets of data where the X and Y coordinates are each specified in a list of lists. Should also
+	    work if a single set of X, Y data is specified or if one X is supplied with multiple Y data points (as long 
+	    the dimensions of Y agree with X in all cases). The plot style can be supplied as a list or as a single value.
+	    If no style is specified,  will cycle over a predefined style list. """
+
+	#check if data is a single list or a list of lists
+	single_x_data = False
+	single_y_data = False
+
+	try:
+		l = len(data_x_list[0])
+	except TypeError:
+		single_x_data = True
+
+	try:
+		l = len(data_y_list[0])
+	except TypeError:
+		single_y_data = True
+
+	#the type == list test doesn't cover numy.array objects that could also be plotted
+	#if type(data_x_list[0]) != list:
+	#    single_x_data = True
+
+	#if type(data_y_list[0]) != list:
+	#    single_y_data = True
+
+
+	if type(style) != list:
+	    style = [style]
+	if style == ['']:
+	    style = ['k-','b-','r-','g-','m-','y-']
+
+	if single_y_data:
+	    pylab.plot(data_x_list, data_y_list, style[0])
+	else:
+	    for index, data_y in enumerate(data_y_list):
+		    if single_x_data:
+			pylab.plot(data_x_list, data_y, style[index%len(style)])
+		    else:
+			pylab.plot(data_x_list[index], data_y, style[index%len(style)])
+
+	pylab.title(labels[0])
+	if xlim != [0,0]:
+		pylab.xlim( (xlim[0] ,xlim[1]) )
+	if ylim != [0,0]:
+		pylab.ylim( (ylim[0] ,ylim[1]) )
+	pylab.xlabel(labels[1])
+	pylab.ylabel(labels[2])
+	
+	pylab.savefig(filename)
+	pylab.cla()
