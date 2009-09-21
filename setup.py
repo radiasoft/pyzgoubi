@@ -19,20 +19,33 @@ setup(name='pyzgoubi',
 	)
 
 
-if "install" in sys.argv:
-	#find the prefix argument
+if ("install" in sys.argv) and not ( "--help" in sys.argv):
+	#find the log
 	try:
-		prefix = [x for x in sys.argv if x.startswith('--prefix')][-1]
+		logfile = [x for x in sys.argv if x.startswith('--record')][-1]
 		#strip away quotes, and expand path
-		prefix = prefix.split('=')[-1].strip('"\'')
-		prefix = os.path.expanduser(prefix)
-		prefix = os.path.join(os.getcwd(), prefix)
+		logfile = logfile.split('=')[-1].strip('"\'')
+		logfile = os.path.expanduser(logfile)
 	except IndexError:
-		prefix = "/usr/local"
-	print "\nyou may need to add the following to your .bashrc"
-	print "export PYTHONPATH=$PYTHONPATH:%s"%get_python_lib(True,False, prefix)
-	print "export PATH=$PATH:%s/bin"%prefix
-	print "or"
-	print 'alias pyzgoubi="PYTHONPATH=%s python %s/bin/pyzgoubi.py"'%(get_python_lib(True,False, prefix), prefix)
+		logfile = "install.log"
 
-
+	try:
+		for line in open(logfile):
+			line = line.strip()
+			if line.endswith("bin/pyzgoubi.py"):
+				bin_path = os.path.dirname(line)
+			if line.endswith("zgoubi/__init__.py"):
+				lib_path = os.path.normpath(os.path.join(os.path.dirname(line),".."))
+	except IOError:
+		#error below will show
+		pass
+		
+	try:
+		print "\nyou may need to add the following to your .bashrc"
+		print "export PYTHONPATH=$PYTHONPATH:%s"%lib_path
+		print "export PATH=$PATH:%s"%bin_path
+		print "or"
+		print 'alias pyzgoubi="PYTHONPATH=%s python %s/pyzgoubi.py"'%(lib_path, bin_path)
+	except NameError:
+		print "Could not see install log, install may have failed."
+		print "Can't give help with setting up path"

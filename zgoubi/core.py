@@ -212,7 +212,11 @@ class zgoubi_element(object):
 	def list_params(self):
 		return list(self._params)
 			
-execfile(static_defs)
+try:
+	execfile(static_defs)
+except IOError:
+	print "Could not load static element definitions, maybe you are running pyzgoubi from the source directory"
+	sys.exit(1)
 execfile(compiled_defs_path)
 
 class Line(object):
