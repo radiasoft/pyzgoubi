@@ -112,11 +112,11 @@ if __name__ == '__main__':
 	except IndexError:
 		print "No input file, try:"
 		print "pyzgoubi inputfile"
-		sys.exit()
+		sys.exit(1)
 	
 	if not os.path.exists(input_file_name):
 		print "no such input file in current directory"
-		sys.exit()
+		sys.exit(1)
 		
 	execfile(input_file_name)
 	

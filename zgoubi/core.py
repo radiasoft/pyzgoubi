@@ -36,7 +36,7 @@ try:
 	from operator import itemgetter
 except:
 	print "please use python 2.5 or newer"
-	sys.exit()
+	sys.exit(1)
 try:
 	import cairo
 except:

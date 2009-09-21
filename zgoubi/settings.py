@@ -37,7 +37,7 @@ except OSError:
 	print "please modify the 'zgoubi_path' entry in", config_path, "to the full path of zgoubi"
 	print "or add the direcory containing zgoubi to the $PATH"
 	import sys
-	sys.exit()
+	sys.exit(1)
 
 
 zgoubi_settings = {}

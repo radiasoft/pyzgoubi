@@ -19,7 +19,7 @@ for line in install_res.communicate()[0].split('\n'):
 		
 if install_res.returncode != 0:
 	print "ERROR: install failed"
-	sys.exit()
+	sys.exit(1)
 
 
 
@@ -56,7 +56,7 @@ for test_file in os.listdir(test_dir):
 
 
 print ""
-print "Summery:"
+print "Summary:"
 print "Ran %d tests"%number_of_tests
 print "Pass %d"%len(tests_sucess)
 print "Fail %d"%len(tests_fail)
