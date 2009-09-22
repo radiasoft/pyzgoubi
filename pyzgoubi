@@ -64,10 +64,10 @@ for func_name in res_funcs:
 
 def _show_help():
 	if len(sys.argv) == 2:
-		print "For docementation see http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/"
+		print "For documentation see http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/"
 		sys.exit(0)
 	if sys.argv[2].lower() == "elements":
-		print "avaliable elements"
+		print "available elements"
 		elements = []
 
 		for k,v in globals().items():

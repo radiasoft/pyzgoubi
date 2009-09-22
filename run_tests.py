@@ -20,6 +20,7 @@ for line in install_res.communicate()[0].split('\n'):
 		
 if install_res.returncode != 0:
 	print "ERROR: install failed"
+	print "If there were permission errors, try running 'sudo ./setup clean --all' and 'sudo rm install.log'"
 	sys.exit(1)
 
 

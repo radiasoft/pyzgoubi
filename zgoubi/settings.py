@@ -18,8 +18,6 @@ config.add_section('pyzgoubi')
 #default values
 config.set('pyzgoubi', 'tmp_dir', '/tmp/')
 config.set('pyzgoubi', 'extra_defs_files', '')
-#config.set('pyzgoubi', 'pyzgoubi_dir', "/home/sam/pyzgoubi/")
-#config.set('pyzgoubi', 'defs_dir', "/home/sam/pyzgoubi/defs")
 config.set('pyzgoubi', 'zgoubi_path', "zgoubi")
 
 
@@ -32,7 +30,7 @@ else:
 # check zgoubi binary
 import subprocess
 try:
-	a = subprocess.Popen([config.get('pyzgoubi', 'zgoubi_path')], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	a = subprocess.Popen([os.path.expanduser(config.get('pyzgoubi', 'zgoubi_path'))], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 except OSError:
 	print "can't zgoubi binary", config.get('pyzgoubi', 'zgoubi_path')
 	print "please modify the 'zgoubi_path' entry in", config_path, "to the full path of zgoubi"
@@ -42,13 +40,13 @@ except OSError:
 
 
 zgoubi_settings = {}
-zgoubi_settings['tmp_dir'] = config.get('pyzgoubi', 'tmp_dir')
+zgoubi_settings['tmp_dir'] = os.path.expanduser(config.get('pyzgoubi', 'tmp_dir'))
 #zgoubi_settings['pyzgoubi_dir'] = config.get('pyzgoubi', 'pyzgoubi_dir')
 #zgoubi_settings['defs_dir'] = config.get('pyzgoubi', 'defs_dir')
 
-zgoubi_settings['zgoubi_path'] = config.get('pyzgoubi', 'zgoubi_path')
+zgoubi_settings['zgoubi_path'] = os.path.expanduser(config.get('pyzgoubi', 'zgoubi_path'))
 
-zgoubi_settings['extra_defs_files'] = config.get('pyzgoubi', 'extra_defs_files').split(',')
+zgoubi_settings['extra_defs_files'] = [os.path.expanduser(x) for x in config.get('pyzgoubi', 'extra_defs_files').split(',')]
 if zgoubi_settings['extra_defs_files'] == ['']:
 	zgoubi_settings['extra_defs_files'] = []
 
