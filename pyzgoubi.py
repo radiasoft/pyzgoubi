@@ -24,7 +24,7 @@ from zgoubi.utils import *
 from zgoubi.core import *
 from zgoubi.constants import *
 
-zgoubi_version = "0.3dev"
+zgoubi_version = "0.3"
 
 # create a set of functions that work on default_line and default_results objects
 # these will make it simpler to run simple simulations

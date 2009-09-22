@@ -10,6 +10,7 @@ import time
 install_dir = tempfile.mkdtemp(prefix='/tmp/pyzgoubi_test_inst_')
 print "installing to", install_dir
 #install_res = os.system("python setup.py install --prefix=%s"%install_dir)
+subprocess.Popen(["./setup.py", "clean", "--all"])
 install_res = subprocess.Popen(["./setup.py", "install", "--prefix=%s"%install_dir], stdout=subprocess.PIPE)
 
 for line in install_res.communicate()[0].split('\n'):

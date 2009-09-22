@@ -1,3 +1,31 @@
+Changes 3.3 -> 3.0
+Infrastructure changes:
+* Moved code to sourceforge with bzr for revision control.
+* The custom install is gone, and replaced with the standard python tools (install with "./setup.py install")
+* Added some tests (do "./run_tests.py" in the source directory).
+
+New features:
+* Some command line options
+	pyzgoubi --version
+	pyzgoubi --help
+	pyzgoubi --help elements
+	pyzgoubi --help quadrupo
+* Simple mode which acts on a default line to save a bit of typing, see docs
+* Spin tracking
+* emittance_to_coords()
+* get_twiss_profiles()
+* scaling_to_dipole()
+* plot_data_xy_multi()
+* DIPOLES element
+* BestCircle code to find smallest circle enclosing an ellipse, from J. Scott Berg
+
+Several bug fixes
+
+Note: binary fai reading does not yet work with Zgoubi 5.1 (the format changed since 5.0)
+
+
+
+Changes 2.2 -> 2.3
 * Reading of binary fai files, use get_all(file='bfai')
 * Twiss profile function from David
 * Disable sorting by D in OBJET2, can be enabled with .sorted=True
