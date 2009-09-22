@@ -608,7 +608,7 @@ class Results(object):
 			file_len = os.path.getsize(os.path.join(self.rundir,'b_zgoubi.fai'))
 			head_len = 352
 			chunk_len = 251
-			assert((file_len-head_len)%chunk_len == 0), "File size does not seem right for a binary fai file"
+			assert((file_len-head_len)%chunk_len == 0), "File size does not seem right for a binary fai file. File length is %s"%file_len
 		else:
 			raise ValueError, "get_all_bin() expects name to be 'bplt' or 'bfai'"
 

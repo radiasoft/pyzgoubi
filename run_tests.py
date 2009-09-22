@@ -37,6 +37,10 @@ tests_fail = []
 tot_time = 0
 
 for test_file in os.listdir(test_dir):
+	if len(sys.argv) > 1:
+		if test_file not in sys.argv:
+			print "skipping", test_file
+			continue
 	full_test_file = os.path.join(test_dir, test_file)
 	tests_run += 1
 	print "running test %s, %d of %d"%(test_file, tests_run, number_of_tests)
