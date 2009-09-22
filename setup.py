@@ -9,7 +9,7 @@ from glob import glob
 setup(name='pyzgoubi',
 	version='0.3',
 	packages=['zgoubi'],
-	scripts=['pyzgoubi.py'],
+	scripts=['pyzgoubi'],
 	#package_data={'zgoubi': ['defs/*.py', 'defs/*.defs']},
 	data_files=[('share/pyzgoubi/definitions',glob('defs/*')),
 	            ('share/pyzgoubi/examples',glob('examples/*')),
@@ -32,7 +32,7 @@ if ("install" in sys.argv) and not ( "--help" in sys.argv):
 	try:
 		for line in open(logfile):
 			line = line.strip()
-			if line.endswith("bin/pyzgoubi.py"):
+			if line.endswith("bin/pyzgoubi"):
 				bin_path = os.path.dirname(line)
 			if line.endswith("zgoubi/__init__.py"):
 				lib_path = os.path.normpath(os.path.join(os.path.dirname(line),".."))
@@ -45,7 +45,7 @@ if ("install" in sys.argv) and not ( "--help" in sys.argv):
 		print "export PYTHONPATH=$PYTHONPATH:%s"%lib_path
 		print "export PATH=$PATH:%s"%bin_path
 		print "or"
-		print 'alias pyzgoubi="PYTHONPATH=%s python %s/pyzgoubi.py"'%(lib_path, bin_path)
+		print 'alias pyzgoubi="PYTHONPATH=%s python %s/pyzgoubi"'%(lib_path, bin_path)
 	except NameError:
 		print "Could not see install log, install may have failed."
 		print "Can't give help with setting up path"
