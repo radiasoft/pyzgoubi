@@ -23,6 +23,7 @@ config.set('pyzgoubi', 'extra_defs_files', '')
 config.set('pyzgoubi', 'zgoubi_path', "zgoubi")
 
 
+
 if os.path.exists(config_path):
 	config.read(config_path)
 else:

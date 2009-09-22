@@ -1,24 +1,3 @@
-
-
-		
-# beam line elements that are not generated from defs
-class MARKER(zgoubi_element):
-	def __init__(self, name="" ,**settings):
-		self._name = name
-		self._params = {}
-		self._params['plt'] = True
-		self._params['name'] = name
-		self._zgoubi_name = "MARKER"
-		object.__setattr__(self, "ready", True)
-		self.set(settings)
-
-	def output(self):
-		assert(len(str(self._name)) > 0)
-		plt = ""
-		if self.plt:
-			plt = ".plt"
-		return "'MARKER' " + self.name + " " + plt + nl
-
 class OBJET1(zgoubi_element):
 	"""Beam made of grid of particles, default params give just 1 reference particle.
 	Equivilent to OBJET with a KOBJ=1
