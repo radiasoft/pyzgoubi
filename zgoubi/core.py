@@ -306,10 +306,16 @@ class Line(object):
 		tmpdir = self.tmpdir
 	
 		for file in self.input_files:
-			src = file
+			src = os.path.join(orig_cwd, file)
 			dst = os.path.join(tmpdir, os.path.basename(file))
-			print src, dst
-			shutil.copyfile(src, dst)
+			#print src, dst
+			# if possible make a symlink instead of copying (should work on linux/unix)
+			if os.path.exists(dst):
+				os.remove(dst) # can't over write an existing symlink
+			try:
+				os.symlink(src, dst)
+			except AttributError: # should catch windows systems which don't have symlink
+				shutil.copyfile(src, dst)
 	
 		self.tmp_folders.append(tmpdir)
 		os.chdir(tmpdir)
