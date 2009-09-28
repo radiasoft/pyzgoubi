@@ -36,7 +36,7 @@ try:
 	from operator import itemgetter
 except:
 	print "please use python 2.5 or newer"
-	sys.exit()
+	sys.exit(1)
 try:
 	import cairo
 except:
@@ -212,7 +212,11 @@ class zgoubi_element(object):
 	def list_params(self):
 		return list(self._params)
 			
-execfile(static_defs)
+try:
+	execfile(static_defs)
+except IOError:
+	print "Could not load static element definitions, maybe you are running pyzgoubi from the source directory"
+	sys.exit(1)
 execfile(compiled_defs_path)
 
 class Line(object):
@@ -302,10 +306,16 @@ class Line(object):
 		tmpdir = self.tmpdir
 	
 		for file in self.input_files:
-			src = file
+			src = os.path.join(orig_cwd, file)
 			dst = os.path.join(tmpdir, os.path.basename(file))
-			print src, dst
-			shutil.copyfile(src, dst)
+			#print src, dst
+			# if possible make a symlink instead of copying (should work on linux/unix)
+			if os.path.exists(dst):
+				os.remove(dst) # can't over write an existing symlink
+			try:
+				os.symlink(src, dst)
+			except AttributError: # should catch windows systems which don't have symlink
+				shutil.copyfile(src, dst)
 	
 		self.tmp_folders.append(tmpdir)
 		os.chdir(tmpdir)
@@ -608,7 +618,7 @@ class Results(object):
 			file_len = os.path.getsize(os.path.join(self.rundir,'b_zgoubi.fai'))
 			head_len = 352
 			chunk_len = 251
-			assert((file_len-head_len)%chunk_len == 0), "File size does not seem right for a binary fai file"
+			assert((file_len-head_len)%chunk_len == 0), "File size does not seem right for a binary fai file. File length is %s"%file_len
 		else:
 			raise ValueError, "get_all_bin() expects name to be 'bplt' or 'bfai'"
 

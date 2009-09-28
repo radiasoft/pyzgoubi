@@ -10,6 +10,7 @@ import time
 install_dir = tempfile.mkdtemp(prefix='/tmp/pyzgoubi_test_inst_')
 print "installing to", install_dir
 #install_res = os.system("python setup.py install --prefix=%s"%install_dir)
+subprocess.Popen(["./setup.py", "clean", "--all"])
 install_res = subprocess.Popen(["./setup.py", "install", "--prefix=%s"%install_dir], stdout=subprocess.PIPE)
 
 for line in install_res.communicate()[0].split('\n'):
@@ -19,7 +20,8 @@ for line in install_res.communicate()[0].split('\n'):
 		
 if install_res.returncode != 0:
 	print "ERROR: install failed"
-	sys.exit()
+	print "If there were permission errors, try running 'sudo ./setup clean --all' and 'sudo rm install.log'"
+	sys.exit(1)
 
 
 
@@ -37,6 +39,10 @@ tests_fail = []
 tot_time = 0
 
 for test_file in os.listdir(test_dir):
+	if len(sys.argv) > 1:
+		if test_file not in sys.argv:
+			print "skipping", test_file
+			continue
 	full_test_file = os.path.join(test_dir, test_file)
 	tests_run += 1
 	print "running test %s, %d of %d"%(test_file, tests_run, number_of_tests)
@@ -56,7 +62,7 @@ for test_file in os.listdir(test_dir):
 
 
 print ""
-print "Summery:"
+print "Summary:"
 print "Ran %d tests"%number_of_tests
 print "Pass %d"%len(tests_sucess)
 print "Fail %d"%len(tests_fail)

@@ -137,7 +137,7 @@ class OBJET3(zgoubi_element):
 			out += "3" + nl
 		else:
 			print "Error - specify FTYPE, formatted or unformatted"
-			sys.exit()
+			sys.exit(1)
 
 		out += i(self.IT1) +' '+ i(self.IT2) +' '+ i(self.ITStep) +nl
 		out += i(self.IP1) +' '+ i(self.IP2) +' '+ i(self.IPStep) +nl

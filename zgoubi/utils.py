@@ -798,9 +798,9 @@ def get_enclosing_circle(ellipse_data):
 
 	""" 
 
-	import Ellipse
+	import ellipse
 
-	bc = Ellipse.BestCircle()
+	bc = ellipse.BestCircle()
 
 	for edata in ellipse_data:
 		a = edata[0]

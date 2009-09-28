@@ -24,7 +24,7 @@ from zgoubi.utils import *
 from zgoubi.core import *
 from zgoubi.constants import *
 
-zgoubi_version = "0.3dev"
+zgoubi_version = "0.3"
 
 # create a set of functions that work on default_line and default_results objects
 # these will make it simpler to run simple simulations
@@ -64,10 +64,10 @@ for func_name in res_funcs:
 
 def _show_help():
 	if len(sys.argv) == 2:
-		print "For docementation see http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/"
+		print "For documentation see http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/"
 		sys.exit(0)
 	if sys.argv[2].lower() == "elements":
-		print "avaliable elements"
+		print "available elements"
 		elements = []
 
 		for k,v in globals().items():
@@ -112,11 +112,11 @@ if __name__ == '__main__':
 	except IndexError:
 		print "No input file, try:"
 		print "pyzgoubi inputfile"
-		sys.exit()
+		sys.exit(1)
 	
 	if not os.path.exists(input_file_name):
 		print "no such input file in current directory"
-		sys.exit()
+		sys.exit(1)
 		
 	execfile(input_file_name)
 	

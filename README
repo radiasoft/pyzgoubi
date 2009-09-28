@@ -8,15 +8,10 @@ Python 2.5 (2.6 should work, but not tested)
 Numpy 1.0 (newer versions should work, but not tested)
 
 To install run
-./install.py
-and answer the questions
+./setup.py install
+or to in install to a specific place
+./setup.py install --prefix=/home/sam/pyzgoubi
 
-The installer will put the file in the location of your choice. If you choose it will add a line to your .bashrc file to set up the environment. This creates and alias 'pyzgoubi' with which you can run the interface. eg:
-
-pyzgoubi emma
-
-To update an existing installation use
-./install update
 
 Documentation is avaliable at http://www.hep.man.ac.uk/u/sam/pyzgoubi/doc.html or in the doc/ directory. More information can be found at http://www.hep.man.ac.uk/u/sam/pyzgoubi/ or https://sourceforge.net/projects/pyzgoubi/
 
