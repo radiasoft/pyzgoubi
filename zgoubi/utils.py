@@ -850,13 +850,7 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["","",""], st
 	except TypeError:
 		single_y_data = True
 
-	#the type == list test doesn't cover numy.array objects that could also be plotted
-	#if type(data_x_list[0]) != list:
-	#    single_x_data = True
-
-	#if type(data_y_list[0]) != list:
-	#    single_y_data = True
-
+	pylab.hold(True)
 
 	if type(style) != list:
 	    style = [style]
@@ -867,10 +861,10 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["","",""], st
 	    pylab.plot(data_x_list, data_y_list, style[0])
 	else:
 	    for index, data_y in enumerate(data_y_list):
-		    if single_x_data:
-			pylab.plot(data_x_list, data_y, style[index%len(style)])
-		    else:
-			pylab.plot(data_x_list[index], data_y, style[index%len(style)])
+			if single_x_data:
+				pylab.plot(data_x_list, data_y, style[index%len(style)])
+			else:
+				pylab.plot(data_x_list[index], data_y, style[index%len(style)])
 
 	pylab.title(labels[0])
 	if xlim != [0,0]:

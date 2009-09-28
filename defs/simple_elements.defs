@@ -29,8 +29,8 @@ CHANGREF
 CHANGREF
 XCE, YCE, ALE : 3E
 
-DIPOLES
-DIPOLES
+DIPOLES 
+DIPOLES #IND must be set to 5, i.e. up to dodecapole term
 IL : I
 N, AT, RM: I,2E
 !N*{
