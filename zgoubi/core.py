@@ -490,7 +490,6 @@ class Line(object):
 		self.element_list.pop(index)
 
 	def find_elements(self, element):
-		"Find elements in the line and return the indices"
 		indices = []
 		i = -1
 		try:

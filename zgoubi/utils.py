@@ -635,43 +635,6 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 
 	return twiss_profiles
 
-def emittance_to_coords(normemit_horizontal, normemit_vertical, gammayz, betayz, relbetgamma):
-	"""Given some initial normalised emittance in horizonal and vertical space, return points where phase
-	space ellipse crosses the y,y' and z,z' axis. Can use these points, returned in coords_YTZP to start
-	tracking at the desired emittance assuming that the optical functions don't change with amplitude.
-
-	Normalised emittance in both the horizontal and vertical planes must be supplied. Twiss parameters beta and gamma in 
-	both places may be determined calling get_twiss_parameters beforehand i.e.
-			twissparam = r.get_twiss_parameters()
-			betayz = [twissparam[0],twissparam[3]]
-			gammayz = [twissparam[2],twissparam[5]]"""
-	import numpy
-	
-	coords_YTZP = []
-
-	#maximum y or z value at sqrt(emit*beta)
- 	maxy=cm_*sqrt(normemit_horizontal*betayz[0]/relbetgamma)       
-	maxz=cm_*sqrt(normemit_vertical*betayz[1]/relbetgamma)
-
-	#crosses y or z axis at  sqrt(emit/gamma)
-	initialy=cm_*sqrt(normemit_horizontal/(gammayz[0]*relbetgamma))       
-	initialz=cm_*sqrt(normemit_vertical/(gammayz[1]*relbetgamma))
-	
-	initial_YTZP=[initialy,0,initialz,0]
-	coords_YTZP.append(initial_YTZP)
-
-	#maximum y' or z' value at sqrt(emit*gamma)
- 	maxt=mm_*sqrt(normemit_horizontal*gammayz[0]/relbetgamma)       
-	maxp=mm_*sqrt(normemit_vertical*gammayz[1]/relbetgamma)
-
-	#crosses y' or z' axis at sqrt(emit/beta) and convert to mrad (same as scaling by mm)
- 	initialt=mm_*sqrt(normemit_horizontal/(betayz[0]*relbetgamma))       
-	initialp=mm_*sqrt(normemit_vertical/(betayz[1]*relbetgamma))
-	initial_YTZP=[0,initialt,0,initialp]
-	coords_YTZP.append(initial_YTZP)
-
-	return coords_YTZP
-
 
 def fourier_tune(line,initial_YTZP,D_in,nfourierturns):
 	"""Calculate tune using FFT. nfourierturns determines the number of passes through the lattice. 
@@ -737,6 +700,133 @@ def fourier_tune(line,initial_YTZP,D_in,nfourierturns):
 	zfouriertune = zpeaksloc[0]/nfourierturns
 
 	return yfouriertune, zfouriertune
+
+
+def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_gamma_input = 1):
+        """ Check a list of emittances (emit_list, units Pi m rad) to see if tracking succeeds. Can be used to establish the dynamic aperture.
+			Required input:
+					closedorb_YTZP - Closed orbit coordinates as returned by find_closed_orbit
+					npass - Number of passes through lattice
+					D_mom - Momentum factor p/pref
+			Optional input
+					beta_gamma_input - If this is supplied then the emittances supplied in emit_list are assumed to be normalised
+										Otherwise the emittances are assumed to be geometrical.
+	
+		If a particle is lost, returns the index in emit_list where the loss occurs. Otherwise index_lost remains 0.
+        """
+
+	import numpy
+	import os
+	import zgoubi.core as zg
+
+    #create objet so initial phase settings can be set
+	for e in line.element_list:
+		if ("OBJET2" in str(type(e)).split("'")[1]):
+			objet = e
+			break
+	else:
+		raise ValueError, "Line has no OBJET2 element"
+
+	for e in line.element_list:
+		if ("FAISCNL" in str(type(e)).split("'")[1]):
+			break
+	else:
+		raise ValueError, "Line has no FAISCNL element"
+
+
+        #create reb so that number of passes can be set
+        for e in line.element_list:
+                if ("REBELOTE" in str(type(e)).split("'")[1]):
+                        reb = e
+                        break
+        else:
+		raise ValueError, "Line has no REBELOTE element"
+
+        reb.set(NPASS=npass-1)
+
+
+	#extract rigidity from dat_fh (line 3)
+	for index, dat_file_line in enumerate(line.dat_fh()):
+		if index == 2:
+			rigidity = float(dat_file_line)
+			break
+
+	#calculate optical parameters on closed orbit. This is required to convert emittances into a physical coordinate.
+	objet5 = zg.OBJET5()
+	line.replace(objet, objet5)
+	objet5.set(BORO=rigidity)
+	objet5.set(PY=1e-4,PT=1e-3,PZ=1e-4,PP=1e-3,PX=1e-3,PD=1e-3)
+	objet5.set(YR=closedorb_YTZP[0],TR=closedorb_YTZP[1],ZR=closedorb_YTZP[2],PR=closedorb_YTZP[3], DR=D_mom)
+	matrix= zg.MATRIX(IORD=1,IFOC=11)
+	line.replace(reb,matrix)
+	r = line.run(xterm = False)
+	twissparam = r.get_twiss_parameters()
+	#alphayz = [twissparam[1],twissparam[4]]
+	betayz = [twissparam[0],twissparam[3]]
+	gammayz = [twissparam[2],twissparam[5]]
+
+	#revert to objet2 mode with rebelote
+	line.replace(objet5, objet)
+	objet.clear()	# remove existing particles
+	objet.add(Y=closedorb_YTZP[0], T=closedorb_YTZP[1], Z=closedorb_YTZP[2], P=closedorb_YTZP[3], LET='A', D=D_mom)
+	line.replace(matrix,reb)
+
+
+	index_lost = 0
+	for emit in emit_list:
+		print "check emit ",emit
+		trial_YTZP=emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input)[0] 
+		from operator import add
+		current_YTZP = map(add,closedorb_YTZP,trial_YTZP)
+ 
+		objet.clear()	# remove existing particles
+		objet.add(Y=current_YTZP[0], T=current_YTZP[1], Z=current_YTZP[2], P=current_YTZP[3], LET='A', D=D_mom)
+               
+		#run Zgoubi
+		r = line.run(xterm=False)
+
+		rebelote_completed = r.test_rebelote()
+		
+		lost = not rebelote_completed
+
+		if(lost):
+			index_lost = emit_list.index(emit)
+			print "tracking failed at emit = ",emit
+			return index_lost
+
+        else:
+                print "Successful tracking in all test cases"
+
+		return index_lost
+
+
+def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_gamma_input = 1):
+	"""Given some initial emittance in horizonal and vertical space, return points where phase
+	space ellipse crosses the y,y' and z,z' axis. Can use these points, returned in coords_YTZP to start
+	tracking at the desired emittance assuming that the optical functions don't change with amplitude.
+
+	Emittances in both the horizontal and vertical planes may be supplied. Twiss parameters beta and gamma in 
+	both places may be determined calling get_twiss_parameters beforehand i.e.
+			twissparam = r.get_twiss_parameters()
+			betayz = [twissparam[0],twissparam[3]]
+			gammayz = [twissparam[2],twissparam[5]]"""
+	import numpy
+	
+	coords_YTZP = []
+
+	#crosses y or z axis at sqrt(emit/gamma). Convert to cm.
+	initialy=cm_*sqrt(emit_horizontal/(gammayz[0]*beta_gamma_input))       
+	initialz=cm_*sqrt(emit_vertical/(gammayz[1]*beta_gamma_input))
+	initial_YTZP=[initialy,0,initialz,0]
+	coords_YTZP.append(initial_YTZP)
+
+	#crosses y' or z' axis at sqrt(emit/beta) and convert to mrad (same as scaling by mm)
+ 	initialt=mm_*sqrt(emit_horizontal/(betayz[0]*beta_gamma_input))       
+	initialp=mm_*sqrt(emit_vertical/(betayz[1]*beta_gamma_input))
+	initial_YTZP=[0,initialt,0,initialp]
+	coords_YTZP.append(initial_YTZP)
+
+	return coords_YTZP
 
 
 def find_indices(list,list_element):
