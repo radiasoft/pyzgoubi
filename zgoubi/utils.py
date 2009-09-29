@@ -772,7 +772,7 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 	line.replace(matrix,reb)
 
 
-	index_lost = 0
+	index_lost = None
 	for emit in emit_list:
 		print "check emit ",emit
 		trial_YTZP=emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input)[0] 
@@ -794,10 +794,10 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 			print "tracking failed at emit = ",emit
 			return index_lost
 
-        else:
-                print "Successful tracking in all test cases"
+	else:
+		print "Successful tracking in all test cases"
 
-		return index_lost
+	return index_lost
 
 
 def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_gamma_input = 1):
