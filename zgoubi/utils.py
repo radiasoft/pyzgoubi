@@ -909,6 +909,8 @@ def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, seed = 12
 	with sigma, sigma_cutoff and mean among the input parameters. If sigma = 0.0, the misalignment is constant 
 	and given by mean
 
+	Returns the misailgnment distribution (misalign_dist)
+
 	element_indices can be determined using line.find_elements(element_name)
 
 	mean and sigma should be input in meters """
@@ -944,7 +946,7 @@ def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, seed = 12
 		line.insert(pos, misalign_elem)
 		line.insert(pos+2, misalign_elem_rev)
 
-	return
+	return misalign_dist
 
 
 def plot_data_xy(data, filename, labels=["","",""], style='b-', xlim = [0,0], ylim = [0,0]):
