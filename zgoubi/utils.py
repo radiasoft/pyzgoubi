@@ -702,15 +702,17 @@ def fourier_tune(line,initial_YTZP,D_in,nfourierturns):
 	return yfouriertune, zfouriertune
 
 
-def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_gamma_input = 1):
+def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_gamma_input = 1, ellipse_coords = 1, plot_data = False):
         """ Check a list of emittances (emit_list, units Pi m rad) to see if tracking succeeds. Can be used to establish the dynamic aperture.
 			Required input:
-					closedorb_YTZP - Closed orbit coordinates as returned by find_closed_orbit
-					npass - Number of passes through lattice
-					D_mom - Momentum factor p/pref
+				closedorb_YTZP - Closed orbit coordinates as returned by find_closed_orbit
+				npass - Number of passes through lattice
+				D_mom - Momentum factor p/pref
 			Optional input
-					beta_gamma_input - If this is supplied then the emittances supplied in emit_list are assumed to be normalised
-										Otherwise the emittances are assumed to be geometrical.
+				beta_gamma_input - If this is supplied then the emittances supplied in emit_list are assumed to be normalised. 				Otherwise the emittances are assumed to be geometrical.
+				ellipse_coords - If greater than 1 will test uniformly distributed set of coordinates around around phase space 			ellipse. Otherwise will take single point where phase space cuts y (or z) axis.
+						Can also specify ellipse coords = [n,m] -- distribute n points around ellipse but only test point m of these. 
+				plot_data - If True, creates phase space plots at all emittances scanned in both transverse planes.
 	
 		If a particle is lost, returns the index in emit_list where the loss occurs. Otherwise index_lost remains 0.
         """
@@ -719,7 +721,7 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 	import os
 	import zgoubi.core as zg
 
-    #create objet so initial phase settings can be set
+	#create objet so initial phase settings can be set
 	for e in line.element_list:
 		if ("OBJET2" in str(type(e)).split("'")[1]):
 			objet = e
@@ -751,7 +753,12 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 			rigidity = float(dat_file_line)
 			break
 
-	#calculate optical parameters on closed orbit. This is required to convert emittances into a physical coordinate.
+	coord_pick = None
+	if type(ellipse_coords) == list:
+	    coord_pick = ellipse_coords[1]
+	    ellipse_coords = ellipse_coords[0]
+
+	#calculate optical parameters on closed orbit. This is required to convert emittances into a coordinate.
 	objet5 = zg.OBJET5()
 	line.replace(objet, objet5)
 	objet5.set(BORO=rigidity)
@@ -773,37 +780,90 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 
 
 	index_lost = None
+	from operator import add
+	if plot_data:
+	    YTZP_list = []
+
 	for emit in emit_list:
 		print "check emit ",emit
-		trial_YTZP=emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input)[0] 
-		from operator import add
-		current_YTZP = map(add,closedorb_YTZP,trial_YTZP)
- 
-		objet.clear()	# remove existing particles
-		objet.add(Y=current_YTZP[0], T=current_YTZP[1], Z=current_YTZP[2], P=current_YTZP[3], LET='A', D=D_mom)
+		if coord_pick == None:
+		    coords_YTZP_ini = emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input, ncoords = ellipse_coords)
+		else:
+		    coords_YTZP_ini = emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input, ncoords = ellipse_coords)[coord_pick]
+
+		try:
+			l = len(coords_YTZP_ini[0])
+			coords_YTZP_ini = [map(add,closedorb_YTZP,coords) for coords in coords_YTZP_ini]
+		except TypeError:
+			coords_YTZP_ini = [map(add,closedorb_YTZP,coords_YTZP_ini)]
+	
+		for coord_index, current_YTZP in enumerate(coords_YTZP_ini):
+
+		    print "ellipse coord index ",coord_index
+		    objet.clear()	# remove existing particles
+		    objet.add(Y=current_YTZP[0], T=current_YTZP[1], Z=current_YTZP[2], P=current_YTZP[3], LET='A', D=D_mom)
+		    #objet.add(Y=current_YTZP2[0], T=current_YTZP2[1], Z=current_YTZP2[2], P=current_YTZP2[3], LET='B', D=D_mom)
                
-		#run Zgoubi
-		r = line.run(xterm=False)
+		    #run Zgoubi
+		    r = line.run(xterm= False)
+    
+		    if plot_data:
+			YTZP_list.append(r.get_track('fai', ['Y','T','Z','P']))
 
-		rebelote_completed = r.test_rebelote()
-		
-		lost = not rebelote_completed
-
-		if(lost):
-			index_lost = emit_list.index(emit)
-			print "tracking failed at emit = ",emit
-			return index_lost
+		    rebelote_completed = r.test_rebelote()
+		    
+		    lost = not rebelote_completed
+    
+		    if(lost):
+			    index_lost = emit_list.index(emit)
+			    print "tracking failed at emit = ",emit
+			    return index_lost, coord_index
 
 	else:
 		print "Successful tracking in all test cases"
 
-	return index_lost
+	if plot_data:
+	    coords_YTZP_full = emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input, ncoords = 100)
+	    coords_YTZP_full = [map(add,closedorb_YTZP,coords) for coords in coords_YTZP_full]
+	    coords_YTZP_full.append(coords_YTZP_full[0])
+
+	    #add many coordinates to draw phase space ellipse
+	    Y_data = [numpy.transpose(coords_YTZP_full)[0]]
+	    T_data = [numpy.transpose(coords_YTZP_full)[1]]
+	    Z_data = [numpy.transpose(coords_YTZP_full)[2]]
+	    P_data = [numpy.transpose(coords_YTZP_full)[3]]
+
+	    #add points on phase space ellipse actually used in scan
+	    Y_data.append([numpy.transpose(coords_YTZP_ini)[0]])
+	    T_data.append([numpy.transpose(coords_YTZP_ini)[1]])
+	    Z_data.append([numpy.transpose(coords_YTZP_ini)[2]])
+	    P_data.append([numpy.transpose(coords_YTZP_ini)[3]])
+    
+	    for index in range(len(YTZP_list)):
+		    Y_data.append(numpy.transpose(YTZP_list[index])[0])
+		    T_data.append(numpy.transpose(YTZP_list[index])[1])
+		    Z_data.append(numpy.transpose(YTZP_list[index])[2])
+		    P_data.append(numpy.transpose(YTZP_list[index])[3])
+
+	    plot_data_xy_multi(Y_data,T_data,'yt_check', labels=["Horizontal phase space","y [cm]","y' [mrad]"],style = ['k-','ro','b+','r+','g+','m+','y+'])
+	    plot_data_xy_multi(Z_data,P_data,'zp_check', labels=["Vertical phase space","z [cm]","z' [mrad]"],style = ['k-','ro','b+','r+','g+','m+','y+']) 
+	    
+
+	return index_lost, coord_index
 
 
-def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_gamma_input = 1):
-	"""Given some initial emittance in horizonal and vertical space, return points where phase
-	space ellipse crosses the y,y' and z,z' axis. Can use these points, returned in coords_YTZP to start
-	tracking at the desired emittance assuming that the optical functions don't change with amplitude.
+def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_gamma_input = 1, ncoords = 1):
+	"""Given some emittance in horizonal and vertical space
+
+	If ncoords >= 1 return points where phase space ellipse crosses the y,y' and z,z' axis.
+
+	If ncoords > 1, will instead give a distribution of points (y,t) around the phase space ellipse uniform in angle theta where
+	    y = a*cos(theta)*cos(phi) - b*sin(theta)*sin(phi)
+	    t = a*cos(theta)*sin(phi) + b*sin(theta)*cos(phi)
+	where (a,b) are major and minor radii and phi is the tilt of the major radius w.r.t horizontal axis. A (z,p) distribution is 
+	similarly calculated.
+
+	Can use these points, returned in coords_YTZP to start tracking at the desired emittance (assuming that the optical functions don't change with amplitude).
 
 	Emittances in both the horizontal and vertical planes may be supplied. Twiss parameters beta and gamma in 
 	both places may be determined calling get_twiss_parameters beforehand i.e.
@@ -814,17 +874,61 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 	
 	coords_YTZP = []
 
-	#crosses y or z axis at sqrt(emit/gamma). Convert to cm.
-	initialy=cm_*sqrt(emit_horizontal/(gammayz[0]*beta_gamma_input))       
-	initialz=cm_*sqrt(emit_vertical/(gammayz[1]*beta_gamma_input))
-	initial_YTZP=[initialy,0,initialz,0]
-	coords_YTZP.append(initial_YTZP)
+	if ncoords <= 1:
+	    #crosses y or z axis at sqrt(emit/gamma). Convert to cm.
+	    y_axis=cm_*sqrt(emit_horizontal/(gammayz[0]*beta_gamma_input))       
+	    z_axis=cm_*sqrt(emit_vertical/(gammayz[1]*beta_gamma_input))
+	    YTZP=[y_axis,0,z_axis,0]
+	    coords_YTZP.append(YTZP)
+    
+	    #crosses y' or z' axis at sqrt(emit/beta) and convert to mrad (same as scaling by mm)
+	    t_axis =mm_*sqrt(emit_horizontal/(betayz[0]*beta_gamma_input))       
+	    p_axis =mm_*sqrt(emit_vertical/(betayz[1]*beta_gamma_input))
+	    YTZP=[0,t_axis,0,p_axis]
+	    #coords_YTZP.append(YTZP)
 
-	#crosses y' or z' axis at sqrt(emit/beta) and convert to mrad (same as scaling by mm)
- 	initialt=mm_*sqrt(emit_horizontal/(betayz[0]*beta_gamma_input))       
-	initialp=mm_*sqrt(emit_vertical/(betayz[1]*beta_gamma_input))
-	initial_YTZP=[0,initialt,0,initialp]
-	coords_YTZP.append(initial_YTZP)
+	else:
+	    start_angle = 0.0
+	    end_angle = 2*pi
+	    angle_list = [start_angle+i*(end_angle-start_angle)/(ncoords) for i in range(ncoords)]
+	    emityz = [emit_horizontal/beta_gamma_input, emit_vertical/beta_gamma_input]
+	    ydat = []
+	    tdat = []
+	    zdat = []
+	    pdat = []
+	    for index in range(2):
+		#calculate twiss parameter alpha
+		alpha = (abs(betayz[index]*gammayz[index]-1))**0.5
+		#calculate major and minor radii in each plane
+		h = 0.5*(betayz[index] + gammayz[index])
+		major_radius = ((emityz[index]/2)**0.5)*( (h+1)**0.5 + (h-1)**0.5 )
+		minor_radius = ((emityz[index]/2)**0.5)*( (h+1)**0.5 - (h-1)**0.5 )
+		phi = 0.5*numpy.arctan(-2*alpha/(betayz[index]-gammayz[index]))
+
+		#decide which axis is the major one
+		if betayz[index] >= gammayz[index]:
+		    horiz_radius = major_radius
+		    vert_radius = minor_radius
+		else:
+		    horiz_radius = minor_radius
+		    vert_radius = major_radius		
+
+		for theta in angle_list:
+		    y_z = horiz_radius*cos(theta)*cos(phi) - vert_radius*sin(theta)*sin(phi)
+		    t_p = horiz_radius*cos(theta)*sin(phi) + vert_radius*sin(theta)*cos(phi)
+		    if index == 0:
+			ydat.append(cm_*y_z)
+			tdat.append(mm_*t_p)
+		    else:
+			zdat.append(cm_*y_z)
+			pdat.append(mm_*t_p)
+
+	    #plot_data_xy_multi(ydat,tdat,'ytdat', style = ['k+','b+','r+','g+'])
+	    #plot_data_xy_multi(zdat,pdat,'zpdat', style = ['k+','b+','r+','g+'])
+
+	    #put coords_YTZP together
+	    for index in range(ncoords):
+		coords_YTZP.append([ydat[index],tdat[index],zdat[index],pdat[index]])
 
 	return coords_YTZP
 
