@@ -1008,12 +1008,14 @@ def get_enclosing_circle(ellipse_data):
 	return
 
 
-def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, seed = 123456):
+def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_dist = [], seed = 123456):
 	""" Misalign the set of elements identified by element_indices. The misalignment is Gaussian
 	with sigma, sigma_cutoff and mean among the input parameters. If sigma = 0.0, the misalignment is constant 
 	and given by mean
 
-	Returns the misailgnment distribution (misalign_dist)
+	Alternatively, misalignments specified by list misalign_dist
+
+	Returns the misailgnment distribution (misalign_dist), unit meters
 
 	element_indices can be determined using line.find_elements(element_name)
 
@@ -1034,14 +1036,14 @@ def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, seed = 12
 	changref_indices = list(surround(element_indices))
 
 	#generate misalignment distribution (microns)
-	misalign_dist = []
-	while len(misalign_dist) < len(element_indices):
-		if sigma > 0.0:
-			rand = random.gauss(mean,sigma)
-			if abs(rand) < sigma_cutoff*sigma:
-				misalign_dist.append(rand)
-		else:
-			misalign_dist.append(mean)
+	if misalign_dist == []:
+		while len(misalign_dist) < len(element_indices):
+			if sigma > 0.0:
+				rand = random.gauss(mean,sigma)
+				if abs(rand) < sigma_cutoff*sigma:
+					misalign_dist.append(rand)
+			else:
+				misalign_dist.append(mean)
 
 	#insert CHANGREF with misalignments given by misalign_dist.
 	for index, pos in enumerate(changref_indices):
