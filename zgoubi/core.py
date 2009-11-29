@@ -53,8 +53,14 @@ zgoubi_path = zgoubi_settings['zgoubi_path']
 
 pyzgoubi_egg_path = glob(os.path.dirname(zgoubi_module_path) + "/pyzgoubi*egg-info")
 
-static_defs = os.path.join(zgoubi_module_path,'..','..','..','..' ,"share","pyzgoubi","definitions", "static_defs.py")
-simple_defs = os.path.join(zgoubi_module_path,'..','..','..','..' ,"share","pyzgoubi","definitions", "simple_elements.defs")
+if zgoubi_module_path.startswith("/"):
+	static_defs = os.path.join(zgoubi_module_path,'..','..','..','..' ,"share","pyzgoubi","definitions", "static_defs.py")
+	simple_defs = os.path.join(zgoubi_module_path,'..','..','..','..' ,"share","pyzgoubi","definitions", "simple_elements.defs")
+else:
+	# windows style paths
+	bits = zgoubi_module_path.split('\\')[:-3]+['share','pyzgoubi','definitions']
+	static_defs = '\\'.join(bits+['static_defs.py'])
+	simple_defs = '\\'.join(bits+['simple_elements.defs'])
 
 
 #definitions of elements
