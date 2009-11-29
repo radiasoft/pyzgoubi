@@ -423,6 +423,45 @@ I the second parameter to get_cmd_param() is the default. If you don't give a va
 
 then you will receive and error if you don't provide a value as an argument.
 
+
+Units
+-----
+
+PyZgoubi does not do any automatic unit conversion. When you give a parameter you must give the units that Zgoubi expects. However PyZgoubi does define some values to save some effort, in the conversion. Any of the following will set x to 2::
+
+	x = 2 * m
+	x = 200 * cm
+	x = 2000 * mm
+
+Then to output x in a different unit::
+
+	print x * m_ , "m"
+	print x * cm_ , "cm"
+	print x * mm_ , "mm"
+
+So for example DRIFT expects cm, but your lattice might use meters, so do::
+
+	d_length = 0.6 * m
+	DRIFT('d1', XL=d_length*cm_)
+
+Currently the following units are defined::
+
+	m
+	cm
+	mm
+	T
+	kgauss
+
+but more can be added on request.
+
+For conversion between degrees and radians use the python math functions::
+
+	degrees(2*pi) # gives 360
+	radians(180) # gives 3.1416...
+
+
+
+
 Tips
 ----
 Python hints
