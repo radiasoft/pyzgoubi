@@ -10,6 +10,7 @@ m = 1
 cm = 0.01
 mm = 0.001
 T = 1
+kgauss = 0.1
 
 # define things in metres, and tesla
 # then use these when setting up elements to convert
@@ -18,6 +19,7 @@ m_ = 1
 cm_ = 100
 mm_ = 1000
 kgauss_ = 10
+T_ = 1
 
 
 def coords_grid(min=[0,0], max=[1,1], step=[1,1], type=float):
