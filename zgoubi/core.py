@@ -262,6 +262,15 @@ class Line(object):
 				pass
 			element.print_elements(prefix+"\t")
 
+	def elements(self):
+		for element in self.element_list:
+			try:
+				# decend into sub lines
+				for sub_element in element.elements():
+					yield sub_element
+			except AttributeError:
+				yield element
+
 	def add(self, *elements):
 		"Add an elements to the line"
 		for element in elements:

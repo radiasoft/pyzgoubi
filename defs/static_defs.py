@@ -4,6 +4,8 @@ class OBJET1(zgoubi_element):
 	"""
 	def __init__(self ,**settings):
 		self._zgoubi_name = "OBJET"
+		self.label1 = ""
+		self.label2 = ""
 		self._params = {}
 		self._params['BORO'] = 0
 		for p in ['Y','T','Z','P','X','D']:
@@ -37,6 +39,8 @@ class OBJET2(zgoubi_element):
 	"""
 	def __init__(self ,**settings):
 		self._zgoubi_name = "OBJET"
+		self.label1 = ""
+		self.label2 = ""
 		self._params = {}
 		self._params['BORO'] = 0
 		self._params['particles'] = []
@@ -107,6 +111,8 @@ class OBJET3(zgoubi_element):
 	def __init__(self ,**settings):
 		self._zgoubi_name = "OBJET"
 		self._params = {}
+		self.label1 = ""
+		self.label2 = ""
 		self._params['BORO'] = 0
 		self._params['IT1'] = 1
 		self._params['IT2'] = 1
@@ -155,6 +161,8 @@ class OBJET5(zgoubi_element):
 	def __init__(self ,**settings):
 		self._zgoubi_name = "OBJET"
 		self._params = {}
+		self.label1 = ""
+		self.label2 = ""
 		self._params['BORO'] = 0
 		self._params['particles'] = []
 		for p in ['Y','T','Z','P','X','D']:
@@ -183,6 +191,8 @@ class MCOBJET3(zgoubi_element):
 	def __init__(self ,**settings):
 		self._zgoubi_name = "MCOBJET"
 		self._params = {}
+		self.label1 = ""
+		self.label2 = ""
 		self._params['BORO'] = 0
 		self._params['IMAX'] = 0
 		self._params['particles'] = []
@@ -237,6 +247,8 @@ class MCOBJET3(zgoubi_element):
 class ELECTRON(zgoubi_element):
 	def __init__(self):
 		self._params = {}
+		self.label1 = ""
+		self.label2 = ""
 		self._zgoubi_name = "PARTICUL"
 		
 	def output(self):
@@ -250,6 +262,8 @@ class ELECTRON(zgoubi_element):
 class PROTON(zgoubi_element):
 	def __init__(self):
 		self._params = {}
+		self.label1 = ""
+		self.label2 = ""
 		self._zgoubi_name = "PARTICUL"
 		
 	def output(self):
@@ -263,6 +277,8 @@ class PROTON(zgoubi_element):
 class MUON(zgoubi_element):
 	def __init__(self):
 		self._params = {}
+		self.label1 = ""
+		self.label2 = ""
 		self._zgoubi_name = "PARTICUL"
                
 	def output(self):
@@ -277,6 +293,8 @@ class IMMORTAL_MUON(zgoubi_element):
 	"non decaying muon"
 	def __init__(self):
 		self._params = {}
+		self.label1 = ""
+		self.label2 = ""
 		self._zgoubi_name = "PARTICUL"
                
 	def output(self):
@@ -290,6 +308,8 @@ class IMMORTAL_MUON(zgoubi_element):
 class FAKE_ELEM(zgoubi_element):
 	def __init__(self, data=""):
 		self.data = data
+		self.label1 = ""
+		self.label2 = ""
 		self._params = {}
 		self._zgoubi_name = "####"
 
