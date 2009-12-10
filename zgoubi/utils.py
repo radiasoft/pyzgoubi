@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from __future__ import division
 from math import *
 import numpy
@@ -350,7 +351,6 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 
 	Note - This calculation uses trajectories as measured in the local coordinate system of the magnet."""
 
-
 	has_object5 = False
        	has_matrix = False
        	for e in line.element_list:
@@ -364,9 +364,9 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 
 	#run Zgoubi
 	r = line.run(xterm = False)
-	#-----------------------------------------------------------------------------------------
-	#  PREPARE DATA FOR CALCULATION
-	#-----------------------------------------------------------------------------------------
+#!-----------------------------------------------------------------------------------------
+#!  PREPARE DATA FOR CALCULATION
+#!-----------------------------------------------------------------------------------------
 	plt_track = r.get_track('plt', ['LET','D0','Y0','T0','Z0','P0','X0','D','Y','T','Z','P','S','X'])
 	transpose_plt_track = map(list,zip(*plt_track))
 	track_tag = transpose_plt_track[0]
@@ -457,9 +457,23 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 
 	#11 coordinate in Y0_alltracks,T0_alltracks etc correspond to 11 starting conditions required by MATRIX
 
-	#-----------------------------------------------------------------------------------------
-	#  TRANSFER MATRIX CALCULATION AT ALL POINTS in PLT file (as in mat1.f)
-	#-----------------------------------------------------------------------------------------
+#!-----------------------------------------------------------------------------------------
+#!  TRANSFER MATRIX CALCULATION AT ALL POINTS in PLT file (as in zgoubi source file mat1.f)
+#!-----------------------------------------------------------------------------------------
+
+#pyreport latex
+#$ The linear transfer matrix relates the starting coordinates to the final coordinates \newline
+#$ \begin{pmatrix}
+#$ R11 & R12 & R13 & R14 & R15 & R16 \\
+#$ R21 & R22 & R23 & R24 & R25 & R26 \\
+#$ R31 & R32 & R33 & R34 & R35 & R36 \\
+#$ R41 & R42 & R43 & R44 & R45 & R46 \\
+#$ R51 & R52 & R53 & R54 & R55 & R56 \\
+#$ R61 & R62 & R63 & R64 & R65 & R66 \end{pmatrix}*
+#$\begin{pmatrix}
+#$ Y0 \\ T0 \\ Z0 \\ P0 \\ X0 \\ D0 \end{pmatrix}=
+#$\begin{pmatrix}
+#$ Y \\ T \\ Z \\ P \\ X \\ D \end{pmatrix}
 
 	#initialise transfer matrix
 	#transfer_matrix = zeros((6, 6))
@@ -468,7 +482,7 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 	# FORTRAN (mat1.f)   DP = ( FO(1,I10) - FO(1,I11) ) / (.5D0*( FO(1,I10) + FO(1,I11) ) )
 	DP = ((1+D0_alltracks[9])-(1+D0_alltracks[10]))/(0.5*((1+D0_alltracks[9])+(1+D0_alltracks[10])))
 
-        #Transfer matrix elements R(J-1,6), J in range (2,6)
+	#Transfer matrix elements R(J-1,6), J in range (2,6)
 	# FORTRAN (mat1.f)   R(J-1,6)  = (F(J,I10) - F(J,I11)) /DP
 	R16_list = [x/DP for x in map(numpy.subtract,Y_alltracks[9],Y_alltracks[10])]
 	R26_list = [x/DP for x in map(numpy.subtract,T_alltracks[9],T_alltracks[10])]
@@ -514,9 +528,9 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 			R44_list =  [x/UO for x in map(numpy.subtract,P_alltracks[i2],P_alltracks[i3])]
 			R54_list =  [x/UO for x in map(numpy.subtract,S_alltracks[i2],S_alltracks[i3])]
 		
-	#----------------------------------
-	# Adjust units to SI (as in mksa.f)
-	#----------------------------------
+#!----------------------------------
+#! Adjust units to SI (as in mksa.f)
+#!----------------------------------
 	unit_list = [1e-2,1e-3,1e-2,1e-3,1e-2,1,1e-6]
 	R21_list = [x*unit_list[1]/unit_list[0] for x in R21_list]
 	R31_list = [x*unit_list[2]/unit_list[0] for x in R31_list]
@@ -544,9 +558,9 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 	R46_list = [x*unit_list[3]/unit_list[5] for x in R46_list]
 	R56_list = [x*unit_list[4]/unit_list[5] for x in R56_list]
 	
-	#---------------------------------------------------------------------------------------------------------------------------------------
-	# Get inital twiss paramters. If no input_twiss_parameters supplied, assume cell is periodic and find results using get_twiss_parameters
-	#---------------------------------------------------------------------------------------------------------------------------------------
+
+#! Get inital twiss paramters. If no input_twiss_parameters supplied, assume cell is periodic and find results using get_twiss_parameters
+
 	if input_twiss_parameters == [0,0,0,0,0,0]:
 		twissparam = r.get_twiss_parameters()
 		beta_y_0 = twissparam[0]
@@ -563,13 +577,15 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 		alpha_z_0 = input_twiss_parameters[4]
 		gamma_z_0 = input_twiss_parameters[5]
 
-        #----------------------------------------------------------------------------------------------------------------
-        # Calculate twiss parameters at all points in plt file 
-	#  - The twiss parameters at the end of the periodic cell have been calculated by call to get_twiss_parameters 
-	#  - Twiss parameters at other points in the cell may calculated knowing these values and the transfer matrix.
-	#  - e.g. S.Y.Lee Accelerator physics equation 2.54
-	#  - The phase advance can be found by applying a Floquet transformation to the transfer matrix (S.Y.Lee eqn 2.65)
-        #-----------------------------------------------------------------------------------------------------------------
+
+#! Calculate twiss parameters at all points in plt file 
+#!######################################################
+
+#! The twiss parameters at the end of the periodic cell have been calculated by call to get_twiss_parameters, otherwise twiss parameters are input 
+#!
+#! - e.g. S.Y.Lee Accelerator physics equation 2.54
+#! - The phase advance can be found by applying a Floquet transformation to the transfer matrix (S.Y.Lee eqn 2.65)
+
  
 	fresults= open(file_result, 'w')
               
@@ -590,6 +606,7 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 		#-----------------
 		beta_y = (R11_list[i]**2)*beta_y_0 - 2.0*R11_list[i]*R12_list[i]*alpha_y_0 + (R12_list[i]**2)*gamma_y_0
 		beta_y_list.append(beta_y)
+
 		# Horizontal phase advance calculation
 		# To account for range of acos=(0,Pi), check sign of sin(angle) to know when to change from angle to (2*Pi-angle) etc.	
 		sine_angle = R12_list[i]/sqrt(beta_y*beta_y_0)
@@ -604,6 +621,7 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 				mu_y_list.append(n_pi_y*2*pi+acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
 			else:
 				mu_y_list.append(n_pi_y*2*pi-acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+
 		alpha_y_list.append(-R11_list[i]*R21_list[i]*beta_y_0 + (R11_list[i]*R22_list[i]+R12_list[i]*R21_list[i])*alpha_y_0 \
 			- R12_list[i]*R22_list[i]*gamma_y_0)
 		gamma_y_list.append((R21_list[i]**2)*beta_y_0-2*R21_list[i]*R22_list[i]*alpha_y_0+(R22_list[i]**2)*gamma_y_0)
@@ -611,6 +629,7 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 		#---------------
 		beta_z = (R33_list[i]**2)*beta_z_0 - 2.0*R33_list[i]*R34_list[i]*alpha_z_0 + (R34_list[i]**2)*gamma_z_0
 		beta_z_list.append(beta_z)
+
 		# Vertical phase advance calculation
 		sine_angle = R34_list[i]/sqrt(beta_z*beta_z_0)
 		if abs(sine_angle) > 1:
@@ -624,6 +643,7 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 				mu_z_list.append(n_pi_z*2*pi+acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
 			else: 
 				mu_z_list.append(n_pi_z*2*pi-acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
+
 		alpha_z_list.append(-R33_list[i]*R43_list[i]*beta_z_0 + (R33_list[i]*R44_list[i]+R34_list[i]*R43_list[i])*alpha_z_0 \
 			- R34_list[i]*R44_list[i]*gamma_z_0)
 		gamma_z_list.append((R43_list[i]**2)*beta_z_0-2*R43_list[i]*R44_list[i]*alpha_z_0+(R44_list[i]**2)*gamma_z_0)
@@ -1002,10 +1022,10 @@ def get_enclosing_circle(ellipse_data):
 		c = edata[2]
 		bc.append((a,b,c))
 
-	(zz,rr) = bc.get_circle()
-	print 'centre of enclosing circle =', zz, ", with radius =", rr
+	(centre,radius) = bc.get_circle()
+	print 'centre of enclosing circle =', centre, ", with radius =", radius
 
-	return
+	return centre, radius
 
 
 def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_dist = [], seed = 123456):
@@ -1070,7 +1090,7 @@ def plot_data_xy(data, filename, labels=["","",""], style='b-', xlim = [0,0], yl
 	pylab.savefig(filename)
 
 
-def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["","",""], style='', xlim = [0,0], ylim = [0,0]):
+def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["","",""], style='', legend = ' ',xlim = [0,0], ylim = [0,0]):
 	import pylab
 	""" Plots multiple sets of data where the X and Y coordinates are each specified in a list of lists. Should also
 	    work if a single set of X, Y data is specified or if one X is supplied with multiple Y data points (as long 
@@ -1098,14 +1118,18 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["","",""], st
 	if style == ['']:
 	    style = ['k-','b-','r-','g-','m-','y-']
 
+	if type(legend) != list:
+	    legend = [legend]
+
+
 	if single_y_data:
 	    pylab.plot(data_x_list, data_y_list, style[0])
 	else:
 	    for index, data_y in enumerate(data_y_list):
 			if single_x_data:
-				pylab.plot(data_x_list, data_y, style[index%len(style)])
+				pylab.plot(data_x_list, data_y, style[index%len(style)], label=legend[index%len(legend)])
 			else:
-				pylab.plot(data_x_list[index], data_y, style[index%len(style)])
+				pylab.plot(data_x_list[index], data_y, style[index%len(style)], label= legend[index%len(legend)])
 
 	pylab.title(labels[0])
 	if xlim != [0,0]:
@@ -1114,6 +1138,7 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["","",""], st
 		pylab.ylim( (ylim[0] ,ylim[1]) )
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])
-	
+
 	pylab.savefig(filename)
 	pylab.cla()
+
