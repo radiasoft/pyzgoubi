@@ -11,7 +11,6 @@ m = 1
 cm = 0.01
 mm = 0.001
 T = 1
-kgauss = 0.1
 
 # define things in metres, and tesla
 # then use these when setting up elements to convert
@@ -20,7 +19,6 @@ m_ = 1
 cm_ = 100
 mm_ = 1000
 kgauss_ = 10
-T_ = 1
 
 
 def coords_grid(min=[0,0], max=[1,1], step=[1,1], type=float):
@@ -727,11 +725,12 @@ def fourier_tune(line,initial_YTZP,D_in,nfourierturns):
 def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_gamma_input = 1, ellipse_coords = 1, plot_data = False):
         """ Check a list of emittances (emit_list, units Pi m rad) to see if tracking succeeds. Can be used to establish the dynamic aperture.
 			Required input:
+				emit_list - List of emittances to check
 				closedorb_YTZP - Closed orbit coordinates as returned by find_closed_orbit
 				npass - Number of passes through lattice
 				D_mom - Momentum factor p/pref
 			Optional input
-				beta_gamma_input - If this is supplied then the emittances supplied in emit_list are assumed to be normalised. 				Otherwise the emittances are assumed to be geometrical.
+				beta_gamma_input - If this is supplied then the emittances supplied in emit_list are assumed to be normalised and a conversion to geometrical emittance is made. Otherwise the emittances are assumed to be geometrical.
 				ellipse_coords - If greater than 1 will test uniformly distributed set of coordinates around around phase space 			ellipse. Otherwise will take single point where phase space cuts y (or z) axis.
 						Can also specify ellipse coords = [n,m] -- distribute n points around ellipse but only test point m of these. 
 				plot_data - If True, creates phase space plots at all emittances scanned in both transverse planes.
@@ -766,14 +765,9 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 	else:
 		raise ValueError, "Line has no REBELOTE element"
 
+	rigidity = objet.BORO
+
 	reb.set(NPASS=npass-1)
-
-
-	#extract rigidity from dat_fh (line 3)
-	for index, dat_file_line in enumerate(line.dat_fh()):
-		if index == 2:
-			rigidity = float(dat_file_line)
-			break
 
 	coord_pick = None
 	if type(ellipse_coords) == list:
