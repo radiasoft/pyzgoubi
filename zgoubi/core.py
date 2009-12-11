@@ -28,6 +28,7 @@ import sys
 import re
 import struct
 from glob import glob
+import copy
 try:
 	import numpy
 except:
@@ -53,8 +54,14 @@ zgoubi_path = zgoubi_settings['zgoubi_path']
 
 pyzgoubi_egg_path = glob(os.path.dirname(zgoubi_module_path) + "/pyzgoubi*egg-info")
 
-static_defs = os.path.join(zgoubi_module_path,'..','..','..','..' ,"share","pyzgoubi","definitions", "static_defs.py")
-simple_defs = os.path.join(zgoubi_module_path,'..','..','..','..' ,"share","pyzgoubi","definitions", "simple_elements.defs")
+if (not zgoubi_module_path.startswith("/")) and os.name == 'posix' :
+	# windows style paths, but os.name is 'posix', so need to mess with paths by hand
+	bits = zgoubi_module_path.split('\\')[:-3]+['share','pyzgoubi','definitions']
+	static_defs = '\\'.join(bits+['static_defs.py'])
+	simple_defs = '\\'.join(bits+['simple_elements.defs'])
+else:
+	static_defs = os.path.join(zgoubi_module_path,'..','..','..','..' ,"share","pyzgoubi","definitions", "static_defs.py")
+	simple_defs = os.path.join(zgoubi_module_path,'..','..','..','..' ,"share","pyzgoubi","definitions", "simple_elements.defs")
 
 
 #definitions of elements
@@ -231,14 +238,39 @@ class Line(object):
 							# otherwise the intepreter may have thrown it away
 							# by the time the __del__() is run
 		self.has_run = False
+		self.full_line = False # has an OBJET, dont allow full lines to be added to each other
+								# only a full line outputs its name into zgoubi.dat
 
 	def __del__(self):
 		self.clean()
 	
+	def __neg__(self):
+		"return a reversed line"
+		new_line = copy.copy(self)
+		new_line.element_list = copy.copy(new_line.element_list)
+		new_line.element_list.reverse()
+		new_line.name = "-"+self.name
+		return new_line
+
+	def print_elements(self, prefix=""):
+		print self.name
+		for element in self.element_list:
+			try: # for normal elemnts
+				print prefix, element._zgoubi_name, element.label1, element.label2
+				continue
+			except AttributeError:
+				pass
+			element.print_elements(prefix+"\t")
+
 	def add(self, *elements):
 		"Add an elements to the line"
 		for element in elements:
 			self.element_list.append(element)
+			try:
+				if 'OBJET' in element._zgoubi_name:
+					self.full_line = True
+			except AttributeError:
+				pass
 	
 	def full_tracking(self, enable=True):
 		"""Enable full tracking on magnetic elements.
@@ -269,7 +301,9 @@ class Line(object):
 		
 	def output(self):
 		"Generate the zgoubi.dat file, and return it as a string"
-		safeout = self.name + nl
+		safeout = ""
+		if self.full_line:
+			safeout = self.name + nl
 		
 		for element in self.element_list:
 			out = ''

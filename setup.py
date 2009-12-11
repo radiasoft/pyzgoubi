@@ -18,7 +18,7 @@ setup(name='pyzgoubi',
 	            ]
 	)
 
-
+is_cygwin = False
 if ("install" in sys.argv) and not ( "--help" in sys.argv):
 	#find the log
 	try:
@@ -34,18 +34,31 @@ if ("install" in sys.argv) and not ( "--help" in sys.argv):
 			line = line.strip()
 			if line.endswith("bin/pyzgoubi"):
 				bin_path = os.path.dirname(line)
+			if line.endswith("Scripts\pyzgoubi"):
+				bin_path = line.rpartition('\\')[0]
+				is_cygwin = True
 			if line.endswith("zgoubi/__init__.py"):
 				lib_path = os.path.normpath(os.path.join(os.path.dirname(line),".."))
+			if line.endswith("zgoubi\__init__.py"):
+				lib_path = line.rpartition('\\')[0].rpartition('\\')[0]
 	except IOError:
-		#error below will show
-		pass
+		print "Could not see install log, install may have failed."
+		print "Can't give help with setting up path"
+		sys.exit(1)
 		
 	try:
 		print "\nyou may need to add the following to your .bashrc"
-		print "export PYTHONPATH=$PYTHONPATH:%s"%lib_path
-		print "export PATH=$PATH:%s"%bin_path
-		print "or"
-		print 'alias pyzgoubi="PYTHONPATH=%s python %s/pyzgoubi"'%(lib_path, bin_path)
+		if is_cygwin:
+			print "export PYTHONPATH=$PYTHONPATH:%s"%lib_path
+			print "export PATH=$PATH:%s"%bin_path
+			print "or"
+			print 'alias pyzgoubi="PYTHONPATH=%s python %s\pyzgoubi"'%(lib_path, bin_path)
+		else:
+			print "export PYTHONPATH=$PYTHONPATH:%s"%lib_path
+			print "export PATH=$PATH:%s"%bin_path
+			print "or"
+			print 'alias pyzgoubi="PYTHONPATH=%s python %s/pyzgoubi"'%(lib_path, bin_path)
 	except NameError:
-		print "Could not see install log, install may have failed."
-		print "Can't give help with setting up path"
+		print "Could not find all paths in logfile"
+
+
