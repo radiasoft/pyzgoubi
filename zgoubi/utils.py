@@ -756,15 +756,15 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 		raise ValueError, "Line has no FAISCNL element"
 
 
-        #create reb so that number of passes can be set
-        for e in line.element_list:
-                if ("REBELOTE" in str(type(e)).split("'")[1]):
-                        reb = e
-                        break
-        else:
+	#create reb so that number of passes can be set
+	for e in line.element_list:
+			if ("REBELOTE" in str(type(e)).split("'")[1]):
+					reb = e
+					break
+	else:
 		raise ValueError, "Line has no REBELOTE element"
 
-        reb.set(NPASS=npass-1)
+	reb.set(NPASS=npass-1)
 
 
 	#extract rigidity from dat_fh (line 3)
@@ -807,9 +807,9 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 	for emit in emit_list:
 		print "check emit ",emit
 		if coord_pick == None:
-		    coords_YTZP_ini = emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input, ncoords = ellipse_coords)
+			coords_YTZP_ini = emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input, ncoords = ellipse_coords)
 		else:
-		    coords_YTZP_ini = emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input, ncoords = ellipse_coords)[coord_pick]
+			coords_YTZP_ini = emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input, ncoords = ellipse_coords)[coord_pick]
 
 		try:
 			l = len(coords_YTZP_ini[0])
