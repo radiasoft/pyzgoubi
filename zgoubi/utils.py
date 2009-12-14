@@ -656,8 +656,10 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 	return twiss_profiles
 
 
-def fourier_tune(line,initial_YTZP,D_in,nfourierturns):
-	"""Calculate tune using FFT. nfourierturns determines the number of passes through the lattice. 
+def fourier_tune(line,initial_YTZP,D_in,nfourierturns, coords = []):
+	"""Calculate tune using FFT. nfourierturns determines the number of passes through the lattice.
+       Can supply set of horizontal and vertical coordinates in coords = [ycoords,zcoords], otherwise
+         routine will calculate coordinates
 	"""
 	#check line has an objet2
 	for e in line.element_list:
@@ -682,15 +684,29 @@ def fourier_tune(line,initial_YTZP,D_in,nfourierturns):
 	else:
 		raise ValueError, "Line has no REBELOTE element"
 
-	objet.clear()	# remove existing particles
-	#start at closed orbit with a small amplitude added to vertical component to get tune readings
-	objet.add(Y=initial_YTZP[0], T=initial_YTZP[1], Z=initial_YTZP[2]+1e-5, P=initial_YTZP[3], LET='A', D=D_in)
-			
-	reb.set(NPASS=nfourierturns-1)	
-	r = line.run(xterm = False)
-	YZ = r.get_track('fai', ['Y','Z'])
-	ycoords = numpy.transpose(YZ)[0]
-	zcoords = numpy.transpose(YZ)[1]
+	if coords == []:
+		objet.clear()	# remove existing particles
+		#start at closed orbit with a small amplitude added to vertical component to get tune readings
+		objet.add(Y=initial_YTZP[0], T=initial_YTZP[1], Z=initial_YTZP[2]+1e-5, P=initial_YTZP[3], LET='A', D=D_in)
+
+		reb.set(NPASS=nfourierturns-1)	
+		r = line.run(xterm = False)
+		YZ = r.get_track('fai', ['Y','Z'])
+		ycoords = numpy.transpose(YZ)[0]
+		zcoords = numpy.transpose(YZ)[1]
+
+	else:
+
+		if len(ycoords) != len(zcoords):
+			print "len ycoords must equal len zcoords"
+			break
+
+		#use input coords
+		ycoords = coords[0]
+		zcoords = coords[1]
+
+		nfourierturns = len(ycoords)
+
 
 	#perform FFT
 	import pylab
