@@ -345,6 +345,7 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 
 	The twiss parameters are then mapped to all points in the magnets using the transfer matrix calculated at each point. The results are stored
 	in list twiss_profiles where each row represents a point in the zgoubi.plt file and has format 
+
 	[s_coord, label,  mu_y, beta_y, alpha_y, gamma_y, mu_z, beta_z, alpha_z, gamma_z]
 
 	Requires an OBJET type 5, and a MATRIX element.
@@ -697,13 +698,13 @@ def fourier_tune(line,initial_YTZP,D_in,nfourierturns, coords = []):
 
 	else:
 
-		if len(ycoords) != len(zcoords):
-			print "len ycoords must equal len zcoords"
-			break
-
 		#use input coords
 		ycoords = coords[0]
 		zcoords = coords[1]
+
+		if len(ycoords) != len(zcoords):
+			print "len ycoords must equal len zcoords"
+			sys.exit()
 
 		nfourierturns = len(ycoords)
 
@@ -731,6 +732,7 @@ def fourier_tune(line,initial_YTZP,D_in,nfourierturns, coords = []):
 	ypeaksloc = sorted([ysortfreqamp[0][0],ysortfreqamp[1][0]])
 	zpeaksloc = sorted([zsortfreqamp[0][0],zsortfreqamp[1][0]])
 
+	print "ypeaksloc,zpeaksloc ",ypeaksloc, zpeaksloc
 
 	yfouriertune = ypeaksloc[0]/nfourierturns
 	zfouriertune = zpeaksloc[0]/nfourierturns
@@ -816,11 +818,15 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 	if plot_data:
 	    YTZP_list = []
 
+	fourier_tune_emit = []
+
 	for emit in emit_list:
 		print "check emit ",emit
 		if coord_pick == None:
+			#obtain coordinates on phase space ellipses. Use beta, gamma values found at closed orbit
 			coords_YTZP_ini = emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input, ncoords = ellipse_coords)
 		else:
+			#select one point on phase space ellipse. Use beta, gamma values found at closed orbit
 			coords_YTZP_ini = emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input, ncoords = ellipse_coords)[coord_pick]
 
 		try:
@@ -831,54 +837,61 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 	
 		for coord_index, current_YTZP in enumerate(coords_YTZP_ini):
 
-		    print "ellipse coord index ",coord_index
-		    objet.clear()	# remove existing particles
-		    objet.add(Y=current_YTZP[0], T=current_YTZP[1], Z=current_YTZP[2], P=current_YTZP[3], LET='A', D=D_mom)
-		    #objet.add(Y=current_YTZP2[0], T=current_YTZP2[1], Z=current_YTZP2[2], P=current_YTZP2[3], LET='B', D=D_mom)
-               
-		    #run Zgoubi
-		    r = line.run(xterm= False)
+			print "ellipse coord index ",coord_index
+			objet.clear()	# remove existing particles
+			objet.add(Y=current_YTZP[0], T=current_YTZP[1], Z=current_YTZP[2], P=current_YTZP[3], LET='A', D=D_mom)
+				
+			#run Zgoubi
+			r = line.run(xterm= False)
     
-		    if plot_data:
-			YTZP_list.append(r.get_track('fai', ['Y','T','Z','P']))
+			rebelote_completed = r.test_rebelote()
 
-		    rebelote_completed = r.test_rebelote()
-		    
-		    lost = not rebelote_completed
+			lost = not rebelote_completed
     
-		    if(lost):
+			if(lost):
 			    index_lost = emit_list.index(emit)
 			    print "tracking failed at emit = ",emit
-			    return index_lost, coord_index
+			    return [index_lost, coord_index],fourier_tune_emit
+
+			if plot_data:
+				YTZP_list.append(r.get_track('fai', ['Y','T','Z','P']))
+				coords_in = [flatten(r.get_track('fai', ['Y'])),flatten(r.get_track('fai', ['Z']))]
+				fourier_tune_result = fourier_tune(line,[],1,1, coords = coords_in)
+				print "fourier_tune ",fourier_tune_result
+				fourier_tune_emit.append(fourier_tune_result)
 
 	else:
 		print "Successful tracking in all test cases"
+		return None, fourier_tune_emit
 
 	if plot_data:
-	    coords_YTZP_full = emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input, ncoords = 100)
-	    coords_YTZP_full = [map(add,closedorb_YTZP,coords) for coords in coords_YTZP_full]
-	    coords_YTZP_full.append(coords_YTZP_full[0])
+		#obtain coordinates on phase space ellipse using closed orbit twiss parameters
+		coords_YTZP_full = emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input, ncoords = 100)
+		coords_YTZP_full = [map(add,closedorb_YTZP,coords) for coords in coords_YTZP_full]
+		coords_YTZP_full.append(coords_YTZP_full[0])
 
-	    #add many coordinates to draw phase space ellipse
-	    Y_data = [numpy.transpose(coords_YTZP_full)[0]]
-	    T_data = [numpy.transpose(coords_YTZP_full)[1]]
-	    Z_data = [numpy.transpose(coords_YTZP_full)[2]]
-	    P_data = [numpy.transpose(coords_YTZP_full)[3]]
+		#add many coordinates to draw phase space ellipse
+		Y_data = [numpy.transpose(coords_YTZP_full)[0]]
+		T_data = [numpy.transpose(coords_YTZP_full)[1]]
+		Z_data = [numpy.transpose(coords_YTZP_full)[2]]
+		P_data = [numpy.transpose(coords_YTZP_full)[3]]
 
-	    #add points on phase space ellipse actually used in scan
-	    Y_data.append([numpy.transpose(coords_YTZP_ini)[0]])
-	    T_data.append([numpy.transpose(coords_YTZP_ini)[1]])
-	    Z_data.append([numpy.transpose(coords_YTZP_ini)[2]])
-	    P_data.append([numpy.transpose(coords_YTZP_ini)[3]])
+
+		#add points on phase space ellipse actually used to initialise scan above
+		Y_data.append([numpy.transpose(coords_YTZP_ini)[0]])
+		T_data.append([numpy.transpose(coords_YTZP_ini)[1]])
+		Z_data.append([numpy.transpose(coords_YTZP_ini)[2]])
+		P_data.append([numpy.transpose(coords_YTZP_ini)[3]])
     
-	    for index in range(len(YTZP_list)):
-		    Y_data.append(numpy.transpose(YTZP_list[index])[0])
-		    T_data.append(numpy.transpose(YTZP_list[index])[1])
-		    Z_data.append(numpy.transpose(YTZP_list[index])[2])
-		    P_data.append(numpy.transpose(YTZP_list[index])[3])
+		for index in range(len(YTZP_list)):
+			Y_data.append(numpy.transpose(YTZP_list[index])[0])
+			T_data.append(numpy.transpose(YTZP_list[index])[1])
+			Z_data.append(numpy.transpose(YTZP_list[index])[2])
+			P_data.append(numpy.transpose(YTZP_list[index])[3])
 
-	    plot_data_xy_multi(Y_data,T_data,'yt_check', labels=["Horizontal phase space","y [cm]","y' [mrad]"],style = ['k-','ro','b+','r+','g+','m+','y+'])
-	    plot_data_xy_multi(Z_data,P_data,'zp_check', labels=["Vertical phase space","z [cm]","z' [mrad]"],style = ['k-','ro','b+','r+','g+','m+','y+']) 
+
+		plot_data_xy_multi(Y_data,T_data,'yt_check', labels=["Horizontal phase space","y [cm]","y' [mrad]"],style = ['k-','ro','b+','r+','g+','m+','y+'])
+		plot_data_xy_multi(Z_data,P_data,'zp_check', labels=["Vertical phase space","z [cm]","z' [mrad]"],style = ['k-','ro','b+','r+','g+','m+','y+']) 
 	    
 
 	return index_lost, coord_index
