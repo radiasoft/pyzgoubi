@@ -857,12 +857,10 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 				YTZP_list.append(r.get_track('fai', ['Y','T','Z','P']))
 				coords_in = [flatten(r.get_track('fai', ['Y'])),flatten(r.get_track('fai', ['Z']))]
 				fourier_tune_result = fourier_tune(line,[],1,1, coords = coords_in)
-				print "fourier_tune ",fourier_tune_result
 				fourier_tune_emit.append(fourier_tune_result)
 
 	else:
 		print "Successful tracking in all test cases"
-		return None, fourier_tune_emit
 
 	if plot_data:
 		#obtain coordinates on phase space ellipse using closed orbit twiss parameters
@@ -894,7 +892,7 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 		plot_data_xy_multi(Z_data,P_data,'zp_check', labels=["Vertical phase space","z [cm]","z' [mrad]"],style = ['k-','ro','b+','r+','g+','m+','y+']) 
 	    
 
-	return index_lost, coord_index
+	return None, fourier_tune_emit
 
 
 def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_gamma_input = 1, ncoords = 1):
