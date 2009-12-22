@@ -695,18 +695,11 @@ def fourier_tune(line,initial_YTZP,D_in,nfourierturns, coords = []):
 		YZ = r.get_track('fai', ['Y','Z'])
 		ycoords = numpy.transpose(YZ)[0]
 		zcoords = numpy.transpose(YZ)[1]
-
 	else:
-
 		#use input coords
 		ycoords = coords[0]
 		zcoords = coords[1]
 
-		if len(ycoords) != len(zcoords):
-			print "len ycoords must equal len zcoords"
-			sys.exit()
-
-		nfourierturns = len(ycoords)
 
 
 	#perform FFT
@@ -732,16 +725,21 @@ def fourier_tune(line,initial_YTZP,D_in,nfourierturns, coords = []):
 	ypeaksloc = sorted([ysortfreqamp[0][0],ysortfreqamp[1][0]])
 	zpeaksloc = sorted([zsortfreqamp[0][0],zsortfreqamp[1][0]])
 
-	print "ypeaksloc,zpeaksloc ",ypeaksloc, zpeaksloc
+	yfouriertune = ypeaksloc[0]/len(ycoords)
+	zfouriertune = zpeaksloc[0]/len(zcoords)
 
-	yfouriertune = ypeaksloc[0]/nfourierturns
-	zfouriertune = zpeaksloc[0]/nfourierturns
+	#plot tunes if desired
+	plot_fourier = False
+	if(plot_fourier):
+		pylab.plot(yampfreq, 'k-')
+		pylab.plot(zampfreq, 'b-')
+		pylab.savefig('fspectrum')
 
 	return yfouriertune, zfouriertune
 
-
 def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_gamma_input = 1, ellipse_coords = 1, plot_data = False):
-        """ Check a list of emittances (emit_list, units Pi m rad) to see if tracking succeeds. Can be used to establish the dynamic aperture.
+        """ Check a list of emittances (emit_list, units Pi m rad) to see if tracking succeeds. Can be used to establish the dynamic aperture. If the elements in emit_list are increasing then will stop tracking once it finds the lowest emittance where a particle is lost. On the other hand, if the elements in emit_list are decreasing then will stop tracking once it reaches the first point where tracking succeeds without loss. 
+
 			Required input:
 				emit_list - List of emittances to check
 				closedorb_YTZP - Closed orbit coordinates as returned by find_closed_orbit
@@ -753,7 +751,7 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 						Can also specify ellipse coords = [n,m] -- distribute n points around ellipse but only test point m of these. 
 				plot_data - If True, creates phase space plots at all emittances scanned in both transverse planes.
 	
-		If a particle is lost, returns the index in emit_list where the loss occurs. Otherwise index_lost remains 0.
+		If a particle is lost, returns index_lost in emit_list where the loss occurs. Otherwise index_lost remains 0.
         """
 
 	import numpy
@@ -814,11 +812,19 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 
 
 	index_lost = None
+	coord_index_lost = None
 	from operator import add
 	if plot_data:
 	    YTZP_list = []
 
 	fourier_tune_emit = []
+
+	#if emit_list is a list of decreasing emittances, looking for the first point where particle is not lost
+	reverse_search = False
+	if emit_list[0] > emit_list[-1]:
+		print "decreasing list "
+		reverse_search = True
+		
 
 	for emit in emit_list:
 		print "check emit ",emit
@@ -833,7 +839,7 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 			l = len(coords_YTZP_ini[0])
 			coords_YTZP_ini = [map(add,closedorb_YTZP,coords) for coords in coords_YTZP_ini]
 		except TypeError:
-			coords_YTZP_ini = [map(add,closedorb_YTZP,coords_YTZP_ini)]
+			coords_YTZP_ini = [map(add,closedorb_YTZP,coords_YTZP_ini)] 
 	
 		for coord_index, current_YTZP in enumerate(coords_YTZP_ini):
 
@@ -849,15 +855,25 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 			lost = not rebelote_completed
     
 			if(lost):
-			    index_lost = emit_list.index(emit)
-			    print "tracking failed at emit = ",emit
-			    return [index_lost, coord_index],fourier_tune_emit
+				print "tracking failed at emit = ",emit
+				coord_index_lost = coord_index
+				#break
+				#return [index_lost, coord_index],fourier_tune_emit
 
-			if plot_data:
+			if plot_data and not lost:
 				YTZP_list.append(r.get_track('fai', ['Y','T','Z','P']))
 				coords_in = [flatten(r.get_track('fai', ['Y'])),flatten(r.get_track('fai', ['Z']))]
 				fourier_tune_result = fourier_tune(line,[],1,1, coords = coords_in)
 				fourier_tune_emit.append(fourier_tune_result)
+
+		#condition to end scan
+		if reverse_search and not lost:
+			index_lost = emit_list.index(emit)+1
+			break
+		elif not reverse_search and lost:
+			index_lost = emit_list.index(emit)
+			break			
+
 
 	else:
 		print "Successful tracking in all test cases"
@@ -888,11 +904,32 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 			P_data.append(numpy.transpose(YTZP_list[index])[3])
 
 
-		plot_data_xy_multi(Y_data,T_data,'yt_check', labels=["Horizontal phase space","y [cm]","y' [mrad]"],style = ['k-','ro','b+','r+','g+','m+','y+'])
-		plot_data_xy_multi(Z_data,P_data,'zp_check', labels=["Vertical phase space","z [cm]","z' [mrad]"],style = ['k-','ro','b+','r+','g+','m+','y+']) 
+		plot_data_xy_multi(Y_data,T_data,'yt_phasespace', labels=["Horizontal phase space","y [cm]","y' [mrad]"],style = ['k-','ro','b+','r+','g+','m+','y+'],xlim=[-32.5,-29.5],ylim=[-40,40])
+		plot_data_xy_multi(Z_data,P_data,'zp_phasespace', labels=["Vertical phase space","z [cm]","z' [mrad]"],style = ['k-','ro','b+','r+','g+','m+','y+'],xlim=[-2.0,2.0],ylim=[-30,30])
+
+		#y turn-by-turn, including initial point
+		y_turnbyturn = numpy.transpose(YTZP_list[index])[0]
+		y_turnbyturn = [y for y in y_turnbyturn]
+		y_turnbyturn.reverse()
+		y_turnbyturn.append(coords_YTZP_ini[0][0])
+		y_turnbyturn.reverse()
+		y_turnbyturn = [y-closedorb_YTZP[0] for y in y_turnbyturn]
+		yrange = [i+1 for i in range(len(y_turnbyturn))]
+		#z turn-by-turn, including initial point
+		z_turnbyturn = [z for z in numpy.transpose(YTZP_list[index])[2]]
+		z_turnbyturn.reverse()
+		z_turnbyturn.append(coords_YTZP_ini[0][2])
+		z_turnbyturn.reverse()
+		#z_turnbyturn = [z-closedorb_YTZP[2] for z in z_turnbyturn]
+		zrange = [i+1 for i in range(len(z_turnbyturn))]
+
+		#plot_data_xy_multi(yrange,y_turnbyturn,'y_turnbyturn', labels=["Y turn-by-turn","turn","y [cm]"],style = ['k+'],xlim = [0,len(yrange)+1])
+		#plot_data_xy_multi(zrange,z_turnbyturn,'z_turnbyturn', labels=["Z turn-by-turn","turn","z [cm]"],style = ['k+'],xlim = [0,len(zrange)+1])
+		plot_data_xy_multi(y_turnbyturn,z_turnbyturn,'yz_space', labels=["YZ coords","y [cm]","z [cm]"],style = ['k+'])
 	    
 
-	return None, fourier_tune_emit
+	return [index_lost, coord_index],fourier_tune_emit
+
 
 
 def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_gamma_input = 1, ncoords = 1):
