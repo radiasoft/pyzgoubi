@@ -1150,12 +1150,25 @@ def plot_data_xy(data, filename, labels=["","",""], style='b-', xlim = [0,0], yl
 	pylab.savefig(filename)
 
 
-def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["","",""], style='', legend = ' ',xlim = [0,0], ylim = [0,0]):
+def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["","",""], style='', legend = ' ', legend_location = 'best',xlim = [0,0], ylim = [0,0]):
 	import pylab
 	""" Plots multiple sets of data where the X and Y coordinates are each specified in a list of lists. Should also
 	    work if a single set of X, Y data is specified or if one X is supplied with multiple Y data points (as long 
-	    the dimensions of Y agree with X in all cases). The plot style can be supplied as a list or as a single value.
-	    If no style is specified,  will cycle over a predefined style list. """
+	    the dimensions of Y equals that of X in all cases). 
+
+		Required input -
+		data_x_list - Set of X data. May be a single list or a list of lists each with the same dimension. 
+		data_y_list - Set of Y data. May be a single list or a list of lists each with the same dimension. Can have a single list of X data and multiple lists of data_y_list.
+		filename - Plot saved to filename.png
+
+		Optional parameters -
+		labels = ["Plot Title","X axis label","Y axis label"]
+		style - The plot style can be supplied as a list or as a single value. If no style is specified,  will cycle over a predefined style list.
+		legend - Legends can be supplied as a list of strings or as a single string. 
+		legend_location - Default of location of legend box is 'best', otherwise can select 'upper right' or numerical code for position. See matplotlib documentation. 
+		xlim = [lower_value, upper_value] - Limit horizontal axis
+		ylim = [lower_value, upper_value] - Limit vertical axis  """
+                                                                  
 
 	#check if data is a single list or a list of lists
 	single_x_data = False
@@ -1198,6 +1211,10 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["","",""], st
 		pylab.ylim( (ylim[0] ,ylim[1]) )
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])
+
+	print "legend ",legend
+	if legend != [' ']:
+		pylab.legend(loc=legend_location)
 
 	pylab.savefig(filename)
 	pylab.cla()
