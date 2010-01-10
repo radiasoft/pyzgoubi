@@ -533,7 +533,6 @@ class Line(object):
 		self.element_list.pop(index)
 
 	def find_elements(self, element):
-		"Find elements in the line and return the indices"
 		indices = []
 		i = -1
 		try:
@@ -729,7 +728,19 @@ class Results(object):
 		elif(file == 'bfai'):
 			return self.get_all_bin(file=file)
 		else:
-			raise ValueError, "get_all() expects name to be 'plt' or 'fai'"
+			#open previously saved file
+			fh = open(file)
+			#decide what type of file we have, look at extension
+			fileext = os.path.splitext(file)[1]
+			if(fileext == '.plt'):
+				file = 'plt'
+			elif(fileext == '.fai'):
+				file = 'fai'
+			elif(fileext == '.spn'):
+				file = 'spn'
+			else:
+				raise ValueError, "get_all() expects '.plt', '.fai' or '.spn' extension"
+			
 
 		header = list(read_n_lines(fh,4))
 		#print "header", header
