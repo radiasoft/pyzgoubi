@@ -7,7 +7,7 @@ from glob import glob
 
 
 setup(name='pyzgoubi',
-	version='0.3',
+	version='0.3.1',
 	packages=['zgoubi'],
 	scripts=['pyzgoubi'],
 	#package_data={'zgoubi': ['defs/*.py', 'defs/*.defs']},

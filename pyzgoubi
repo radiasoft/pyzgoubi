@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #		pyzgoubi - python interface to zgoubi
-#		Copyright 2008 Sam Tygier <Sam.Tygier@hep.manchester.ac.uk>
+#		Copyright 2008 - 2009 Sam Tygier <Sam.Tygier@hep.manchester.ac.uk>
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
 #       the Free Software Foundation; either version 2 of the License, or
@@ -24,7 +24,7 @@ from zgoubi.utils import *
 from zgoubi.core import *
 from zgoubi.constants import *
 
-zgoubi_version = "0.3"
+pyzgoubi_version = "0.3.1"
 
 # create a set of functions that work on default_line and default_results objects
 # these will make it simpler to run simple simulations
@@ -102,7 +102,7 @@ if __name__ == '__main__':
 		sys.exit(1)
 	
 	if sys.argv[1] in ['version', '--version']:
-		print "Pyzgoubi version:%s"%zgoubi_version
+		print "Pyzgoubi version:%s"%pyzgoubi_version
 		sys.exit(0)
 	if sys.argv[1] in ['help', '--help']:
 		_show_help()
