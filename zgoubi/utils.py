@@ -301,6 +301,7 @@ def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-8,
 		#r = Results(line)
 
 		track = r.get_track('fai', ['Y','T','Z','P'])
+
 		if not r.run_success():
 			print "No stable orbit"
 			return None
@@ -702,8 +703,6 @@ def fourier_tune(line,initial_YTZP,D_in,nfourierturns, coords = []):
 		ycoords = coords[0]
 		zcoords = coords[1]
 
-
-
 	#perform FFT
 	import pylab
 	yfft = pylab.fft(ycoords)
@@ -731,10 +730,11 @@ def fourier_tune(line,initial_YTZP,D_in,nfourierturns, coords = []):
 	zfouriertune = zpeaksloc[0]/len(zcoords)
 
 	#plot tunes if desired
-	plot_fourier = False
+	plot_fourier = True
 	if(plot_fourier):
 		pylab.plot(yampfreq, 'k-')
 		pylab.plot(zampfreq, 'b-')
+		pylab.ylim([0,max([max(yampfreq[1:-1]),max(zampfreq[1:-1])])])
 		pylab.savefig('fspectrum')
 
 	return yfouriertune, zfouriertune
@@ -1214,7 +1214,6 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["","",""], st
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])
 
-	print "legend ",legend
 	if legend != [' ']:
 		pylab.legend(loc=legend_location)
 
