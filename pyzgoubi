@@ -20,6 +20,7 @@
 
 from __future__ import division
 from math import *
+import getopt, sys
 from zgoubi.utils import *
 from zgoubi.core import *
 from zgoubi.constants import *
@@ -62,11 +63,11 @@ for func_name in res_funcs:
 	code = function_template%dict(func_name=func_name, class_name='result')
 	exec(code)
 
-def _show_help():
-	if len(sys.argv) == 2:
+def _show_help(help_arg):
+	if help_arg == None:
 		print "For documentation see http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/"
 		sys.exit(0)
-	if sys.argv[2].lower() == "elements":
+	if help_arg.lower() == "elements":
 		print "available elements"
 		elements = []
 
@@ -82,33 +83,47 @@ def _show_help():
 		sys.exit(0)
 
 	try:
-		help_elem = globals()[sys.argv[2].upper()]
+		help_elem = globals()[help_arg.upper()]
 	except KeyError:
 		print "There is no help for %s"%sys.argv[2]
 		sys.exit(1)
 
-	print sys.argv[2].upper()
-	help_elem_inst = eval("%s()"%sys.argv[2].upper())
+	print help_arg.upper()
+	help_elem_inst = eval("%s()"%help_arg.upper())
 	print "zgoubi name:",help_elem_inst._zgoubi_name
 	print "Parameters:"
 	print '\n'.join(help_elem_inst.list_params())
 
+def _show_usage():
+	print "Usage:"
+	print sys.argv[0], "input_file_name"
+	print sys.argv[0], "--help"
+
 
 if __name__ == '__main__':
-	if len(sys.argv) == 1:
-		print "Usage:"
-		print sys.argv[0], "input_file_name"
-		print sys.argv[0], "--help"
-		sys.exit(1)
-	
-	if sys.argv[1] in ['version', '--version']:
-		print "Pyzgoubi version:%s"%pyzgoubi_version
-		sys.exit(0)
-	if sys.argv[1] in ['help', '--help']:
-		_show_help()
-		sys.exit(0)
 	try:
-		input_file_name = sys.argv[1]
+		opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "version"])
+	except getopt.GetoptError, err:
+		print str(err)
+		_show_usage()
+		sys.exit(1)
+
+	if len(sys.argv) == 1:
+		_show_usage()
+		sys.exit(1)
+
+	for o, a in opts:
+		if o in ['--version']:
+			print "Pyzgoubi version:%s"%pyzgoubi_version
+			sys.exit(0)
+		if o in ['--help', "-h"]:
+			if len(args):
+				_show_help(args[0])
+			else:
+				_show_help(None)
+			sys.exit(0)
+	try:
+		input_file_name = args[0]
 	except IndexError:
 		print "No input file, try:"
 		print "pyzgoubi inputfile"
