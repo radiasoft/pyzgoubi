@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 class OBJET1(zgoubi_element):
 	"""Beam made of grid of particles, default params give just 1 reference particle.
 	Equivilent to OBJET with a KOBJ=1
@@ -304,6 +305,49 @@ class IMMORTAL_MUON(zgoubi_element):
 		out = "'PARTICUL'" +nl
 		out += f(MUON_MASS/1e6) +' '+ f(MUON_CHARGE) +' '+ f(MUON_ANOM_MAG_MOM) +' '+ f(0) +' 0' +nl
 		return out
+
+
+class CHANGREF_NEW(zgoubi_element):
+	"""Monte Carlo generation of a 6-D object on a phase space ellipse
+	Equivilent to MCOBJET with a KOBJ=3
+	"""
+	def __init__(self ,**settings):
+		self._zgoubi_name = "CHANGREF"
+		self._params = {}
+		self.label1 = ""
+		self.label2 = ""
+		self._params['XS'] = None
+		self._params['YS'] = None
+		self._params['ZS'] = None
+		self._params['XR'] = None
+		self._params['YR'] = None
+		self._params['ZR'] = None
+		object.__setattr__(self, "ready", True)
+		self.set(settings)
+
+	def output(self):
+		# local short cuts for long function names
+		f = self.f2s
+		i = self.i2s
+		
+		out = "'CHANGREF'" +nl
+		if self.XS != None:
+			out += "XS " + f(self.XS)+' '
+		if self.YS != None:
+			out += "YS " + f(self.YS)+' '
+		if self.ZS != None:
+			out += "ZS " + f(self.ZS)+' '
+		if self.XR != None:
+			out += "XR " + f(self.XR)+' '
+		if self.YR != None:
+			out += "YR " + f(self.YR)+' '
+		if self.ZR != None:
+			out += "ZR " + f(self.ZR)+' '
+		out += '\n'
+
+		return out
+
+
 		
 class FAKE_ELEM(zgoubi_element):
 	def __init__(self, data=""):
@@ -315,3 +359,5 @@ class FAKE_ELEM(zgoubi_element):
 
 	def output(self):
 		return self.data+'\n'
+
+

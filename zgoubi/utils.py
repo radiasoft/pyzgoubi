@@ -1137,6 +1137,30 @@ def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_
 	return misalign_dist
 
 
+def gaussian_cutoff(npoints, mean, sigma, sigma_cutoff, seed = None):
+	""" Generate Gaussian distribution about mean with standard deviation sigma
+          npoints - number of points in distribution required
+          sigma_cutoff - the cutoff factor i.e. points outside sigma*sigma_cutoff eliminated
+
+          Seed - Optional parameter to set random seed"""
+
+	import random
+
+	if seed != None:
+		random.seed(seed)
+
+	dist = []
+	while len(dist) < npoints:
+		if sigma > 0.0:
+			rand = random.gauss(0,sigma)
+			if abs(rand) < sigma_cutoff*sigma or sigma_cutoff == 0:
+				dist.append(mean+rand)
+		else:
+			dist.append(mean)
+
+	return dist
+
+
 def plot_data_xy(data, filename, labels=["","",""], style='b-', xlim = [0,0], ylim = [0,0]):
 	import pylab
 	data_a = numpy.array(data)

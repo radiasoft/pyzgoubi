@@ -914,8 +914,6 @@ class Results(object):
 						p['PASS'] = int(l0[29])
 						p['NOEL'] = int(l0[30])
 						p['element_type'] = l0_stringpart[0].strip('\'')
-						#Kludge - lines[0].split() creates some "'" strings if surrounded by whitespace
-						#e.g. 'DRIFT  ' becomes "'DRIFT" + "'"
 						p['element_label1']  = l0_stringpart[1].strip('\'')
 						p['element_label2']  = l0_stringpart[2].strip('\'')
 						p['LET'] = l0_stringpart[3].strip('\'')
@@ -937,7 +935,6 @@ class Results(object):
 						p['PASS'] = int(l0[40])
 						p['NOEL'] = int(l0[41])
 						p['element_type'] = l0_stringpart[0].strip()
-						#Kludge - lines[0].split() creates some "'" strings - just skip them
 						p['element_label1']  = l0_stringpart[1].strip()
 						p['element_label2']  = l0_stringpart[2].strip()
 						p['LET'] = l0_stringpart[3].strip()
