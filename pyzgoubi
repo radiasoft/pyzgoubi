@@ -102,7 +102,7 @@ def _show_usage():
 
 if __name__ == '__main__':
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "version"])
+		opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "version", "zgoubi="])
 	except getopt.GetoptError, err:
 		print str(err)
 		_show_usage()
@@ -122,6 +122,8 @@ if __name__ == '__main__':
 			else:
 				_show_help(None)
 			sys.exit(0)
+		if o in ['--zgoubi']:
+			 zgoubi_settings['zgoubi_path'] = a
 	try:
 		input_file_name = args[0]
 	except IndexError:
