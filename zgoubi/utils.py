@@ -298,13 +298,13 @@ def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-8,
 		objet.add(Y=current_YTZP[0], T=current_YTZP[1], Z=current_YTZP[2], P=current_YTZP[3], LET='A', D=D)
 
 		r = line.run(xterm=False)
-		#r = Results(line)
-
-		track = r.get_track('fai', ['Y','T','Z','P'])
 
 		if not r.run_success():
 			print "No stable orbit"
 			return None
+		else:
+			track = r.get_track('fai', ['Y','T','Z','P'])
+
 		track.insert(0, current_YTZP)
 		track_a = numpy.array(track)
 		tracks.append(track_a)
@@ -1090,7 +1090,7 @@ def get_enclosing_circle(ellipse_data):
 	return centre, radius
 
 
-def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_dist = [], seed = 123456):
+def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_dist = [], seed = None):
 	""" Misalign the set of elements identified by element_indices. The misalignment is Gaussian
 	with sigma, sigma_cutoff and mean among the input parameters. If sigma = 0.0, the misalignment is constant 
 	and given by mean
@@ -1119,13 +1119,7 @@ def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_
 
 	#generate misalignment distribution (microns)
 	if misalign_dist == []:
-		while len(misalign_dist) < len(element_indices):
-			if sigma > 0.0:
-				rand = random.gauss(mean,sigma)
-				if abs(rand) < sigma_cutoff*sigma:
-					misalign_dist.append(rand)
-			else:
-				misalign_dist.append(mean)
+		misalign_dist = gaussian_cutoff(len(element_indices), mean, sigma, sigma_cutoff, seed = seed)
 
 	#insert CHANGREF with misalignments given by misalign_dist.
 	for index, pos in enumerate(changref_indices):
