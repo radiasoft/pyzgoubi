@@ -6,9 +6,44 @@ import sys
 import subprocess
 import time
 import datetime
+import getopt
+
+def usage():
+	print "Usage:"
+	print sys.argv[0]
+	print sys.argv[0], "[testname [testname2 ...]]"
+	print sys.argv[0], "zgoubi=/path/to/zgoubi"
+	print sys.argv[0], "zgoubi=/path/to/zgoubi1,/path/to/zgoubi2"
+	print sys.argv[0], "logfile=testlog.txt"
+
+
+
+try:
+	opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "logfile=", "zgoubi="])
+except getopt.GetoptError, err:
+# print help information and exit:
+	print str(err) # will print something like "option -a not recognized"
+	usage()
+	sys.exit(2)
+
+
+
 
 
 log_file_path = "test-" + datetime.datetime.today().strftime("%Y%m%d-%H%M") + ".log"
+zgoubi_bins = [None]
+
+for o, a in opts:
+	if o in ("-h", "--help"):
+		usage()
+		sys.exit()
+	elif o in ("--logfile"):
+		log_file_path = a
+	elif o in ("--zgoubi"):
+		zgoubi_bins = a.split(',')
+		print zgoubi_bins
+	
+
 log = open(log_file_path, "w")
 print "writing test log to:", log_file_path
 
@@ -59,8 +94,8 @@ for test_file in os.listdir(test_dir):
 	print
 	print >>log, "\n", "="*40
 	log.flush()
-	if len(sys.argv) > 1:
-		if test_file not in sys.argv:
+	if len(args) > 0:
+		if test_file not in args:
 			print "skipping", test_file
 			print >> log, "skipping", test_file
 			continue
@@ -69,36 +104,45 @@ for test_file in os.listdir(test_dir):
 	print "running test %s, %d of %d"%(test_file, tests_run, number_of_tests)
 	print >> log,"running test %s, %d of %d"%(test_file, tests_run, number_of_tests)
 	log.flush()
-	command = pyzgoubi_cmd + " " + full_test_file
-	t0 = time.time()
-#	result = os.system(command)
-	print command
-	proc = subprocess.Popen(command, shell=True, stderr=subprocess.STDOUT, stdout=log)
-	proc.wait()
-	result = proc.returncode
-	t1 = time.time()
-	t = t1 - t0
-	log.flush()
-	print
-	print >>log, "\n", "="*40
-	log.flush()
-	if result == 0:
-		print "PASS:", test_file
-		print >> log,"PASS:", test_file
-		tests_sucess.append(test_file)
-	else:
-		print "FAIL:", test_file
-		print >> log,"FAIL:", test_file
-		tests_fail.append(test_file)
-	print "Took %s sec"%t
-	print >> log,"Took %s sec"%t
-	tot_time += t
+	for zgoubi_bin in zgoubi_bins:
+		if zgoubi_bin == None:
+			command = pyzgoubi_cmd + " " + full_test_file
+			test_name = test_file
+		else:
+			command = pyzgoubi_cmd + " --zgoubi="+ zgoubi_bin + " " + full_test_file
+			print "Using zgoubi:", zgoubi_bin
+			print >>log, "Using zgoubi:", zgoubi_bin
+			test_name = test_file + " " + zgoubi_bin
+
+		t0 = time.time()
+		#	result = os.system(command)
+		print command
+		proc = subprocess.Popen(command, shell=True, stderr=subprocess.STDOUT, stdout=log)
+		proc.wait()
+		result = proc.returncode
+		t1 = time.time()
+		t = t1 - t0
+		log.flush()
+		print
+		print >>log, "\n", "="*40
+		log.flush()
+		if result == 0:
+			print "PASS:", test_name
+			print >> log,"PASS:", test_name
+			tests_sucess.append(test_name)
+		else:
+			print "FAIL:", test_name
+			print >> log,"FAIL:", test_name
+			tests_fail.append(test_name)
+		print "Took %s sec"%t
+		print >> log,"Took %s sec"%t
+		tot_time += t
 
 
 print "\nSummary:"
 print >> log,"\nSummary:"
-print "Ran %d tests"%number_of_tests
-print >> log,"Ran %d tests"%number_of_tests
+print "Ran %d tests"%tests_run
+print >> log,"Ran %d tests"%tests_run
 print "Pass %d"%len(tests_sucess)
 print >> log,"Pass %d"%len(tests_sucess)
 print "Fail %d"%len(tests_fail)
