@@ -298,12 +298,13 @@ def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-8,
 		objet.add(Y=current_YTZP[0], T=current_YTZP[1], Z=current_YTZP[2], P=current_YTZP[3], LET='A', D=D)
 
 		r = line.run(xterm=False)
-		#r = Results(line)
 
-		track = r.get_track('fai', ['Y','T','Z','P'])
 		if not r.run_success():
 			print "No stable orbit"
 			return None
+		else:
+			track = r.get_track('fai', ['Y','T','Z','P'])
+
 		track.insert(0, current_YTZP)
 		track_a = numpy.array(track)
 		tracks.append(track_a)
@@ -702,8 +703,6 @@ def fourier_tune(line,initial_YTZP,D_in,nfourierturns, coords = []):
 		ycoords = coords[0]
 		zcoords = coords[1]
 
-
-
 	#perform FFT
 	import pylab
 	yfft = pylab.fft(ycoords)
@@ -731,10 +730,11 @@ def fourier_tune(line,initial_YTZP,D_in,nfourierturns, coords = []):
 	zfouriertune = zpeaksloc[0]/len(zcoords)
 
 	#plot tunes if desired
-	plot_fourier = False
+	plot_fourier = True
 	if(plot_fourier):
 		pylab.plot(yampfreq, 'k-')
 		pylab.plot(zampfreq, 'b-')
+		pylab.ylim([0,max([max(yampfreq[1:-1]),max(zampfreq[1:-1])])])
 		pylab.savefig('fspectrum')
 
 	return yfouriertune, zfouriertune
@@ -1090,7 +1090,7 @@ def get_enclosing_circle(ellipse_data):
 	return centre, radius
 
 
-def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_dist = [], seed = 123456):
+def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_dist = [], seed = None):
 	""" Misalign the set of elements identified by element_indices. The misalignment is Gaussian
 	with sigma, sigma_cutoff and mean among the input parameters. If sigma = 0.0, the misalignment is constant 
 	and given by mean
@@ -1119,13 +1119,7 @@ def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_
 
 	#generate misalignment distribution (microns)
 	if misalign_dist == []:
-		while len(misalign_dist) < len(element_indices):
-			if sigma > 0.0:
-				rand = random.gauss(mean,sigma)
-				if abs(rand) < sigma_cutoff*sigma:
-					misalign_dist.append(rand)
-			else:
-				misalign_dist.append(mean)
+		misalign_dist = gaussian_cutoff(len(element_indices), mean, sigma, sigma_cutoff, seed = seed)
 
 	#insert CHANGREF with misalignments given by misalign_dist.
 	for index, pos in enumerate(changref_indices):
@@ -1135,6 +1129,30 @@ def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_
 		line.insert(pos+2, misalign_elem_rev)
 
 	return misalign_dist
+
+
+def gaussian_cutoff(npoints, mean, sigma, sigma_cutoff, seed = None):
+	""" Generate Gaussian distribution about mean with standard deviation sigma
+          npoints - number of points in distribution required
+          sigma_cutoff - the cutoff factor i.e. points outside sigma*sigma_cutoff eliminated
+
+          Seed - Optional parameter to set random seed"""
+
+	import random
+
+	if seed != None:
+		random.seed(seed)
+
+	dist = []
+	while len(dist) < npoints:
+		if sigma > 0.0:
+			rand = random.gauss(0,sigma)
+			if abs(rand) < sigma_cutoff*sigma or sigma_cutoff == 0:
+				dist.append(mean+rand)
+		else:
+			dist.append(mean)
+
+	return dist
 
 
 def plot_data_xy(data, filename, labels=["","",""], style='b-', xlim = [0,0], ylim = [0,0]):
@@ -1214,7 +1232,6 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["","",""], st
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])
 
-	print "legend ",legend
 	if legend != [' ']:
 		pylab.legend(loc=legend_location)
 

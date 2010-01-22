@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 #		pyzgoubi - python interface to zgoubi
 #		Copyright 2008 Sam Tygier <Sam.Tygier@hep.manchester.ac.uk>
@@ -744,6 +745,16 @@ class Results(object):
 
 		header = list(read_n_lines(fh,4))
 		#print "header", header
+		#Versions of Zgoubi up to 236 had just '...' in lines 3 and 4 of the fai file 
+		test_version = header[2][0:3]
+		old_format = False
+		if test_version == '...':
+			old_format = True
+		else:
+			data_label = header[2]
+			data_units = header[3]
+			#print "data_label ",data_label
+			#print "units ",data_units
 
 		#for n,x in enumerate([9,3,5,10,8]):
 		#   for i in xrange(x):
@@ -763,7 +774,10 @@ class Results(object):
 
 		#no of lines per fai, plt or spn data point
 		if file != 'spn':
-			n_lines = 5
+			if old_format:
+				n_lines = 5
+			else:
+				n_lines = 1
 		else:
 			n_lines = 2
 
@@ -783,82 +797,148 @@ class Results(object):
 				#
 				p = {}
 
-				# line 0
-				if file == 'spn':
-					l0 = scanf(lines[0], l0_spn)
-					p['SPIN_X'] = float(l0[5])
-					p['SPIN_Y'] = float(l0[6])
-					p['SPIN_Z'] = float(l0[7])
-				else:
-					l0 = scanf(lines[0], l0_re)
-					p['LET'] = l0[0] 
-					p['IEX'] = int(l0[1]) #flag
-					p['D0'] = float(l0[2]) #initial D-1
-					p['Y0'] = self._bad_float(l0[3]) #initial Y
-					p['T0'] = self._bad_float(l0[4]) #initial T (remember that T is dY/dX not time)
-					p['Z0'] = float(l0[5]) #initial Z
-					p['P0'] = float(l0[6]) #initial P
-					p['X0'] = self._bad_float(float(l0[7])) # path length at origin of structure ?
+				if old_format:
 
-				# line 1
-				if file == 'spn':
-					l1 = scanf(lines[1], l1_spn)
-					p['PASS'] = int(l1[3])
-				else:
-					l1 = scanf(lines[1], l1_re)
-					p['D'] = float(l1[0]) #D-1
-					p['Y'] = self._bad_float(l1[1]) #current corrods
-					p['T'] = self._bad_float(l1[2])
+					# line 0
+					if file == 'spn':
+						l0 = scanf(lines[0], l0_spn)
+						p['SPIN_X'] = float(l0[5])
+						p['SPIN_Y'] = float(l0[6])
+						p['SPIN_Z'] = float(l0[7])
+					else:
+						l0 = scanf(lines[0], l0_re)
+						p['LET'] = l0[0] 
+						p['IEX'] = int(l0[1]) #flag
+						p['D0'] = float(l0[2]) #initial D-1
+						p['Y0'] = self._bad_float(l0[3]) #initial Y
+						p['T0'] = self._bad_float(l0[4]) #initial T (remember that T is dY/dX not time)
+						p['Z0'] = float(l0[5]) #initial Z
+						p['P0'] = float(l0[6]) #initial P
+						p['X0'] = self._bad_float(float(l0[7])) # path length at origin of structure ?
 
-				#line 2
-				if file != 'spn':
-					l2 = scanf(lines[2], l2_re)
-					p['Z'] = self._bad_float(l2[0])
-					p['P'] = self._bad_float(l2[1])
-					p['S'] = self._bad_float(l2[2])
-					p['tof'] = self._bad_float(l2[3]) # time of flight
-					if file=='plt': # a strange bug prehaps. anyways this makes it so that you get microseconds
-						p['tof'] = p['tof'] / 1e5
+					# line 1
+					if file == 'spn':
+						l1 = scanf(lines[1], l1_spn)
+						p['PASS'] = int(l1[3])
+					else:
+						l1 = scanf(lines[1], l1_re)
+						p['D'] = float(l1[0]) #D-1
+						p['Y'] = self._bad_float(l1[1]) #current corrods
+						p['T'] = self._bad_float(l1[2])
+
+					#line 2
+					if file != 'spn':
+						l2 = scanf(lines[2], l2_re)
+						p['Z'] = self._bad_float(l2[0])
+						p['P'] = self._bad_float(l2[1])
+						p['S'] = self._bad_float(l2[2])
+						p['tof'] = self._bad_float(l2[3]) # time of flight
+						if file=='plt': # a strange bug prehaps. anyways this makes it so that you get microseconds
+							p['tof'] = p['tof'] / 1e5
+						if file=='fai':
+							p['KE'] = self._bad_float(l2[4]) # Kinetic energy
+					
+					#line 3
+					# see 20080501 in lab book
+					if (file=='plt'):
+						l3 = scanf(lines[3], l3_re_plt)
+						p['KART'] = int(l3[0])
+						p['ID'] = l3[1]
+						p['IREP'] = l3[2]
+						p['SORT'] = l3[3]
+						p['X'] = float(l3[4])
+						p['By'] = float(l3[6])
+						p['Bz'] = float(l3[7])
+					elif (file=='fai'):
+						l3 = scanf(lines[3], l3_re)
+						p['ID'] = l3[0]
+						p['IREP'] = l3[1]
+						p['SORT'] = l3[2]
+						p['X'] = -1 # X is not defined in FAI file, particle is always at end of the element
+
+					#if  particle['X'] > 1e18: # this comes out as a silly giant number in some cases, maybe due to FAICNL or something
+					#	particle['X'] = 0 
+
+					#line4
+					if (file=='plt'):
+						l4 = scanf(lines[4], l4_re_plt)
+						p['BORO'] = float(l4[3])
+						p['PASS'] = int(l4[4])
+						p['element_type'] = l4[5].strip()
+						p['element_label1'] = l4[6].strip()
+						p['element_label2'] = l4[7].strip()
+					elif (file=='fai'):
+						l4 = scanf(lines[4], l4_re)
+						p['BORO'] = float(l4[0])
+						p['PASS'] = int(l4[1])
+						p['element_type'] = l4[2].strip()
+						p['element_label1'] = l4[3].strip()
+						p['element_label2'] = l4[4].strip()
+				else:
+					#new format - first separate the strings at end of l0 from the rest
+					l0 = lines[0].split("\'")
+					#remove spurious ' ' strings
+					for elem in l0:
+						if elem == ' ':
+							l0.remove(elem)
+					l0_stringpart = l0[1:-1]
+					#split the numerical part of l0
+					l0 = l0[0].split()
+
+					p['IEX'] = int(l0[0])
+					p['D0'] = float(l0[1]) #initial D-1
+					p['Y0'] = self._bad_float(l0[2]) #initial Y
+					p['T0'] = self._bad_float(l0[3]) #initial T (remember that T is dY/dX not time)
+					p['Z0'] = float(l0[4]) #initial Z
+					p['P0'] = float(l0[5]) #initial P
+					p['X0'] = self._bad_float(float(l0[6])) # path length at origin of structure ?
+					p['tof0'] = self._bad_float(l0[7]) # time of flight
+					p['D'] = float(l0[8])
+					p['Y'] = self._bad_float(l0[9])
+					p['T'] = self._bad_float(l0[10])
+					p['Z'] = self._bad_float(l0[11])
+					p['P'] = self._bad_float(l0[12])
+					p['S'] = self._bad_float(l0[13])
+					p['tof'] = self._bad_float(l0[14]) # time of flight
 					if file=='fai':
-						p['KE'] = self._bad_float(l2[4]) # Kinetic energy
-				
-				#line 3
-				# see 20080501 in lab book
-				if (file=='plt'):
-					l3 = scanf(lines[3], l3_re_plt)
-					p['KART'] = int(l3[0])
-					p['ID'] = l3[1]
-					p['IREP'] = l3[2]
-					p['SORT'] = l3[3]
-					p['X'] = float(l3[4])
-					p['By'] = float(l3[6])
-					p['Bz'] = float(l3[7])
-				elif (file=='fai'):
-					l3 = scanf(lines[3], l3_re)
-					p['ID'] = l3[0]
-					p['IREP'] = l3[1]
-					p['SORT'] = l3[2]
-					p['X'] = -1 # X is not defined in FAI file, particle is always at end of the element
+						p['KE'] = self._bad_float(l0[15]) # Kinetic energy
+						p['E'] = self._bad_float(l0[16]) # Total energy
+						p['ID'] = int(l0[17])
+						p['IREP'] = int(l0[18])
+						p['SORT'] = l0[19]
+						p['AMQ'] = l0[20:25]
+						p['RET'] = l0[25]
+						p['DPR'] = l0[26]
+						p['PS'] = l0[27]
+						p['BORO'] = float(l0[28])
+						p['PASS'] = int(l0[29])
+						p['NOEL'] = int(l0[30])
+						p['element_type'] = l0_stringpart[0].strip('\'')
+						p['element_label1']  = l0_stringpart[1].strip('\'')
+						p['element_label2']  = l0_stringpart[2].strip('\'')
+						p['LET'] = l0_stringpart[3].strip('\'')
+					elif file=='plt':
+						p['tof'] = p['tof'] / 1e5  #a strange bug prehaps - ensure tof is in microseconds
+						p['beta'] = self._bad_float(l0[15]) # Relativistic beta
+						p['DS'] = self._bad_float(l0[16]) # Relativistic beta
+						p['ID'] = int(l0[18])
+						p['IREP'] = int(l0[19])
+						p['SORT'] = l0[20]
+						p['X'] = float(l0[21])
+						p['Bx'] = float(l0[22])
+						p['By'] = float(l0[23])
+						p['Bz'] = float(l0[24])
+						p['RET'] = l0[25]
+						p['DPR'] = l0[26]
+						p['PS'] = l0[27]
+						p['BORO'] = float(l0[39])
+						p['PASS'] = int(l0[40])
+						p['NOEL'] = int(l0[41])
+						p['element_type'] = l0_stringpart[0].strip()
+						p['element_label1']  = l0_stringpart[1].strip()
+						p['element_label2']  = l0_stringpart[2].strip()
+						p['LET'] = l0_stringpart[3].strip()
 
-				#if  particle['X'] > 1e18: # this comes out as a silly giant number in some cases, maybe due to FAICNL or something
-				#	particle['X'] = 0 
-
-				#line4
-				if (file=='plt'):
-					l4 = scanf(lines[4], l4_re_plt)
-					p['BORO'] = float(l4[3])
-					p['PASS'] = int(l4[4])
-					p['element_type'] = l4[5].strip()
-					p['element_label1'] = l4[6].strip()
-					p['element_label2'] = l4[7].strip()
-				elif (file=='fai'):
-					l4 = scanf(lines[4], l4_re)
-					p['BORO'] = float(l4[0])
-					p['PASS'] = int(l4[1])
-					p['element_type'] = l4[2].strip()
-					p['element_label1'] = l4[3].strip()
-					p['element_label2'] = l4[4].strip()
-				
 				
 				plt_data.append(p)
 		return plt_data
