@@ -5,9 +5,21 @@ import sys
 import os
 from glob import glob
 
+MAIN_VERSION = '0.4dev'
+
+if os.system("bzr version-info --format=python > zgoubi/version.py") == 0:
+	# run from a bzr repo, can use version info
+	print "updated zgoubi/version.py"
+	vfile = open("zgoubi/version.py","a")
+else:
+	vfile = open("zgoubi/version.py","w")
+	vfile.write("#!/usr/bin/env python\n")
+vfile.write("MAIN_VERSION = '%s'\n"%MAIN_VERSION)
+vfile.close()
+
 
 setup(name='pyzgoubi',
-	version='0.3.1',
+	version=MAIN_VERSION,
 	packages=['zgoubi'],
 	scripts=['pyzgoubi'],
 	#package_data={'zgoubi': ['defs/*.py', 'defs/*.defs']},
