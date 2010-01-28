@@ -906,7 +906,7 @@ class Results(object):
 						p['ID'] = int(l0[17])
 						p['IREP'] = int(l0[18])
 						p['SORT'] = float(l0[19])
-						p['AMQ'] = float(l0[20:25])
+						p['AMQ'] = l0[20:25]
 						p['RET'] = float(l0[25])
 						p['DPR'] = float(l0[26])
 						p['PS'] = float(l0[27])
