@@ -930,7 +930,7 @@ class Results(object):
 						p['Bz'] = float(l0[24])
 						p['RET'] = l0[25]
 						p['DPR'] = l0[26]
-						p['PS'] = l0[27]
+						p['PS'] = float(l0[27])
 						p['BORO'] = float(l0[39])
 						p['PASS'] = int(l0[40])
 						p['NOEL'] = int(l0[41])
