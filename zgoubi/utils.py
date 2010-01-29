@@ -371,7 +371,12 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 #!-----------------------------------------------------------------------------------------
 #!  PREPARE DATA FOR CALCULATION
 #!-----------------------------------------------------------------------------------------
-	plt_track = r.get_track('plt', ['LET','D0','Y0','T0','Z0','P0','X0','D','Y','T','Z','P','S','X'])
+	try:
+		plt_track = r.get_track('plt', ['LET','D0','Y0','T0','Z0','P0','X0','D','Y','T','Z','P','S','X'])
+		track_type= 'plt'
+	except:
+		plt_track = r.get_track('fai', ['LET','D0','Y0','T0','Z0','P0','X0','D','Y','T','Z','P','S'])
+		track_type= 'fai'
 	transpose_plt_track = map(list,zip(*plt_track))
 	track_tag = transpose_plt_track[0]
 	D0 = transpose_plt_track[1]
@@ -386,10 +391,14 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 	Z = transpose_plt_track[10]
 	P = transpose_plt_track[11]	
 	S = transpose_plt_track[12]
-	X = transpose_plt_track[13]
+	if track_type== 'plt':
+		X = transpose_plt_track[13]
+		#read labels
+		label = [x[0].strip() for x in r.get_track('plt', ['element_label1'])]
+	else:
+		X = [0 for x in xrange(len(S))]
+		label = [x[0].strip() for x in r.get_track('fai', ['element_label1'])]
 
-	#read labels
-	label = [x[0].strip() for x in r.get_track('plt', ['element_label1'])]
 
 	#sort out individual tracks
 	alphabet = "A,B,C,D,E,F,G,H,I,J,K,L,M,N,P,Q,R,S,T,U,V,W,X,Y,Z"
