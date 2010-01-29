@@ -20,12 +20,14 @@
 
 from __future__ import division
 from math import *
-import getopt, sys
+import getopt, sys, os
 import subprocess
 from zgoubi.utils import *
 from zgoubi.core import *
 from zgoubi.constants import *
 from zgoubi.version import *
+
+sys.path.append(os.getcwd())
 
 # create a set of functions that work on default_line and default_results objects
 # these will make it simpler to run simple simulations
