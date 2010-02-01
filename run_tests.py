@@ -14,6 +14,7 @@ def usage():
 	print sys.argv[0], "[testname [testname2 ...]]"
 	print sys.argv[0], "zgoubi=/path/to/zgoubi"
 	print sys.argv[0], "zgoubi=/path/to/zgoubi1,/path/to/zgoubi2"
+	print sys.argv[0], "zgoubi=~/bin"
 	print sys.argv[0], "logfile=testlog.txt"
 
 
@@ -40,8 +41,17 @@ for o, a in opts:
 	elif o in ("--logfile"):
 		log_file_path = a
 	elif o in ("--zgoubi"):
-		zgoubi_bins = a.split(',')
+		zgoubi_bins = []
+		zgoubi_paths = [os.path.expanduser(x) for x in  a.split(',')]
+		for path in zgoubi_paths:
+			if os.path.isdir(path):
+				files = [os.path.join(path, x) for x in os.listdir(path) if x.startswith("zgoubi")]
+				zgoubi_bins += files
+			else:
+				zgoubi_bins.append(path)
+
 		print zgoubi_bins
+
 	
 
 log = open(log_file_path, "w")
@@ -141,6 +151,14 @@ for test_file in os.listdir(test_dir):
 
 print "\nSummary:"
 print >> log,"\nSummary:"
+if zgoubi_bins[0] != None:
+	print "Using zgoubi binariesi:"
+	print>> log, "Using zgoubi binariesi:"
+	for zgoubi_bin in zgoubi_bins:
+		print "\t", zgoubi_bin
+		print>> log, "\t", zgoubi_bin
+
+
 print "Ran %d tests"%tests_run
 print >> log,"Ran %d tests"%tests_run
 print "Pass %d"%len(tests_sucess)
