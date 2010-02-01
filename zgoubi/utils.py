@@ -272,7 +272,14 @@ def show_file(file_path,mode):
 		system(command)
 
 
-def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-8, D=1):
+def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-6, D=1):
+	"""Find a closed orbit for the line. can optionally give a list of initial coordinates, init_YTZP, eg:
+	find_closed_orbit(line, init_YTZP=[1.2,2.1,0,0])
+	otherwise [0,0,0,0] are used.
+
+	The line is expected to have a OBJET2, and a FAISCNL at the end. It is recommend to have a REBELOTE, with several laps. The area of the phase space ellipse is approximated from the coordinates from the FAISCNL, and the center is used for the new coordinates. Once the relative variation between iterations is less that the tolerance, the function returns the closed orbit coordinates. If a coordinate is close to zero (less than the tolerance) then it is compared absolutely instead of relatively.
+	
+	"""
 	#check line has an objet2
 	for e in line.element_list:
 		if ("OBJET2" in str(type(e)).split("'")[1]):
@@ -287,7 +294,7 @@ def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-8,
 	else:
 		raise ValueError, "Line has no FAISCNL element"
 
-	current_YTZP = init_YTZP
+	current_YTZP = numpy.array(init_YTZP)
 	areas = []
 	coords = []
 	tracks = []
@@ -319,11 +326,25 @@ def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-8,
 
 
 		areas.append([area_h , area_v])
-		current_YTZP = [centre_h[0], centre_h[1], centre_v[0], centre_v[1]]
-		if area_h < tol and area_v < tol:
+		prev_YTZP = current_YTZP
+		current_YTZP = numpy.array([centre_h[0], centre_h[1], centre_v[0], centre_v[1]])
+		
+		difs = numpy.zeros(4)
+		for x in xrange(4):
+			if abs(prev_YTZP[x]) < tol or abs(current_YTZP[x]) < tol:
+				difs[x] = abs(prev_YTZP[x] - current_YTZP[x])
+			else:
+				difs[x] = abs((prev_YTZP[x] - current_YTZP[x])/ prev_YTZP[x])
+
+		if difs.max() < tol:
 			close_orbit_found = True
 			close_orbit = current_YTZP
 			break
+
+		#if area_h < tol and area_v < tol:
+		#	close_orbit_found = True
+		#	close_orbit = current_YTZP
+		#	break
 
 
 	
@@ -371,7 +392,12 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 #!-----------------------------------------------------------------------------------------
 #!  PREPARE DATA FOR CALCULATION
 #!-----------------------------------------------------------------------------------------
-	plt_track = r.get_track('plt', ['LET','D0','Y0','T0','Z0','P0','X0','D','Y','T','Z','P','S','X'])
+	try:
+		plt_track = r.get_track('plt', ['LET','D0','Y0','T0','Z0','P0','X0','D','Y','T','Z','P','S','X'])
+		track_type= 'plt'
+	except:
+		plt_track = r.get_track('fai', ['LET','D0','Y0','T0','Z0','P0','X0','D','Y','T','Z','P','S'])
+		track_type= 'fai'
 	transpose_plt_track = map(list,zip(*plt_track))
 	track_tag = transpose_plt_track[0]
 	D0 = transpose_plt_track[1]
@@ -386,10 +412,14 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 	Z = transpose_plt_track[10]
 	P = transpose_plt_track[11]	
 	S = transpose_plt_track[12]
-	X = transpose_plt_track[13]
+	if track_type== 'plt':
+		X = transpose_plt_track[13]
+		#read labels
+		label = [x[0].strip() for x in r.get_track('plt', ['element_label1'])]
+	else:
+		X = [0 for x in xrange(len(S))]
+		label = [x[0].strip() for x in r.get_track('fai', ['element_label1'])]
 
-	#read labels
-	label = [x[0].strip() for x in r.get_track('plt', ['element_label1'])]
 
 	#sort out individual tracks
 	alphabet = "A,B,C,D,E,F,G,H,I,J,K,L,M,N,P,Q,R,S,T,U,V,W,X,Y,Z"

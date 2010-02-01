@@ -12,7 +12,7 @@ Introduction
 
 http://sourceforge.net/projects/zgoubi Zgoubi is a particle tracking code maintained by François Méot. PyZgoubi is an interface to Zgoubi writing in python. It aims to make input files that are easy to read and can contain calculations, loops, and any other python program feature.
 
-A basic knowledge of http://python.org/ Python is useful to use PyZgoubi. Python is a general purpose, high level, interpreted programing language. I recommend the http://www.python.org/doc/2.5.2/tut/tut.html Official Python Tutorial.
+A basic knowledge of http://python.org/ Python is useful to use PyZgoubi. Python is a general purpose, high level, interpreted programming language. I recommend the http://www.python.org/doc/2.5.2/tut/tut.html Official Python Tutorial.
 
 Quick Start
 -----------
@@ -459,7 +459,24 @@ For conversion between degrees and radians use the python math functions::
 	degrees(2*pi) # gives 360
 	radians(180) # gives 3.1416...
 
+Settings and Options
+--------------------
 
+PyZgoubi settings are stored in a file .pyzgoubi/settings.ini in your home folder. It is automatically created the first time pyzgoubi is used. It can be used to customise some PyZgoubi options.
+
+The following keys can be set::
+
+	extra_defs_files
+
+Give the path of any additional definition files you want to be considered::
+
+	tmp_dir
+
+Where temporary files should be written, this is most likely /tmp/, but in some case you may wish to use /var/tmp/ or a ramdisk /dev/shm/::
+
+	zgoubi_path 
+
+The path to the zgoubi binary file. Note that this can also be set with the commandline option --zgoubi=/path/to/zgoubi.
 
 
 Tips

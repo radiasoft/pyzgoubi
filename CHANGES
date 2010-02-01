@@ -1,4 +1,22 @@
-Changes 3.3 -> 3.0
+Changes from 0.3.0 -> 0.3.1
+Mon Jan 11 12:57:56 GMT 2010
+New Features
+* use symlinks (if possible) instead of copies for add_input_files. should be faster for big files
+* Allow adding lines to lines
+* Can use -line to get the reversed line. (eg line.add(sec1, sec2, -sec3, sec4) or rline = -line )
+* scan_dynamic_aperture
+* misalign_element
+* In def fourier_tune, allow input of coords 
+* Fix legend parameter and add legend_location parameter to plot_data_xy_multi
+
+Fixes
+* Possible cygwin fixes (Not fully tested, probably best to run in native python on windows)
+* Allow convering T and kGauss both directions
+* Fixes to plot_data_xy_multi, scan_dynamic_aperture
+
+See http://pyzgoubi.bzr.sf.net/bzr/ for full changes.
+
+Changes 0.2.3 -> 0.3.0
 Infrastructure changes:
 * Moved code to sourceforge with bzr for revision control.
 * The custom install is gone, and replaced with the standard python tools (install with "./setup.py install")
@@ -25,7 +43,7 @@ Note: binary fai reading does not yet work with Zgoubi 5.1 (the format changed s
 
 
 
-Changes 2.2 -> 2.3
+Changes 0.2.2 -> 0.2.3
 * Reading of binary fai files, use get_all(file='bfai')
 * Twiss profile function from David
 * Disable sorting by D in OBJET2, can be enabled with .sorted=True
@@ -36,10 +54,10 @@ Changes 2.2 -> 2.3
 * Results.get_all() on FAI file gives -1 for X.
 * Fix install update on Ubuntu
 
-Changes 2.1 -> 2.2
+Changes 0.2.1 -> 0.2.2
 * Fix reading plt with get_all()
 
-Changes 2.0 -> 2.1
+Changes 0.2.0 -> 0.2.1
 * Improve error message when writing defs
 * Fix Line.full_tracking()
 * Improve messages when run without an input file

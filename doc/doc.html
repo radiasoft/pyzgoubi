@@ -303,8 +303,9 @@ ul.auto-toc {
 <li><a class="reference internal" href="#loops" id="id8">Loops</a></li>
 <li><a class="reference internal" href="#command-line-arguments" id="id9">Command line arguments</a></li>
 <li><a class="reference internal" href="#units" id="id10">Units</a></li>
-<li><a class="reference internal" href="#tips" id="id11">Tips</a><ul>
-<li><a class="reference internal" href="#python-hints" id="id12">Python hints</a></li>
+<li><a class="reference internal" href="#settings-and-options" id="id11">Settings and Options</a></li>
+<li><a class="reference internal" href="#tips" id="id12">Tips</a><ul>
+<li><a class="reference internal" href="#python-hints" id="id13">Python hints</a></li>
 </ul>
 </li>
 </ul>
@@ -312,7 +313,7 @@ ul.auto-toc {
 <div class="section" id="introduction">
 <h1><a class="toc-backref" href="#id1">Introduction</a></h1>
 <p><a class="reference external" href="http://sourceforge.net/projects/zgoubi">http://sourceforge.net/projects/zgoubi</a> Zgoubi is a particle tracking code maintained by François Méot. PyZgoubi is an interface to Zgoubi writing in python. It aims to make input files that are easy to read and can contain calculations, loops, and any other python program feature.</p>
-<p>A basic knowledge of <a class="reference external" href="http://python.org/">http://python.org/</a> Python is useful to use PyZgoubi. Python is a general purpose, high level, interpreted programing language. I recommend the <a class="reference external" href="http://www.python.org/doc/2.5.2/tut/tut.html">http://www.python.org/doc/2.5.2/tut/tut.html</a> Official Python Tutorial.</p>
+<p>A basic knowledge of <a class="reference external" href="http://python.org/">http://python.org/</a> Python is useful to use PyZgoubi. Python is a general purpose, high level, interpreted programming language. I recommend the <a class="reference external" href="http://www.python.org/doc/2.5.2/tut/tut.html">http://www.python.org/doc/2.5.2/tut/tut.html</a> Official Python Tutorial.</p>
 </div>
 <div class="section" id="quick-start">
 <h1><a class="toc-backref" href="#id2">Quick Start</a></h1>
@@ -727,10 +728,27 @@ degrees(2*pi) # gives 360
 radians(180) # gives 3.1416...
 </pre>
 </div>
+<div class="section" id="settings-and-options">
+<h1><a class="toc-backref" href="#id11">Settings and Options</a></h1>
+<p>PyZgoubi settings are stored in a file .pyzgoubi/settings.ini in your home folder. It is automatically created the first time pyzgoubi is used. It can be used to customise some PyZgoubi options.</p>
+<p>The following keys can be set:</p>
+<pre class="literal-block">
+extra_defs_files
+</pre>
+<p>Give the path of any additional definition files you want to be considered:</p>
+<pre class="literal-block">
+tmp_dir
+</pre>
+<p>Where temporary files should be written, this is most likely /tmp/, but in some case you may wish to use /var/tmp/ or a ramdisk /dev/shm/:</p>
+<pre class="literal-block">
+zgoubi_path
+</pre>
+<p>The path to the zgoubi binary file. Note that this can also be set with the commandline option --zgoubi=/path/to/zgoubi.</p>
+</div>
 <div class="section" id="tips">
-<h1><a class="toc-backref" href="#id11">Tips</a></h1>
+<h1><a class="toc-backref" href="#id12">Tips</a></h1>
 <div class="section" id="python-hints">
-<h2><a class="toc-backref" href="#id12">Python hints</a></h2>
+<h2><a class="toc-backref" href="#id13">Python hints</a></h2>
 <p>If there is a '#' character on a line, everything after it is treated as a comment.</p>
 <p>Python uses whitespace to delimit blocks (instead of braces '{' and '}' in C/C++). The PyZgoubi code uses tabs, so it is best to use tabs in your input files. If you get an 'IndentationError' check that you have not mixed spaces and tabs, or accidentally started a line with a space/tab.</p>
 <p>Python identifiers (variable, function, object names etc) are case sensitive, they must start with a letter and only contain letters, numbers and underscores.</p>
