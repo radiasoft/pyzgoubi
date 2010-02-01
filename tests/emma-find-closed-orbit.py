@@ -65,7 +65,8 @@ ob.add(Y=0, T=0, D=1)
 
 closed_orbit = find_closed_orbit(emma, init_YTZP=[0,0,0,0], tol=1e-10)
 
-Y0, T0, Z0, P0 = 0.45634542682969848, -38.174163096145726, 0.0, 0.0 # from a zgoubi-5.0.0 run on 64bit amd Opteron
+#Y0, T0, Z0, P0 = 0.45634542682969848, -38.174163096145726, 0.0, 0.0 # from a zgoubi-5.0.0 run on 64bit amd Opteron
+Y0, T0, Z0, P0 = 0.456345425934, -38.1741628967, 0.0, 0.0 # from a zgoubi-5.0.0 run on 64bit amd Opteron (new tol)
 Y1, T1, Z1, P1 = closed_orbit
 
 
