@@ -690,10 +690,12 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 	return twiss_profiles
 
 
-def fourier_tune(line,initial_YTZP,D_in,nfourierturns, coords = []):
+def fourier_tune(line,initial_YTZP,D_in,nfourierturns, plot_fourier = False, coords = []):
 	"""Calculate tune using FFT. nfourierturns determines the number of passes through the lattice.
        Can supply set of horizontal and vertical coordinates in coords = [ycoords,zcoords], otherwise
          routine will calculate coordinates
+
+       Set plot_fourier= True to show Fourier spectrum. Default is False
 	"""
 	#check line has an objet2
 	for e in line.element_list:
@@ -759,8 +761,7 @@ def fourier_tune(line,initial_YTZP,D_in,nfourierturns, coords = []):
 	yfouriertune = ypeaksloc[0]/len(ycoords)
 	zfouriertune = zpeaksloc[0]/len(zcoords)
 
-	#plot tunes if desired
-	plot_fourier = True
+	#plot tunes if desired	
 	if(plot_fourier):
 		pylab.plot(yampfreq, 'k-')
 		pylab.plot(zampfreq, 'b-')
@@ -967,7 +968,7 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_gamma_input = 1, ncoords = 1):
 	"""Given some emittance in horizonal and vertical space
 
-	If ncoords >= 1 return points where phase space ellipse crosses the y,y' and z,z' axis.
+	If ncoords <= 1 return points where phase space ellipse crosses the y,y' and z,z' axis.
 
 	If ncoords > 1, will instead give a distribution of points (y,t) around the phase space ellipse uniform in angle theta where
 	    y = a*cos(theta)*cos(phi) - b*sin(theta)*sin(phi)
@@ -1198,6 +1199,8 @@ def plot_data_xy(data, filename, labels=["","",""], style='b-', xlim = [0,0], yl
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])
 	pylab.savefig(filename)
+
+	pylab.cla()
 
 
 def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["","",""], style='', legend = ' ', legend_location = 'best',xlim = [0,0], ylim = [0,0]):
