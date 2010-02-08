@@ -899,7 +899,7 @@ class Results(object):
 					p['Z'] = self._bad_float(l0[11])
 					p['P'] = self._bad_float(l0[12])
 					p['S'] = self._bad_float(l0[13])
-					p['tof'] = self._bad_float(l0[14]) # time of flight
+					p['tof'] = self._bad_float(l0[14]) # time of flight in microseconds
 					if file=='fai':
 						p['KE'] = self._bad_float(l0[15]) # Kinetic energy
 						p['E'] = self._bad_float(l0[16]) # Total energy
@@ -918,7 +918,6 @@ class Results(object):
 						p['element_label2']  = l0_stringpart[2].strip('\'')
 						p['LET'] = l0_stringpart[3].strip('\'')
 					elif file=='plt':
-						p['tof'] = p['tof'] / 1e5  #a strange bug prehaps - ensure tof is in microseconds
 						p['beta'] = self._bad_float(l0[15]) # Relativistic beta
 						p['DS'] = self._bad_float(l0[16]) # Relativistic beta
 						p['ID'] = int(l0[18])
