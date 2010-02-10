@@ -180,3 +180,9 @@ shutil.rmtree(install_dir)
 shutil.rmtree(run_dir)
 
 print "Test written log to:", log_file_path
+
+if len(tests_fail) == 0:
+	sys.exit(0)
+else:
+	sys.exit(1)
+
