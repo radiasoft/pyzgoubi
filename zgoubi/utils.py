@@ -1186,6 +1186,101 @@ def gaussian_cutoff(npoints, mean, sigma, sigma_cutoff, seed = None):
 	return dist
 
 
+def tune_diagram(tune_list, order = 3, xlim = [0,1], ylim= [0,1]):
+	"""Plot a list of tunes on a tune diagram with resonance line up to a given order.
+
+		Required input 
+			tune_list - format [[list of horizontal tunes],[list of vertical tunes]]
+
+		Optional
+			order - Integer denoting order up to which resonance lines are drawn. Default value 3 (third order).
+		    xlim = [lower_value, upper_value] - Limit horizontal axis
+		    ylim = [lower_value, upper_value] - Limit vertical axis  
+
+		At the moment, since the tune diagram covers the range [0,1] just fractional tunes can be shown.
+		The default value of order is 3. 
+		Written by Y. Giboudet """
+
+	import pylab
+
+	XL = xlim[0]
+	XR = xlim[1]
+	YB = ylim[0]
+	YT = ylim[1]
+	NY = 0
+	LOC=[0,0]
+	col=['b','r','g','m','y','k','c']*3
+	for I in xrange(1,order+1):
+		for J in xrange(-I,I+1):
+			NX = J
+			if (NX>=0) and (NY>=0):
+				NY =  I-NX
+			elif (NX>=0) and (NY<0):
+				NY = -I+NX
+			elif (NX<0) and (NY>=0):
+				NY =  I+NX
+			elif (NX<0) and (NY<0):
+				NY = -I-NX
+			for K in xrange(-I+1,I):
+				X1 = -1
+				X2 = -1
+				Y1 = -1
+				Y2 = -1
+				
+				if NX!=0:
+					if (float(K)/NX>0) and (float(K)/NX<=1):
+							X1 = K/float(NX)
+					if ((K-NY)/float(NX)>=0) and ((K-NY)/float(NX)<1):
+							X2 = (K-NY)/float(NX)  
+				if NY!=0:
+					if (float(K)/NY>=0) and (float(K)/NY<1):
+							Y1 = float(K)/NY
+					if ((K-NX)/float(NY)>0) and ((K-NX)/float(NY)<=1):
+							Y2 = (K-NX)/float(NY)
+				XM = 0
+				if X1!=-1:
+					if Y2!=-1 :
+						pylab.plot([X1,1],[0,Y2],color=col[I])    
+
+					elif Y1!=-1:
+						pylab.plot([X1,0],[0,Y1],color=col[I])
+						
+					elif X2!=-1:
+						pylab.plot([X1,X2],[0,1],color=col[I])
+												
+
+				if Y1!=-1:
+					if Y2!=-1 :
+						pylab.plot([0,1],[Y1,Y2],color=col[I])
+						
+
+					elif X2!=-1:
+						pylab.plot([0,X2],[Y1,1],color=col[I])
+						
+				if X2!=-1 :
+					if Y2!=-1:
+						pylab.plot([X2,1],[1,Y2],color=col[I])
+						
+						
+	#plot box around area of resonance lines
+	pylab.plot([XL  ,XL  +XL  ],[YB,YB+YT],color='k')
+	pylab.plot([XL  +XL  ,XL  +XR  ],[YB+YT,YB+YT],color='k')
+	pylab.plot([XL  +XR  ,XL  +XR  ],[YB+YT,YB+YB],color='k')
+	pylab.plot([XL  +XR  ,XL  +XL  ],[YB+YB,YB+YB],color='k')
+
+	#plot list of tunes
+	pylab.plot(tune_list[0],tune_list[1],'k+')
+
+	#pylab.xlim( (xlim[0] ,xlim[1]) )
+	#pylab.axis([-0.05,1.05,-0.05,1.05])
+	pylab.axis([xlim[0],xlim[1],ylim[0],ylim[1]])
+
+	pylab.savefig('tune_diagram')
+	pylab.cla()
+	
+
+
+ 
 def plot_data_xy(data, filename, labels=["","",""], style='b-', xlim = [0,0], ylim = [0,0]):
 	import pylab
 	data_a = numpy.array(data)
