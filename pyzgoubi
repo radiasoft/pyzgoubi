@@ -26,6 +26,7 @@ from zgoubi.utils import *
 from zgoubi.core import *
 from zgoubi.constants import *
 from zgoubi.version import *
+from zgoubi.bunch import *
 
 sys.path.append(os.getcwd())
 
