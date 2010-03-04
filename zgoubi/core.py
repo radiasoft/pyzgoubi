@@ -604,6 +604,10 @@ class Results(object):
 	def b_fai(self): return self._get_str("b_zgoubi.fai")
 	def save_b_fai(self, path): return self._save_file("b_zgoubi.fai", path)
 		
+	def b_plt_fh(self): return self._get_fh("b_zgoubi.plt")
+	def b_plt(self): return self._get_str("b_zgoubi.plt")
+	def save_b_plt(self, path): return self._save_file("b_zgoubi.plt", path)
+
 	def _bad_float(self, text):
 		"""A wrapper around float to deal with zgoubi output numbers like
 		2.67116100-102 when it means 2.67116100e-102

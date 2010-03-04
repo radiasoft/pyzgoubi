@@ -51,11 +51,14 @@ class Bunch(object):
 		self.coords = new_coords
 
 
-	def gen_halo_x_xp_y_yp(self, npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z):
+	def gen_halo_x_xp_y_yp(self, npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None):
 
 		#r = numpy.random.random_sample([npart])
 		ry = sqrt(emit_y) 
 		rz = sqrt(emit_z) 
+
+		if seed!=None:
+			numpy.random.seed(seed)
 
 		u1 = numpy.random.random_sample([npart]) * pi * 2
 		u2 = numpy.random.random_sample([npart]) * pi * 2
