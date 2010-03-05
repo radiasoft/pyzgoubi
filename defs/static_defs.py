@@ -308,8 +308,9 @@ class IMMORTAL_MUON(zgoubi_element):
 
 
 class CHANGREF_NEW(zgoubi_element):
-	"""Monte Carlo generation of a 6-D object on a phase space ellipse
-	Equivilent to MCOBJET with a KOBJ=3
+	""" updated CHANGREF works with format XS,YS,ZS for longitudinal, horizontal and vertical shifts
+		and XR,YR,ZR for rotations about the longitudinal, horizontal and vertical axes
+		order can be specified, for example order=["ZR","YS"].
 	"""
 	def __init__(self ,**settings):
 		self._zgoubi_name = "CHANGREF"
@@ -322,6 +323,8 @@ class CHANGREF_NEW(zgoubi_element):
 		self._params['XR'] = None
 		self._params['YR'] = None
 		self._params['ZR'] = None
+		#default order of transformations
+		self._params['order'] = ["XS","YS","ZS","XR","YR","ZR"]
 		object.__setattr__(self, "ready", True)
 		self.set(settings)
 
@@ -329,20 +332,21 @@ class CHANGREF_NEW(zgoubi_element):
 		# local short cuts for long function names
 		f = self.f2s
 		i = self.i2s
-		
+
 		out = "'CHANGREF'" +nl
-		if self.XS != None:
-			out += "XS " + f(self.XS)+' '
-		if self.YS != None:
-			out += "YS " + f(self.YS)+' '
-		if self.ZS != None:
-			out += "ZS " + f(self.ZS)+' '
-		if self.XR != None:
-			out += "XR " + f(self.XR)+' '
-		if self.YR != None:
-			out += "YR " + f(self.YR)+' '
-		if self.ZR != None:
-			out += "ZR " + f(self.ZR)+' '
+		for elem in self.order:
+			if elem == "XS" and self.XS != None:
+				out += "XS " + f(self.XS)+' '
+			if elem == "YS" and self.YS != None:
+				out += "YS " + f(self.YS)+' '
+			if elem == "ZS" and self.ZS != None:
+				out += "ZS " + f(self.ZS)+' '
+			if elem == "XR" and self.XR != None:
+				out += "XR " + f(self.XR)+' '
+			if elem == "YR" and self.YR != None:
+				out += "YR " + f(self.YR)+' '
+			if elem == "ZR" and self.ZR != None:
+				out += "ZR " + f(self.ZR)+' '
 		out += '\n'
 
 		return out
