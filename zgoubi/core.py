@@ -46,6 +46,7 @@ except:
 #	print "cairo not found, no plotting available"
 
 from constants import *
+import io
 
 
 from settings import zgoubi_settings
@@ -657,10 +658,13 @@ class Results(object):
 	def get_all_bin(self, file='bplt'):
 		
 		if(file == 'bplt'):
-			fh = self.b_plt_fh()
-			file_len = os.path.getsize(os.path.join(self.rundir,'b_zgoubi.plt'))
-			raise ValueError, "binary plt reading not yet implemented"
+			return io.read_file(os.path.join(self.rundir,'b_zgoubi.plt'))
 		elif(file == 'bfai'):
+			try:
+				return io.read_file(os.path.join(self.rundir,'b_zgoubi.fai'))
+			except io.OldFormatError:
+				pass
+
 			fh = self.b_fai_fh()
 			file_len = os.path.getsize(os.path.join(self.rundir,'b_zgoubi.fai'))
 			head_len = 352
@@ -712,8 +716,7 @@ class Results(object):
 	def get_all(self, file='plt', id=None):
 		"""Read all the data out of the file.
 		Set file to plt or fai
-		returns a list of dicts. each dict has the particle coordinates at a point
-		set include_bits=True to get all the coordinates
+		if using the new headered data formats will return a numpy array with named columns, otherwise returns a list of dicts. each dict has the particle coordinates at a point
 		"""
 		#if (isinstance(file_nh, str)):
 		#	fh = open(file_nh)
@@ -755,10 +758,7 @@ class Results(object):
 		if test_version == '...':
 			old_format = True
 		else:
-			data_label = header[2]
-			data_units = header[3]
-			#print "data_label ",data_label
-			#print "units ",data_units
+			return io.read_file(fh)
 
 		#for n,x in enumerate([9,3,5,10,8]):
 		#   for i in xrange(x):
@@ -1081,8 +1081,35 @@ class Results(object):
 		"""
 		returns a list of coordinates specified, and multiply them by the multiplier if not none
 		eg get_trac('plt', ['X','Y','element_label'],[0.01,0.01,None])
+		
+		If all the columns requested are numerical, and new headered data formats are being used then this function will return a numpy array
 		"""
 		all = self.get_all(file)
+		#check if we are using the new zgoubi.io version
+		if (type(all) == type(numpy.zeros(0))):
+			#coords = numpy.zeros([all.size, len(coord_list)])
+			dtypes = []
+			best_type = numpy.dtype('i')
+			for n,c in enumerate(coord_list):
+				if all[c].dtype == numpy.dtype('i'):
+					continue
+				elif all[c].dtype == numpy.dtype('f'):
+					# not all cols are int, so use float
+					best_type = numpy.dtype('f')
+				else:
+					best_type = "mixed"
+			if best_type != "mixed":
+				# all cols numeric, so give a fast numpy array
+				coords = numpy.zeros([all.size], dtype=(best_type * len(coord_list)))
+
+				for n,c in enumerate(coord_list):
+					coords[:,n] = all[c]
+					if multi_list:
+						if multi_list[n]:
+							coords[:,n] *= multi_list[n]
+				return coords
+
+
 		coords = []
 		for p in all:
 			this_coord = []

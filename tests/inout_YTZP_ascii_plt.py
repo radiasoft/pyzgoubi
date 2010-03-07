@@ -39,7 +39,7 @@ add(END())
 res = run(xterm=False)
 
 if binary:
-	fai_data =  res.get_track('bfai', ['Y','T','Z','P'])
+	plt_data =  res.get_track('bplt', ['Y','T','Z','P'])
 else:
 	plt_data =  numpy.array(res.get_track('plt', ['Y','T','Z','P'])) / [100, 1000, 100, 1000]
 

@@ -312,8 +312,10 @@ def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-6,
 		else:
 			track = r.get_track('fai', ['Y','T','Z','P'])
 
-		track.insert(0, current_YTZP)
-		track_a = numpy.array(track)
+		track_a = numpy.zeros([len(track)+1, len(track[0])])
+		track_a[0] = current_YTZP
+		track_a[1:] = track
+
 		tracks.append(track_a)
 
 		#clean up tmp directory
@@ -393,11 +395,20 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 #!  PREPARE DATA FOR CALCULATION
 #!-----------------------------------------------------------------------------------------
 	try:
-		plt_track = r.get_track('plt', ['LET','D0','Y0','T0','Z0','P0','X0','D','Y','T','Z','P','S','X'])
-		track_type= 'plt'
-	except:
-		plt_track = r.get_track('fai', ['LET','D0','Y0','T0','Z0','P0','X0','D','Y','T','Z','P','S'])
-		track_type= 'fai'
+		try:
+			plt_track = r.get_track('plt', ['LET','D0','Y0','T0','Z0','P0','X0','D','Y','T','Z','P','S','X'])
+			track_type= 'plt'
+		except IOError:
+			plt_track = r.get_track('fai', ['LET','D0','Y0','T0','Z0','P0','X0','D','Y','T','Z','P','S'])
+			track_type= 'fai'
+	except ValueError:
+		try:
+			plt_track = r.get_track('plt', ['LET','D0','Y0','T0','Z0','P0','S0','D','Y','T','Z','P','X','S'])
+			track_type= 'plt'
+		except IOError:
+			plt_track = r.get_track('fai', ['LET','D0','Y0','T0','Z0','P0','S0','D','Y','T','Z','P','S'])
+			track_type= 'fai'
+
 	transpose_plt_track = map(list,zip(*plt_track))
 	track_tag = transpose_plt_track[0]
 	D0 = transpose_plt_track[1]
