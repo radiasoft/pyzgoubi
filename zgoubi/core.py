@@ -312,37 +312,15 @@ class Line(object):
 		
 	def output(self):
 		"Generate the zgoubi.dat file, and return it as a string"
-		safeout = ""
+		out = ""
 		if self.full_line:
-			safeout = self.name + nl
+			out = self.name + nl
 		
 		for element in self.element_list:
-			out = ''
-			out += element.output()
-			
-			for l in out.split('\n'):
-				safeout += self.split_line(l) + nl
-			#safeout += nl
+			out += element.output() + nl
 		
-		safeout += nl
-
-		return safeout
-
-	def split_line(self, l):
-		max_line = 200
-		if len(l) < max_line:
-			return l
-
-		out = ''
-		seg = ''
-		for b in l.split():
-			if len(seg) + len(b) + 1 < max_line:
-				seg += ' '+b.strip()
-			else:
-				out += seg.strip()+ '\n'
-				seg = b.strip()
-		out += seg
 		return out
+
 		
 	def run(self, xterm=False, tmp_prefix=zgoubi_settings['tmp_dir'], silence=False):
 		"Run zgoubi on line. If break is true, stop after running zgoubi, and open an xterm for the user in the tmp dir. From here zpop can be run."
