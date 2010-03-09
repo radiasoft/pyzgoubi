@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+
+"Parser for definitions formats"
+
 from __future__ import division
 from string import ascii_letters, digits
 
@@ -13,27 +16,27 @@ def expand_types(typestring):
 	for chunk in chunks:
 		multi = "" # how many
 		#print chunk
-		type = ""  # int, float, strin
+		ptype = ""  # int, float, strin
 		count = "" # sting len
 		chunk = list(chunk)
 		# pop the digits at the front into multi
-		while (chunk[0] in ['0','1','2','3','4','5','6','7','8','9']):
+		while (chunk[0] in digits):
 			multi += chunk.pop(0)
 		if multi == "":
 			multi = '1'
-		type = chunk.pop(0) # first non digit is type
-		#print multi, type  
-		if (type in ['I','E','X']):
+		ptype = chunk.pop(0) # first non digit is type
+		#print multi, ptype  
+		if (ptype in ['I', 'E', 'X']):
 			for x in range(int(multi)):
-				types.append(type)
+				types.append(ptype)
 			continue
 		#print chunk		
-		if (type == 'A'):
+		if (ptype == 'A'):
 			count = int(''.join(chunk)) # what is left must be count
 			for x in range(int(multi)):
-				types.append(type+str(count))
+				types.append(ptype+str(count))
 			continue
-		print multi, type, count
+		print multi, ptype, count
 		print "can't parse", typestring
 		raise ValueError
 	return types
@@ -46,7 +49,7 @@ def make_element_classes(definitions_paths, compiled_path):
 	try:
 		out_file = open(compiled_path, 'w')
 	except IOError:
-		print "Cant create file: "+ compiled_path+ "\n"
+		print "Cant create file: " + compiled_path + "\n"
 		print "Check that you have permission to modify files in that directory\n"
 		raise
 
@@ -91,14 +94,12 @@ def make_element_class(defs):
 	# must be a valid identifier name
 	for letter in class_name:
 		if letter not in ascii_letters + digits:
-			raise ValueError, "invalid classname in definitions file: "+ class_name
+			raise ValueError, "invalid classname in definitions file: " + class_name
 
 	if class_name[0] in digits:
-		raise ValueError, "invalid classname in definitions file: "+ class_name
+		raise ValueError, "invalid classname in definitions file: " + class_name
 		
 	zname = defs[1]
-	out_lines = []
-	params = []
 	class_code = ""
 	init_params_code = ""
 	output_code = ""
@@ -125,7 +126,7 @@ def make_element_class(defs):
 	output_code += "\t\tout = ''\n"
 	output_code += "\t\tnl = '\\n'\n"
 	output_code += "\t\tsq = '\\''\n"
-	output_code += "\t\tout += sq + '%s' + sq + ' ' + self._params['label1'][:8] + ' ' + self._params['label2'][:8]  + nl \n"%(zname)
+	output_code += "\t\tout += sq + '%s' + sq + ' ' + self._params['label1'][:8] + ' ' + self._params['label2'][:8]  + nl \n" % (zname)
 	
 	add_func_code += "\tdef add(self, **settings):\n"
 	add_func_code += "\t\tparams = {}\n"
@@ -141,7 +142,7 @@ def make_element_class(defs):
 			# parameter equals x type conditions
 			if '==' in conditions:
 				cond_param, cond_value = conditions.split('==')
-				cond_code = "if self._params['%s'] == %s : "%(cond_param, cond_value)
+				cond_code = "if self._params['%s'] == %s : " % (cond_param, cond_value)
 			# blank condition, clears condition
 			elif l.strip() == "!":
 				cond_code = ""
@@ -165,47 +166,47 @@ def make_element_class(defs):
 		types = expand_types(typess.strip())
 		if(len(names) != len(types)):
 			error = "Error in defs file:\n"
-			error = "In element %s:\n"%class_name
+			error = "In element %s:\n" % class_name
 			error += l + '\n'
-			error += str(len(names))+ " names, but only"+ str(len(types))+ " types\n"
+			error += str(len(names)) + " names, but only"+ str(len(types))+ " types\n"
 			raise ValueError, error
 		
-		for name, type in zip(names, types):
+		for name, ptype in zip(names, types):
 			if not in_loop:
-				if type in ['I','E','X']:
+				if ptype in ['I', 'E', 'X']:
 					# let these types default to 0
-					init_params_code += "\t\tself._params['%s']=0\n"%name
-				elif type.startswith('A'):
+					init_params_code += "\t\tself._params['%s']=0\n" % name
+				elif ptype.startswith('A'):
 					# let these types default to an empty string
-					init_params_code += "\t\tself._params['%s']=''\n"%name
+					init_params_code += "\t\tself._params['%s']=''\n" % name
 				else:
-					print "unknown type", type, "for", name, "in", class_name
+					print "unknown type", ptype, "for", name, "in", class_name
 					raise ValueError
 			else:
-				if type in ['I','E','X']:
+				if ptype in ['I', 'E', 'X']:
 					# let these types default to 0
-					add_func_code += "\t\tparams['%s']=0\n"%name
-				elif type.startswith('A'):
+					add_func_code += "\t\tparams['%s']=0\n" % name
+				elif ptype.startswith('A'):
 					# let these types default to an empty string
-					add_func_code += "\t\tparams['%s']=''\n"%name
+					add_func_code += "\t\tparams['%s']=''\n" % name
 				else:
-					print "unknown type", type, "for", name, "in", class_name
+					print "unknown type", ptype, "for", name, "in", class_name
 					raise ValueError
 
 				
-			init_params_code += "\t\tself._types['%s']='%s'\n"%(name,type)
+			init_params_code += "\t\tself._types['%s']='%s'\n" % (name, ptype)
 		
 		#the lines that out put the parameters to zgoubi.dat
 		if not in_loop:
 			out_bits = []
-			for name, type in zip(names, types):
-				out_bits.append("%s(self._params['%s'])"%(type[0], name)) # type[0] so that A80 calls the A function
-			output_code += "\t\t%sout +=  %s +nl \n"%(cond_code, " + ' ' + ".join(out_bits))
+			for name, ptype in zip(names, types):
+				out_bits.append("%s(self._params['%s'])" % (ptype[0], name)) # type[0] so that A80 calls the A function
+			output_code += "\t\t%sout +=  %s +nl \n" % (cond_code, " + ' ' + ".join(out_bits))
 		else:
 			out_bits = []
-			for name, type in zip(names, types):
-				out_bits.append("%s(part['%s'])"%(type[0], name))
-			loop_output_code += "\t\t\t%sout +=  %s +nl \n"%(cond_code, " + ' ' + ".join(out_bits))
+			for name, ptype in zip(names, types):
+				out_bits.append("%s(part['%s'])" % (ptype[0], name))
+			loop_output_code += "\t\t\t%sout +=  %s +nl \n" % (cond_code, " + ' ' + ".join(out_bits))
 		
 		
 	output_code += "\t\treturn out\n"
@@ -217,7 +218,7 @@ def make_element_class(defs):
 		add_func_code += "\t\tfor k, v in settings.items():\n"
 		add_func_code += "\t\t\tparams[k] = v\n"
 		add_func_code += "\t\tself._looped_data.append(params)\n"
-		add_func_code += "\t\tself._params['%s'] = len(self._looped_data)\n"%loop_on
+		add_func_code += "\t\tself._params['%s'] = len(self._looped_data)\n" % loop_on
 		add_func_code += "\tdef clear(self):\n"
 		add_func_code += "\t\tself._looped_data = []\n"
 	
