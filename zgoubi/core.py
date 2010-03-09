@@ -46,6 +46,8 @@ except:
 #	print "cairo not found, no plotting available"
 
 from constants import *
+from exceptions import *
+import io
 
 
 from settings import zgoubi_settings
@@ -311,37 +313,15 @@ class Line(object):
 		
 	def output(self):
 		"Generate the zgoubi.dat file, and return it as a string"
-		safeout = ""
+		out = ""
 		if self.full_line:
-			safeout = self.name + nl
+			out = self.name + nl
 		
 		for element in self.element_list:
-			out = ''
-			out += element.output()
-			
-			for l in out.split('\n'):
-				safeout += self.split_line(l) + nl
-			#safeout += nl
+			out += element.output() + nl
 		
-		safeout += nl
-
-		return safeout
-
-	def split_line(self, l):
-		max_line = 200
-		if len(l) < max_line:
-			return l
-
-		out = ''
-		seg = ''
-		for b in l.split():
-			if len(seg) + len(b) + 1 < max_line:
-				seg += ' '+b.strip()
-			else:
-				out += seg.strip()+ '\n'
-				seg = b.strip()
-		out += seg
 		return out
+
 		
 	def run(self, xterm=False, tmp_prefix=zgoubi_settings['tmp_dir'], silence=False):
 		"Run zgoubi on line. If break is true, stop after running zgoubi, and open an xterm for the user in the tmp dir. From here zpop can be run."
@@ -358,7 +338,7 @@ class Line(object):
 				os.remove(dst) # can't over write an existing symlink
 			try:
 				os.symlink(src, dst)
-			except AttributError: # should catch windows systems which don't have symlink
+			except AttributeError: # should catch windows systems which don't have symlink
 				shutil.copyfile(src, dst)
 	
 		self.tmp_folders.append(tmpdir)
@@ -545,11 +525,6 @@ class Line(object):
 
 		return indices
 			
-class NoTrackError(Exception):
-	pass
-
-class BadLineError(Exception):
-	pass
 	
 class Results(object):
 	"""This class lets you analyse the results after running a line.
@@ -604,6 +579,10 @@ class Results(object):
 	def b_fai(self): return self._get_str("b_zgoubi.fai")
 	def save_b_fai(self, path): return self._save_file("b_zgoubi.fai", path)
 		
+	def b_plt_fh(self): return self._get_fh("b_zgoubi.plt")
+	def b_plt(self): return self._get_str("b_zgoubi.plt")
+	def save_b_plt(self, path): return self._save_file("b_zgoubi.plt", path)
+
 	def _bad_float(self, text):
 		"""A wrapper around float to deal with zgoubi output numbers like
 		2.67116100-102 when it means 2.67116100e-102
@@ -619,44 +598,17 @@ class Results(object):
 			print error
 			return 0
 		
-	def plt_to_csv(self, path):
-		"""Read all the data out of the plt file.
-		prints out a comma separated variable file (can be imported by all good spread sheets).
-		each line is the coordinats of a particle at a point
-		headings show where in the plt file that column of data came from (this assumed that elements had 1 label, things may slide around if not true)
-
-		"""
-		print "this does not handle oddities in zgoubi's files, so columns may not line up"
-		fh = self.line.plt_fh()
-		
-		out_file = open(path, 'w')
-		
-		header = list(read_n_lines(fh,4))
-		#print "header", header
-
-		for n,x in enumerate([9,3,5,10,8]):
-			for i in xrange(x):
-				print >> out_file, '"['+str(n)+','+str(i)+']",',
-
-
-
-		for lines in yield_n_lines(fh, 5):
-		#   print "##########"
-			bits = []
-			for line in lines:
-				#bits.append(line.split())
-				bits += line.split()
-				#print len(line.split())
-
-			print >>out_file, ','.join(bits)
 		
 	def get_all_bin(self, file='bplt'):
 		
 		if(file == 'bplt'):
-			fh = self.b_plt_fh()
-			file_len = os.path.getsize(os.path.join(self.rundir,'b_zgoubi.plt'))
-			raise ValueError, "binary plt reading not yet implemented"
+			return io.read_file(os.path.join(self.rundir,'b_zgoubi.plt'))
 		elif(file == 'bfai'):
+			try:
+				return io.read_file(os.path.join(self.rundir,'b_zgoubi.fai'))
+			except io.OldFormatError:
+				pass
+
 			fh = self.b_fai_fh()
 			file_len = os.path.getsize(os.path.join(self.rundir,'b_zgoubi.fai'))
 			head_len = 352
@@ -708,8 +660,7 @@ class Results(object):
 	def get_all(self, file='plt', id=None):
 		"""Read all the data out of the file.
 		Set file to plt or fai
-		returns a list of dicts. each dict has the particle coordinates at a point
-		set include_bits=True to get all the coordinates
+		if using the new headered data formats will return a numpy array with named columns, otherwise returns a list of dicts. each dict has the particle coordinates at a point
 		"""
 		#if (isinstance(file_nh, str)):
 		#	fh = open(file_nh)
@@ -751,10 +702,7 @@ class Results(object):
 		if test_version == '...':
 			old_format = True
 		else:
-			data_label = header[2]
-			data_units = header[3]
-			#print "data_label ",data_label
-			#print "units ",data_units
+			return io.read_file(fh)
 
 		#for n,x in enumerate([9,3,5,10,8]):
 		#   for i in xrange(x):
@@ -942,142 +890,40 @@ class Results(object):
 				plt_data.append(p)
 		return plt_data
 
-	def get_all_old(self, file='plt', include_bits=False, id=None, elems=None):
-		"""Read all the data out of the file.
-		Set file to plt or fai
-		returns a list of dicts. each dict has the particle coordinates at a point
-		set include_bits=True to get all the coordinates
-		elems can be a list of element, labels. if so only those elements get returned.
-		"""
-		#if (isinstance(file_nh, str)):
-		#	fh = open(file_nh)
-		#elif (isinstance(file_nh, file)):
-		#	fh = file_nh
-		#else:
-		#	error = "get_all(file_nh), file_nh should be string or file handle. "
-		#	error += "It actually was"+ str(type(file_nh))
-		#	raise TypeError, error
-
-		if(file == 'plt'):
-			fh = self.line.plt_fh()
-		elif(file == 'fai'):
-			fh = self.line.fai_fh()
-		else:
-			raise ValueError, "get_all() expects name to be 'plt' or 'fai'"
-
-		header = list(read_n_lines(fh,4))
-		#print "header", header
-
-		#for n,x in enumerate([9,3,5,10,8]):
-		#   for i in xrange(x):
-		#       print '"['+str(n)+','+str(i)+']",',
-
-
-		plt_data = []
-		for lines in yield_n_lines(fh, 5):
-			
-			if (id != None):
-				try:
-					if(lines[3].split()[1] != id):
-						continue # escape quickly if this is not a point we are interested in
-				except:
-					print lines
-					continue
-			
-			#print "##########"
-			bits = [] # not computerscience bits. just the bits of data on each line
-			for line in lines:
-				bits.append(line.split()) # split them by whitespace
-				#bits += line.split()
-				#print len(line.split())
-
-			if (len(bits) == 5): # dont go through this if we have just few dangling lines on the end of the file
-				# fill dictionary with the bits that have been identified
-				#
-				#if (id != None): # escape quickly if this is not a point we are interested in
-				#	if (int(bits[3][1]) != id):
-				#		continue
-				particle = {}
-				if (include_bits):
-					particle['bits'] = bits
-
-				# fai files seem to be missing a the bits[3][0] that plt has
-				# see 20080501 in lab book
-				if (file=='plt'):
-					particle['ID'] = bits[3][1]
-					particle['ID2'] = bits[3][2]
-					if (particle['ID'] != particle['ID2'] ):
-						print "particle IDs [3][1] and [3][2] differ !"
-						print bits[3]
-						print particle['ID'], '!=', particle['ID2']
-				elif (file=='fai'):
-					particle['ID'] = bits[3][0]
-					particle['ID2'] = bits[3][1]
-					if (particle['ID'] != particle['ID2'] ):
-						print "particle IDs [3][0] and [3][1] differ !"
-						print bits[3]
-						print particle['ID'], '!=', particle['ID2']
-				particle['LET'] = bits[0][0]
-				particle['D0'] = float(bits[0][2]) #initial D-1
-				particle['Y0'] = self._bad_float(bits[0][3]) #initial Y
-				particle['T0'] = self._bad_float(bits[0][4]) #initial T (remember that T is dY/dX not time)
-				particle['Z0'] = float(bits[0][5]) #initial Z
-				particle['P0'] = float(bits[0][6]) #initial P
-				particle['X0'] = self._bad_float(float(bits[0][7])) #initial X
-
-
-				#print lines
-				particle['D'] = float(bits[1][0]) #D-1
-				particle['Y'] = self._bad_float(bits[1][1])
-				particle['T'] = self._bad_float(bits[1][2])
-				particle['Z'] = self._bad_float(bits[2][0])
-				particle['P'] = self._bad_float(bits[2][1])
-				
-
-				particle['S'] = float(bits[2][2])
-				particle['tof'] = float(bits[2][3]) # time of flight
-				if file=='plt': # a strange bug prehaps. anyways this makes it so that you get microseconds
-					particle['tof'] = float(bits[2][3]) / 1e5
-
-				particle['X'] = float(bits[3][4])
-				if  particle['X'] > 1e18: # this comes out as a silly giant number in some cases, maybe due to FAICNL or something
-					particle['X'] = 0 
-				#the last line of each chunk is a pain.
-				#lets find the first none numeric element and work from that
-				for n, test_string in enumerate(bits[4]):
-					try:
-						float(test_string)
-					except ValueError:
-						first_non_numeric = n
-						break
-				
-				particle['BORO'] = bits[4][first_non_numeric -2]
-				particle['PASS'] = bits[4][first_non_numeric -1]
-
-				particle['element_type'] = bits[4][first_non_numeric]
-				#set these to empty, and fill them in later if possible
-				particle['element_label1'] = ""
-				particle['element_label2'] = ""
-				particle['element_number'] = bits[4][len(bits[4]) -1]
-				if((len(bits[4]) - first_non_numeric) == 4): # 2 labels
-					particle['element_label1'] = bits[4][first_non_numeric + 1]
-					particle['element_label2'] = bits[4][first_non_numeric + 2]
-				if((len(bits[4]) - first_non_numeric) == 3): # 1 labels
-					particle['element_label1'] = bits[4][first_non_numeric + 1]
-				if (elems != None):
-					if(particle['element_label1'] not in elems and particle['element_label2'] not in elems):
-						continue
-				
-				plt_data.append(particle)
-		return plt_data
-
 
 	def get_track(self, file, coord_list, multi_list=None):
 		"""
 		returns a list of coordinates specified, and multiply them by the multiplier if not none
 		eg get_trac('plt', ['X','Y','element_label'],[0.01,0.01,None])
+		
+		If all the columns requested are numerical, and new headered data formats are being used then this function will return a numpy array
 		"""
 		all = self.get_all(file)
+		#check if we are using the new zgoubi.io version
+		if (type(all) == type(numpy.zeros(0))):
+			#coords = numpy.zeros([all.size, len(coord_list)])
+			dtypes = []
+			best_type = numpy.dtype('i')
+			for n,c in enumerate(coord_list):
+				if all[c].dtype == numpy.dtype('i'):
+					continue
+				elif all[c].dtype == numpy.dtype('f'):
+					# not all cols are int, so use float
+					best_type = numpy.dtype('f')
+				else:
+					best_type = "mixed"
+			if best_type != "mixed":
+				# all cols numeric, so give a fast numpy array
+				coords = numpy.zeros([all.size], dtype=(best_type * len(coord_list)))
+
+				for n,c in enumerate(coord_list):
+					coords[:,n] = all[c]
+					if multi_list:
+						if multi_list[n]:
+							coords[:,n] *= multi_list[n]
+				return coords
+
+
 		coords = []
 		for p in all:
 			this_coord = []
