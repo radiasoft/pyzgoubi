@@ -22,7 +22,6 @@ class Bunch(object):
 	('tof', numpy.float64),
 	('S', numpy.float64),
 	('X', numpy.float64),
-	#('D', numpy.float64),
 	('keep', numpy.bool)
 	]
 	def __init__(self, nparticles=0, ke=0, mass=0):
@@ -34,10 +33,8 @@ class Bunch(object):
 	def particles(self):
 		return self.coords
 
-	def get_min_BORO(self): #FIXME proton mass hardwired 
+	def get_min_BORO(self, mass):
 		min_BORO = ke_to_rigidity(min(self.coords['KE']), mass)
-		# FIXME could be faster with ufunc ?
-	#	self.coords['D'] = [ke_to_rigidity(p['KE'], PROTON_MASS)/min_BORO for p in self.coords]
 		return min_BORO
 
 	def drop_unkept(self):

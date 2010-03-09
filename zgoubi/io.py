@@ -6,6 +6,8 @@ import hashlib
 import os
 import struct
 
+from exceptions import OldFormatError
+
 # translate some of the column names for compatibility with old pyzgoubi
 col_name_trans ={
 "KEX":"IEX",
@@ -85,8 +87,6 @@ def fortran_record(fh):
 	assert (rec_len_r == rec_len_r2), "record should start and end with length"
 	return record
 
-class OldFormatError(Exception):
-	    pass
 
 def define_file(fname, allow_lookup=True):
 	"Read header from a file and determine formating. Returns a dict that describes the file"

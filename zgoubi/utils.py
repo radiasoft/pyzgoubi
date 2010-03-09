@@ -6,6 +6,7 @@ import numpy
 import sys
 from glob import glob
 from constants import *
+from exceptions import *
 # use these to convert things to metres and tesla
 m = 1
 cm = 0.01
@@ -136,7 +137,7 @@ def readArray(filename, skipchar = '#', dtype=float):
 
 	a = numpy.array(data, dtype=dtype)
 	(Nrow,Ncol) = a.shape
-	if ((Nrow == 1) or (Ncol == 1)): a = ravel(a)
+	if ((Nrow == 1) or (Ncol == 1)): a = numpy.ravel(a)
 
 	#print >> sys.stderr, "Read",Nrow,"rows in",Ncol,"columns in file", filename
 	return(a)

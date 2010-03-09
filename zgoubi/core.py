@@ -46,6 +46,7 @@ except:
 #	print "cairo not found, no plotting available"
 
 from constants import *
+from exceptions import *
 import io
 
 
@@ -337,7 +338,7 @@ class Line(object):
 				os.remove(dst) # can't over write an existing symlink
 			try:
 				os.symlink(src, dst)
-			except AttributError: # should catch windows systems which don't have symlink
+			except AttributeError: # should catch windows systems which don't have symlink
 				shutil.copyfile(src, dst)
 	
 		self.tmp_folders.append(tmpdir)
@@ -524,11 +525,6 @@ class Line(object):
 
 		return indices
 			
-class NoTrackError(Exception):
-	pass
-
-class BadLineError(Exception):
-	pass
 	
 class Results(object):
 	"""This class lets you analyse the results after running a line.
