@@ -144,7 +144,7 @@ def define_file(fname, allow_lookup=True):
 	
 	dupes = list(set ([x  for x in col_names if (col_names.count(x) > 1)]))
 	if dupes:
-		raise ValueError, "Duplicate columns in:"+ fname +"\n"+" ".join(dupes)
+		raise ValueError, "Duplicate columns in:" + str(fname) + "\n" + " ".join(dupes)
 	
 	names = []
 	types = []
