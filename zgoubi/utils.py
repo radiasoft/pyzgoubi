@@ -1107,6 +1107,33 @@ def scaling_to_dipole(k, r0, b0_in, d_r0=0, scale_factor=1.0, terms=4):
 
 	return bcoef, b0
 
+def scaling_to_poly(b0,k,r0,rmin,rmax,step,order=5):
+        import pylab
+        """In a scaling FFAG, the magnetic field follows the scaling law given by B=B0*(r/r0)^k where r is the radial coordinate,
+           B0 is the field at r=r0 and k is the scaling factor.
+           This def fits a polynomial of a given order to the scaling field at points in the region rmin < r < rmax, where the number of points is determined by the increment step. The coefficients of 
+           polynomial are returned.
+
+           Required input - 
+           b0 - the field at r0
+           r0 - the reference radius
+           rmin,rmax - region of fit
+           step - step size in (rmin,rmax) at which scaling field is evaluated
+
+           Optional input-
+           order - Order of polynomial fit (default 5)
+           
+           Author -  S. Sheehy """
+
+        x=numpy.arange(rmin,rmax,step)
+        def scalelaw(a): return b0*pow((r0+a)/r0,k)
+        By=map(scalelaw,x)
+        polyval = pylab.polyfit(x,By,order)
+        vals=polyval.tolist()
+        vals.reverse()
+        while len(vals)<6:
+                vals.append(0)
+        return vals
 
 def get_enclosing_circle(ellipse_data):
 	""" Find smallest circle that encloses a set of ellipses centred on the midplane. The ellipses are defined by their horizontal and vertical radii and by their centre along the horizontal axis (a,b,c). The algorithm optimised both the centre of the enclosing circle and its radius. 
