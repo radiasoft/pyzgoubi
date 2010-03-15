@@ -344,10 +344,15 @@ class Line(object):
 		self.tmp_folders.append(tmpdir)
 		os.chdir(tmpdir)
 		
+		for element in self.element_list:
+			# some elements may have a setup function, to be run before zgoubi
+			if hasattr(element, "setup"):
+				element.setup()
+		
 		infile = open(tmpdir+"/zgoubi.dat", 'w')
 		infile.write(self.output())
 		infile.close()
-		
+
 		command = zgoubi_settings['zgoubi_path']
 		if silence:
 			command += " > zgoubi.stdout 2> zgoubi.sdterr"

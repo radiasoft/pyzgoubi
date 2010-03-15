@@ -154,6 +154,37 @@ class OBJET3(zgoubi_element):
 		out += self.FNAME +nl
 		return out
 
+class OBJET_bunch(zgoubi_element):
+	def __init__(self,bunch=None, **settings):
+		self._zgoubi_name = "OBJET"
+		self._params = {}
+		self.label1 = ""
+		self.label2 = ""
+		self.bunch = bunch
+
+	def setup(self):
+
+		self.bunch.write_YTZPSD("coords.dat")
+
+	def output(self):
+		if self.bunch == None:
+			raise BadLineError, "OBJET_bunch has no bunch set"
+
+		f = self.f2s
+		i = self.i2s
+		out = "'OBJET'" +nl
+		out += f(self.bunch.get_bunch_rigidity()) + nl
+		out += "3.01" +nl
+		out += "1 " + i(len(self.bunch)) + " 1" + nl
+		out += "1 1 1" + nl
+		out += "100 1000 100 1000 100 1 1 *" + nl
+		out += "0 0 0 0 0 0 0" + nl
+		out += "0" + nl
+		out += "coords.dat" + nl
+
+		return out
+
+
 
 class OBJET5(zgoubi_element):
 	"""Beam made of particles, for use with matrix

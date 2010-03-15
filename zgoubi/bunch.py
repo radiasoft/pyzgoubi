@@ -5,7 +5,7 @@
 from math import *
 import numpy
 import pylab
-#from zgoubi import rel_conv
+from zgoubi import rel_conv
 
 #from zgoubi.utils import *
 
@@ -16,30 +16,58 @@ class Bunch(object):
 
 	"""
 	data_def = [
-	('KE', numpy.float64),
+	('D', numpy.float64), # these coorspond to zgoubi D,Y,T,Z,P,S, but in SI units
 	('Y', numpy.float64),
 	('T', numpy.float64),
 	('Z', numpy.float64),
 	('P', numpy.float64),
-	('tof', numpy.float64),
 	('S', numpy.float64),
+	('tof', numpy.float64), # these are for accumulating 
 	('X', numpy.float64),
 	]
-	def __init__(self, nparticles=0, ke=0, mass=0):
+	def __init__(self, nparticles=0, ke=0, rigidity=0, mass=0, charge=1):
 		self.coords = numpy.zeros(nparticles, self.data_def)
-		self.coords['KE'] = ke
 		self.mass = mass
+		self.charge = charge
+		self.rigidity = rigidity 
+		if ke != 0:
+			self.set_bunch_ke(ke)
+		self.coords['D'] = 1
+
+	
+	def set_bunch_ke(self, ke):
+		"Set bunch kinetic energy"
+		if self.mass == 0:
+			raise ValueError, "Particle mass can't be Zero"
+		if self.charge == 0:
+			raise ValueError, "Particle charge can't be Zero"
+		self.rigidity = rel_conv.ke_to_rigidity(mass=self.mass, ke=ke, charge=self.charge)
+
+	def get_bunch_ke(self):
+		"Get bunch kinetic energy"
+		if self.mass == 0:
+			raise ValueError, "Particle mass can't be Zero"
+		if self.charge == 0:
+			raise ValueError, "Particle charge can't be Zero"
+		return rel_conv.rigidity_to_ke(mass=self.mass, rigidity=self.rigidity, charge=self.charge)
+
+	def set_bunch_rigidity(self, rigidity):
+		"Set bunch rigidity"
+		self.rigidity = rigidity
+
+	def get_bunch_rigidity(self):
+		"Get bunch rigidity"
+		return self.rigidity
 
 	def particles(self):
 		"Returns the numpy array that holds the coordinates"
 		return self.coords
 
 	def get_min_BORO(self):
-		"Returns the minimum rigidy of the bunch"
-		min_BORO = ke_to_rigidity(min(self.coords['KE']), self.mass)
+		"Returns the minimum rigidity of the bunch"
+		#min_BORO = ke_to_rigidity(min(self.coords['KE']), self.mass)
+		min_BORO = self.rigidity * self.coords['D'].min()
 		return min_BORO
-
-
 
 	def gen_halo_x_xp_y_yp(self, npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None):
 		"Generate a halo bunch, i.e. an elipse in x-xp (Y-T) and in y-yp (Z-P)"
@@ -109,14 +137,13 @@ class Bunch(object):
 		if lim:
 			dist = dist[:lim]
 		self.coords = numpy.zeros(nparts, self.data_def)
-		# FIXME should set KE from D
-		self.coords['KE'] = ke
+		#self.coords['KE'] = ke
 		self.coords['Y'] = dist[:, 0]
 		self.coords['T'] = dist[:, 1]
 		self.coords['Z'] = dist[:, 2]
 		self.coords['P'] = dist[:, 3]
 		self.coords['X'] = dist[:, 4]
-		#self.coords['D'] = dist[:,5]
+		self.coords['D'] = dist[:, 5]
 
 	def write_YTZPSD(self, fname):
 		"Output a bunch, compatible with read_YTZPSD"
@@ -128,10 +155,12 @@ class Bunch(object):
 		dist[:, 2] = self.coords['Z']
 		dist[:, 3] = self.coords['P']
 		dist[:, 4] = self.coords['X']
-		#dist[:,5] = self.coords['D']
-		dist[:, 5] = 1
-		dist = dist.reshape(nparts * 2, 3)
-		numpy.savetxt(fname, dist)
+		dist[:,5] = self.coords['D']
+		#dist[:, 5] = 1
+		#dist = dist.reshape(nparts * 2, 3)
+		fh = open(fname, "w")
+		fh.write("# bunch\n\n\n\n")
+		numpy.savetxt(fh, dist)
 
 	
 	def get_widths(self):
