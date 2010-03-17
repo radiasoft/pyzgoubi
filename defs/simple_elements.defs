@@ -28,6 +28,11 @@ V, sig_s : 2E
 L, h : 2E
 V, sig_s :2E
 
+CHAMBR
+CHAMBR
+IA : I
+IFORM,YL,ZL,YC,ZC : I,4E
+
 CHANGREF
 CHANGREF
 XCE, YCE, ALE : 3E
