@@ -908,21 +908,27 @@ class Results(object):
 		#check if we are using the new zgoubi.io version
 		if (type(all) == type(numpy.zeros(0))):
 			#coords = numpy.zeros([all.size, len(coord_list)])
-			dtypes = []
-			best_type = numpy.dtype('i')
-			for n,c in enumerate(coord_list):
-				if all[c].dtype == numpy.dtype('i'):
-					continue
-				elif all[c].dtype == numpy.dtype('f'):
-					# not all cols are int, so use float
-					best_type = numpy.dtype('f')
-				else:
-					best_type = "mixed"
+			
+			# is set logic to see what best array type is
+			# mixed arrays might break some old code, so fall back to dicts
+			dtypes =  set([all[c].dtype for c in coord_list])
+			if not( dtypes - set([numpy.dtype('i')]) ):
+				# if there is nothing but ints, use int
+				best_type = 'i'
+			elif not( dtypes - set([numpy.dtype('i'), numpy.dtype('f'), numpy.dtype('d')]) ):
+				# if there is nothing but ints and float/double, use double
+				best_type = 'd'
+			else:
+				# otherwise fall back to dicts
+				best_type = "mixed"
+
+
 			if best_type != "mixed":
 				# all cols numeric, so give a fast numpy array
-				coords = numpy.zeros([all.size], dtype=(best_type * len(coord_list)))
+				coords = numpy.zeros([all.size, len(coord_list)], dtype=(best_type))
 
 				for n,c in enumerate(coord_list):
+					print c
 					coords[:,n] = all[c]
 					if multi_list:
 						if multi_list[n]:

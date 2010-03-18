@@ -61,6 +61,10 @@ definition_lookup['ea298b3ccc3f5b75bb672363221ec9da'] = {'file_mode': 'ascii', '
 definition_lookup['98dfe80e482e210e6ed827aff0c70b53'] = {'header_length': 922, 'file_mode': 'binary', 'file_type': 'plt', 'record_length': 347, 'names': ['IEX', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'tof0', 'D-1', 'Y', 'T', 'Z', 'P', 'S', 'tof', 'beta', 'DS', 'KART', 'ID', 'IREP', 'SORT', 'X', 'BX', 'BY', 'BZ', 'RET', 'DPR', 'PS', 'SXo', 'SYo', 'SZo', 'modSo', 'SX', 'SY', 'SZ', 'modS', 'EX', 'EY', 'EZ', 'BORO', 'PASS', 'NOEL', 'element_type', 'element_label1', 'element_label2', 'LET'], 'signature': '98dfe80e482e210e6ed827aff0c70b53', 'units': ['int', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'v/c', 'cm', 'int', 'int', 'int', 'cm', 'cm', 'kG', 'kG', 'kG', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'V/m', 'V/m', 'V/m', 'kG.cm', 'int', 'int', 'string', 'string', 'string', 'string'], 'types': ['i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'a10', 'a8', 'a8', 'a1']}
 
 
+z251_fai_def = definition_lookup['7e0d6c789529cad60f97c7a9f3ff8894']
+z251_fai_dtype = zip(z251_fai_def['names'], z251_fai_def['types'])
+
+
 def open_file_or_name(forn, mode="r"):
 	"Pass either a filename or file handle like object. Returns a file like object"
 	if hasattr(forn, 'readline'):
@@ -70,7 +74,7 @@ def open_file_or_name(forn, mode="r"):
 
 
 
-def fortran_record(fh):
+def read_fortran_record(fh):
 	"Read 1 record from a fortran file"
 	# length of each record is at start and end of record.
 	# read length
@@ -86,6 +90,15 @@ def fortran_record(fh):
 	rec_len_r2 = fh.read(4)
 	assert (rec_len_r == rec_len_r2), "record should start and end with length"
 	return record
+
+def write_fortran_record(fh, record):
+	"Write a record, adds record length to start and end"
+	rec_len = len(record)
+	rec_len_r = struct.pack("i", rec_len)
+	fh.write(rec_len_r)
+	fh.write(record)
+	fh.write(rec_len_r)
+
 
 
 def define_file(fname, allow_lookup=True):
@@ -111,7 +124,7 @@ def define_file(fname, allow_lookup=True):
 	if file_mode == 'ascii':
 		header = [fh.readline() for x in xrange(4)]
 	else:
-		header = [fortran_record(fh) for x in xrange(4)]
+		header = [read_fortran_record(fh) for x in xrange(4)]
 	
 	if header[2].startswith("..."):
 		raise OldFormatError, "This is an old format that does not define column headings"
@@ -130,7 +143,7 @@ def define_file(fname, allow_lookup=True):
 	if file_mode == 'binary':
 		header_length += 4*8 # extra bytes from record lengths
 		#file_length = os.path.getsize(fname)
-		record_length = len(fortran_record(fh)) +8
+		record_length = len(read_fortran_record(fh)) +8
 
 		#file_length = len(whole_file)
 		#print "file_length", file_length
@@ -216,14 +229,13 @@ def read_file(fname):
 		head_len = file_def["header_length"]
 		fh.seek(head_len)
 		
-		types = file_def['types']
-		types = listreplace(types, 'f8', 'd')
-		types = listreplace(types, 'i4', 'i')
-		types = listreplace(types, 'a8', '8s')
-		types = listreplace(types, 'a10', '10s')
-		types = listreplace(types, 'a1', 'c')
-		
-		data_format = "="+"".join(types)
+		#types = file_def['types']
+		#types = listreplace(types, 'f8', 'd')
+		#types = listreplace(types, 'i4', 'i')
+		#types = listreplace(types, 'a8', '8s')
+		#types = listreplace(types, 'a10', '10s')
+		#types = listreplace(types, 'a1', 'c')
+		#data_format = "="+"".join(types)
 
 		file_size = os.path.getsize(fname)
 		num_records = (file_size - head_len) / rec_len

@@ -6,6 +6,8 @@ from math import *
 import numpy
 import pylab
 from zgoubi import rel_conv
+from zgoubi import io
+import struct
 
 #from zgoubi.utils import *
 
@@ -15,7 +17,7 @@ class Bunch(object):
 	All values are in SI units, m, rad, eV, s
 
 	"""
-	data_def = [
+	min_data_def = [
 	('D', numpy.float64), # these coorspond to zgoubi D,Y,T,Z,P,S, but in SI units
 	('Y', numpy.float64),
 	('T', numpy.float64),
@@ -25,8 +27,11 @@ class Bunch(object):
 	('tof', numpy.float64), # these are for accumulating 
 	('X', numpy.float64),
 	]
+	# might be interesting to have bunch hold more coordinates, but not yet implemented.
+	#fai_data_def = io.z251_fai_dtype
+
 	def __init__(self, nparticles=0, ke=0, rigidity=0, mass=0, charge=1):
-		self.coords = numpy.zeros(nparticles, self.data_def)
+		self.coords = numpy.zeros(nparticles, self.min_data_def)
 		self.mass = mass
 		self.charge = charge
 		self.rigidity = rigidity 
@@ -99,17 +104,14 @@ class Bunch(object):
 			new_coord = numpy.dot(matrix, coord)
 			coords2[n] = new_coord 
 		
-		bunch =  numpy.zeros([npart], self.data_def)
+		bunch =  numpy.zeros([npart], self.min_data_def)
 		
 		bunch['Y'] = coords2[:, 0]
 		bunch['T'] = coords2[:, 1]
 		bunch['Z'] = coords2[:, 2]
 		bunch['P'] = coords2[:, 3]
+		bunch['D'] = 1
 		
-	#	bunch['Y'] = coords[:,0]
-	#	bunch['T'] = coords[:,1]
-	#	bunch['Z'] = coords[:,2]
-	#	bunch['P'] = coords[:,3]
 		self.coords = bunch
 
 	def _twiss_matrix(self, beta_y, beta_z, alpha_y, alpha_z):
@@ -136,7 +138,7 @@ class Bunch(object):
 		dist = dist.reshape(nparts, 6)
 		if lim:
 			dist = dist[:lim]
-		self.coords = numpy.zeros(nparts, self.data_def)
+		self.coords = numpy.zeros(nparts, self.min_data_def)
 		#self.coords['KE'] = ke
 		self.coords['Y'] = dist[:, 0]
 		self.coords['T'] = dist[:, 1]
@@ -145,22 +147,36 @@ class Bunch(object):
 		self.coords['X'] = dist[:, 4]
 		self.coords['D'] = dist[:, 5]
 
-	def write_YTZPSD(self, fname):
+	def write_YTZPSD(self, fname, binary=False):
 		"Output a bunch, compatible with read_YTZPSD"
-		nparts = len(self.coords)
-		dist = numpy.zeros([nparts, 6])
-		#FIXME should set D from KE
-		dist[:, 0] = self.coords['Y']
-		dist[:, 1] = self.coords['T']
-		dist[:, 2] = self.coords['Z']
-		dist[:, 3] = self.coords['P']
-		dist[:, 4] = self.coords['X']
-		dist[:,5] = self.coords['D']
-		#dist[:, 5] = 1
-		#dist = dist.reshape(nparts * 2, 3)
+		
+		# it ought to be possible to do this:
+		#numpy.savetxt(fh, self.coords[['Y','T','Z','P','X','D']])
+		# but the field end up in the wrong order, see http://thread.gmane.org/gmane.comp.python.numeric.general/36933
+
 		fh = open(fname, "w")
-		fh.write("# bunch\n\n\n\n")
-		numpy.savetxt(fh, dist)
+		if binary:
+			#header
+			for x in xrange(4):
+				io.write_fortran_record(fh, "a"*80)
+			#data
+			for p in self.coords:
+				record = struct.pack("6d", p['Y'], p['T'], p['Z'], p['P'], p['X'], p['D'])
+				io.write_fortran_record(fh, record)
+
+		else:
+			nparts = len(self.coords)
+			dist = numpy.zeros([nparts, 6])
+			dist[:, 0] = self.coords['Y']
+			dist[:, 1] = self.coords['T']
+			dist[:, 2] = self.coords['Z']
+			dist[:, 3] = self.coords['P']
+			dist[:, 4] = self.coords['X']
+			dist[:,5] = self.coords['D']
+			dist = dist.reshape(nparts * 2, 3)
+			fh.write("# bunch\n\n\n\n")
+			numpy.savetxt(fh, dist)
+			fh.close()
 
 	
 	def get_widths(self):

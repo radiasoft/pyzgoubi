@@ -155,16 +155,19 @@ class OBJET3(zgoubi_element):
 		return out
 
 class OBJET_bunch(zgoubi_element):
-	def __init__(self,bunch=None, **settings):
+	def __init__(self,bunch=None, binary=False,**settings):
 		self._zgoubi_name = "OBJET"
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
 		self.bunch = bunch
+		self.binary = binary
 
 	def setup(self):
-
-		self.bunch.write_YTZPSD("coords.dat")
+		if self.binary:
+			self.bunch.write_YTZPSD("b_coords.dat", binary=True)
+		else:
+			self.bunch.write_YTZPSD("coords.dat", binary=False)
 
 	def output(self):
 		if self.bunch == None:
@@ -180,7 +183,10 @@ class OBJET_bunch(zgoubi_element):
 		out += "100 1000 100 1000 100 1 1 *" + nl
 		out += "0 0 0 0 0 0 0" + nl
 		out += "0" + nl
-		out += "coords.dat" + nl
+		if self.binary:
+			out += "b_coords.dat" + nl
+		else:
+			out += "coords.dat" + nl
 
 		return out
 
