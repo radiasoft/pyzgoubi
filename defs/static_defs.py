@@ -176,7 +176,7 @@ class OBJET_bunch(zgoubi_element):
 		f = self.f2s
 		i = self.i2s
 		out = "'OBJET'" +nl
-		out += f(self.bunch.get_bunch_rigidity()) + nl
+		out += f(self.bunch.get_bunch_rigidity() *1000) + nl # convert from T.m to kG.cm
 		out += "3.01" +nl
 		out += "1 " + i(len(self.bunch)) + " 1" + nl
 		out += "1 1 1" + nl

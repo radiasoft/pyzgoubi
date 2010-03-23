@@ -290,7 +290,7 @@ class Line(object):
 		use line.full_tracking(False) to disable tracking
 
 		"""
-		for e in self.element_list:
+		for e in self.elements():
 			#t = str(type(e)).split("'")[1] #get type, eg zgoubi22.QUADRUPO
 			#print t
 
@@ -344,7 +344,7 @@ class Line(object):
 		self.tmp_folders.append(tmpdir)
 		os.chdir(tmpdir)
 		
-		for element in self.element_list:
+		for element in self.elements():
 			# some elements may have a setup function, to be run before zgoubi
 			if hasattr(element, "setup"):
 				element.setup()
@@ -1113,7 +1113,7 @@ class Results(object):
 		"""
 		has_object5 = False
 		has_matrix = False
-		for e in self.line.element_list:
+		for e in self.line.elements():
 			t = str(type(e)).split("'")[1].rpartition(".")[2]
 			if t == 'OBJET5':
 				has_object5 = True
@@ -1159,7 +1159,7 @@ class Results(object):
 		"""
 		has_object5 = False
 		has_matrix = False
-		for e in self.line.element_list:
+		for e in self.line.elements():
 			t = str(type(e)).split("'")[1].rpartition(".")[2]
 			if t == 'OBJET5':
 				has_object5 = True
@@ -1201,13 +1201,41 @@ class Results(object):
 				found_row4 = True
 				return (beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z)
 
+	def show_particle_info(self):
+		"show the particle info, a good check of energies, mass etc"
+		in_particle = False
+		past_input = False
+		fh = self.res_fh()
+		while True:
+			line = fh.readline()
+			if line.startswith("***"):
+				if in_particle: # going into a new section, so can break
+					break
+				past_input = True
+				section = fh.readline().strip().split()[-1]
+				if section == "PARTICUL": #entering particle
+					in_particle = True
+				continue
+
+			if not past_input:
+				continue
+			if in_particle:
+				if line.strip().startswith("I, AMQ(1,I)"):
+					break
+				print line,
+
+
+
+
+
+
 	def test_rebelote(self):
 		"""Return true if end of REBELOTE procedure reported
 		Needs a REBELOTE element.
 
 		"""
 		has_reb = False
-		for e in self.line.element_list:
+		for e in self.line.elements():
 			t = str(type(e)).split("'")[1].rpartition(".")[2]
 			if t == 'REBELOTE':
 				has_reb = True
@@ -1296,7 +1324,7 @@ class Plotter(object):
 		angle = 0
 		position = [0,0]
 		self.elements = {}
-		for elem in self.line.element_list:
+		for elem in self.line.elements():
 			classtype =  str(type(elem))
 			classtype = classtype.split("'")[-2]
 			classtype = classtype.split(".")[-1]
