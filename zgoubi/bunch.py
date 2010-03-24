@@ -151,7 +151,7 @@ class Bunch(object):
 		"Output a bunch, compatible with read_YTZPSD"
 		
 		# it ought to be possible to do this:
-		#numpy.savetxt(fh, self.coords[['Y','T','Z','P','X','D']])
+		#numpy.savetxt(fh, self.coords[['Y','T','Z','P','S','D']])
 		# but the field end up in the wrong order, see http://thread.gmane.org/gmane.comp.python.numeric.general/36933
 
 		fh = open(fname, "w")
@@ -161,7 +161,7 @@ class Bunch(object):
 				io.write_fortran_record(fh, "a"*80)
 			#data
 			for p in self.coords:
-				record = struct.pack("6d", p['Y'], p['T'], p['Z'], p['P'], p['X'], p['D'])
+				record = struct.pack("6d", p['Y'], p['T'], p['Z'], p['P'], p['S'], p['D'])
 				io.write_fortran_record(fh, record)
 
 		else:
@@ -171,25 +171,33 @@ class Bunch(object):
 			dist[:, 1] = self.coords['T']
 			dist[:, 2] = self.coords['Z']
 			dist[:, 3] = self.coords['P']
-			dist[:, 4] = self.coords['X']
+			dist[:, 4] = self.coords['S']
 			dist[:,5] = self.coords['D']
-			dist = dist.reshape(nparts * 2, 3)
+			#dist = dist.reshape(nparts * 2, 3)
 			fh.write("# bunch\n\n\n\n")
 			numpy.savetxt(fh, dist)
-			fh.close()
+		fh.close()
 
 	
 	def get_widths(self):
-		"Returns the width of the bunch in each dimension Y,T,Z,P,X,D (D not calculated yet)"
-		y_width = max(self.coords['Y']) - min(self.coords['Y'])
-		t_width = max(self.coords['T']) - min(self.coords['T'])
-		z_width = max(self.coords['Z']) - min(self.coords['Z'])
-		p_width = max(self.coords['P']) - min(self.coords['P'])
-		x_width = max(self.coords['X']) - min(self.coords['X'])
-		#d_width = max(self.coords['D']) - min(self.coords['D'])
-		# FIXME should set from KE
-		d_width = 0
-		return (y_width, t_width, z_width, p_width, x_width, d_width)
+		"Returns the width of the bunch in each dimension Y,T,Z,P,S,D (D not calculated yet)"
+		y_width = numpy.max(self.coords['Y']) - numpy.min(self.coords['Y'])
+		t_width = numpy.max(self.coords['T']) - numpy.min(self.coords['T'])
+		z_width = numpy.max(self.coords['Z']) - numpy.min(self.coords['Z'])
+		p_width = numpy.max(self.coords['P']) - numpy.min(self.coords['P'])
+		s_width = numpy.max(self.coords['S']) - numpy.min(self.coords['S'])
+		d_width = numpy.max(self.coords['D']) - numpy.min(self.coords['D'])
+		return (y_width, t_width, z_width, p_width, s_width, d_width)
+
+	def get_centers(self):
+		"Returns the center of the bunch in each dimension Y,T,Z,P,S,D"
+		y_mean = numpy.mean(self.coords['Y'])
+		t_mean = numpy.mean(self.coords['T'])
+		z_mean = numpy.mean(self.coords['Z'])
+		p_mean = numpy.mean(self.coords['P'])
+		s_mean = numpy.mean(self.coords['S'])
+		d_mean = numpy.mean(self.coords['D'])
+		return (y_mean, t_mean, z_mean, p_mean, s_mean, d_mean)
 
 	def __len__(self):
 		"Returns length of bunch. Use len(my_bunch)"
@@ -241,18 +249,25 @@ class Bunch(object):
 	
 	def get_emmitance(self):
 		"return emittance h and v in m rad"
-		r_yt = numpy.sqrt(self.coords['Y']**2 + self.coords['T']**2)
-		theta_yt = numpy.arctan2(self.coords['Y'], self.coords['T'])
+		centers = self.get_centers()
+		Ys = self.coords['Y'] - centers[0] # work relative to center
+		Ts = self.coords['T'] - centers[1]
+		Zs = self.coords['Z'] - centers[2]
+		Ps = self.coords['P'] - centers[3]
+
+		r_yt = numpy.sqrt(Ys**2 + Ts**2)
+		theta_yt = numpy.arctan2(Ys, Ts)
 		major_angle = theta_yt[r_yt.argmax()]
-		theta_yt = theta_yt - major_angle
+		theta_yt -= major_angle
 		rot_y = r_yt * numpy.sin(theta_yt)
 		rot_t = r_yt * numpy.cos(theta_yt)
 		emmitance_h = rot_y.max()*rot_t.max()
 
-		r_zp = numpy.sqrt(self.coords['Z']**2 + self.coords['P']**2)
-		theta_zp = numpy.arctan2(self.coords['Z'], self.coords['P'])
+		
+		r_zp = numpy.sqrt(Zs**2 + Ps**2)
+		theta_zp = numpy.arctan2(Zs, Ps)
 		major_angle = theta_zp[r_zp.argmax()]
-		theta_zp = theta_zp - major_angle
+		theta_zp -= major_angle
 		rot_z = r_zp * numpy.sin(theta_zp)
 		rot_p = r_zp * numpy.cos(theta_zp)
 		emmitance_v = rot_z.max() * rot_p.max()
@@ -268,6 +283,11 @@ class Bunch(object):
 		except TypeError:
 			emittance_h = emittance_v = emittance
 		widths = self.get_widths()
+		centers = self.get_centers()
+		Ys = self.coords['Y'] - centers[0] # work relative to center
+		Ts = self.coords['T'] - centers[1]
+		Zs = self.coords['Z'] - centers[2]
+		Ps = self.coords['P'] - centers[3]
 		beta_h = (widths[0] / 2)**2 / emittance_h
 		beta_v = (widths[2] / 2)**2 / emittance_v
 		#print "beta", beta_h, beta_v
@@ -275,10 +295,13 @@ class Bunch(object):
 		#gamma_v = (widths[3] / 2)**2 / emittance_v
 		# get T of particle with bigest Y
 		# FIXME, maybe can also look at T of particle with smallest Y, and average
-		y_p = self.coords['T'][self.coords['Y'].argmax()]
-		alpha_h = - y_p / sqrt(emittance_h / beta_h)
-		z_p = self.coords['P'][self.coords['Z'].argmax()]
-		alpha_v = - z_p / sqrt(emittance_v / beta_v)
+		y_p_max = Ts[Ys.argmax()]
+		y_p_min = Ts[Ys.argmin()]
+		alpha_h = (y_p_min - y_p_max) / 2 / sqrt(emittance_h / beta_h)
+
+		z_p_max = Ps[Zs.argmax()]
+		z_p_min = Ps[Zs.argmin()]
+		alpha_v = (z_p_min - z_p_max) / 2 / sqrt(emittance_v / beta_v)
 		#print "gamma", gamma_h, gamma_v	
 
 		# following is dangerous, due do stat fluctuations causing roots of negative numbers
