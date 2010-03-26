@@ -304,8 +304,9 @@ ul.auto-toc {
 <li><a class="reference internal" href="#command-line-arguments" id="id9">Command line arguments</a></li>
 <li><a class="reference internal" href="#units" id="id10">Units</a></li>
 <li><a class="reference internal" href="#settings-and-options" id="id11">Settings and Options</a></li>
-<li><a class="reference internal" href="#tips" id="id12">Tips</a><ul>
-<li><a class="reference internal" href="#python-hints" id="id13">Python hints</a></li>
+<li><a class="reference internal" href="#debugging-and-profiling" id="id12">Debugging and Profiling</a></li>
+<li><a class="reference internal" href="#tips" id="id13">Tips</a><ul>
+<li><a class="reference internal" href="#python-hints" id="id14">Python hints</a></li>
 </ul>
 </li>
 </ul>
@@ -745,10 +746,30 @@ zgoubi_path
 </pre>
 <p>The path to the zgoubi binary file. Note that this can also be set with the commandline option --zgoubi=/path/to/zgoubi.</p>
 </div>
+<div class="section" id="debugging-and-profiling">
+<h1><a class="toc-backref" href="#id12">Debugging and Profiling</a></h1>
+<p>When installing PyZgoubi it will suggest adding some aliases to your .bashrc file. These are:</p>
+<pre class="literal-block">
+pyzgoubi - run PyZgoubi normally
+pyzgoubii - run PyZgoubi, and start an interactive python shell when its done, or fails
+pyzgoubip - run PyZgoubi, and save profiling information to prof.log
+</pre>
+<p>The interactive shell can be used to check the values of variables at the point of a crash.</p>
+<p>The profiling information can be read with the python pstats module (part of cProfile). For example to see in which functions most time was spent run:</p>
+<pre class="literal-block">
+python -c &quot;import pstats; pstats.Stats('prof.log').sort_stats('cumulative').print_stats()&quot;
+</pre>
+<p>or start a python shell and run:</p>
+<pre class="literal-block">
+&gt;&gt;&gt; import pstats
+&gt;&gt;&gt; p = pstats.Stats('prof.log')
+&gt;&gt;&gt; p.sort_stats('cumulative').print_stats()
+</pre>
+</div>
 <div class="section" id="tips">
-<h1><a class="toc-backref" href="#id12">Tips</a></h1>
+<h1><a class="toc-backref" href="#id13">Tips</a></h1>
 <div class="section" id="python-hints">
-<h2><a class="toc-backref" href="#id13">Python hints</a></h2>
+<h2><a class="toc-backref" href="#id14">Python hints</a></h2>
 <p>If there is a '#' character on a line, everything after it is treated as a comment.</p>
 <p>Python uses whitespace to delimit blocks (instead of braces '{' and '}' in C/C++). The PyZgoubi code uses tabs, so it is best to use tabs in your input files. If you get an 'IndentationError' check that you have not mixed spaces and tabs, or accidentally started a line with a space/tab.</p>
 <p>Python identifiers (variable, function, object names etc) are case sensitive, they must start with a letter and only contain letters, numbers and underscores.</p>

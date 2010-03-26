@@ -478,6 +478,29 @@ Where temporary files should be written, this is most likely /tmp/, but in some 
 
 The path to the zgoubi binary file. Note that this can also be set with the commandline option --zgoubi=/path/to/zgoubi.
 
+Debugging and Profiling
+-----------------------
+
+When installing PyZgoubi it will suggest adding some aliases to your .bashrc file. These are::
+
+	pyzgoubi - run PyZgoubi normally
+	pyzgoubii - run PyZgoubi, and start an interactive python shell when its done, or fails
+	pyzgoubip - run PyZgoubi, and save profiling information to prof.log
+
+The interactive shell can be used to check the values of variables at the point of a crash.
+
+The profiling information can be read with the python pstats module (part of cProfile). For example to see in which functions most time was spent run::
+
+	python -c "import pstats; pstats.Stats('prof.log').sort_stats('cumulative').print_stats()"
+
+or start a python shell and run::
+
+	>>> import pstats
+	>>> p = pstats.Stats('prof.log')
+	>>> p.sort_stats('cumulative').print_stats()
+
+
+
 
 Tips
 ----
