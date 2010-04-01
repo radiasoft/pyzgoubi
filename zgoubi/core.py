@@ -718,7 +718,7 @@ class Results(object):
 		l4_re_plt = trans_to_regex('%f +%f +%f +%f +%d %8c %8c%8c +%d')
 
 		l0_spn =    trans_to_regex('%d +%f +%f +%f +%f +%f +%f +%f +%f')
-		l1_spn =    trans_to_regex('%f +%d +%d +%d +%d')
+		l1_spn =    trans_to_regex('%f +%d +%d +%d %8c +%d')
 
 		#no of lines per fai, plt or spn data point
 		if file != 'spn':
