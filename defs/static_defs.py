@@ -352,6 +352,38 @@ class CHANGREF_NEW(zgoubi_element):
 		return out
 
 
+class SPNTRK(zgoubi_element):
+	""" SPNTRK assigns the initial spin. Include KSO options 1-3 (longitudinal, horizontal and vertical spin respectively) and KSO=4  which list the spin of each particle, where the number of particles should be equal to that defined in OBJET. If KSO=4, the initial spin should be assigned using the "spin_vector" list
+
+		spin_vector = [[SX,SY,SZ],...] and so on for each particle in OBJET
+
+    KSO=5 is not suppoerted by current Zgoubi and so is not included here.
+	"""
+	def __init__(self ,**settings):
+		self._zgoubi_name = "SPNTRK"
+		self._params = {}
+		self.label1 = ""
+		self.label2 = ""
+		self._params['KSO'] = None
+		self._params['spin_vector'] = []
+		object.__setattr__(self, "ready", True)
+		self.set(settings)
+
+	def output(self):
+		# local short cuts for long function names
+		f = self.f2s
+		i = self.i2s
+
+		out = "'SPNTRK'" +nl
+		out += i(self.KSO) + nl
+		if self.KSO == 4:
+			for spin in self.spin_vector:
+				out += f(spin[0])+' '+f(spin[1])+' '+f(spin[2])+nl
+
+		out += '\n'
+
+		return out
+
 		
 class FAKE_ELEM(zgoubi_element):
 	def __init__(self, data=""):
