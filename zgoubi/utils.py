@@ -273,12 +273,14 @@ def show_file(file_path,mode):
 		system(command)
 
 
-def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-6, D=1):
+def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, fai_label = None, tol = 1e-6, D=1):
 	"""Find a closed orbit for the line. can optionally give a list of initial coordinates, init_YTZP, eg:
 	find_closed_orbit(line, init_YTZP=[1.2,2.1,0,0])
 	otherwise [0,0,0,0] are used.
 
-	The line is expected to have a OBJET2, and a FAISCNL at the end. It is recommend to have a REBELOTE, with several laps. The area of the phase space ellipse is approximated from the coordinates from the FAISCNL, and the center is used for the new coordinates. Once the relative variation between iterations is less that the tolerance, the function returns the closed orbit coordinates. If a coordinate is close to zero (less than the tolerance) then it is compared absolutely instead of relatively.
+	The line is expected to have a OBJET2 and either a FAISCNL at the end or, using FAISTORE, a MARKER at the end of the cell identified by fai_label. The latter option allows the zgoubi.fai file to contain coordinates throughout the lattice while using just those points with fai_label in this function.
+
+	It is recommend to have a REBELOTE, with several laps. The area of the phase space ellipse is approximated from the coordinates from the FAISCNL (or MARKER with fai_label), and the center is used for the new coordinates. Once the relative variation between iterations is less that the tolerance, the function returns the closed orbit coordinates. If a coordinate is close to zero (less than the tolerance) then it is compared absolutely instead of relatively.
 	
 	"""
 	#check line has an objet2
@@ -290,7 +292,7 @@ def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-6,
 		raise ValueError, "Line has no OBJET2 element"
 	
 	for e in line.element_list:
-		if ("FAISCNL" in str(type(e)).split("'")[1]):
+		if ("FAISCNL" or "FAISTORE" in str(type(e)).split("'")[1]):
 			break
 	else:
 		raise ValueError, "Line has no FAISCNL element"
@@ -312,6 +314,21 @@ def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-6,
 			return None
 		else:
 			track = r.get_track('fai', ['Y','T','Z','P'])
+			
+			#use track data at location given by fai_label
+			if fai_label != None:
+				if iteration == 0:
+					label = flatten(r.get_track('fai', ['element_label1']))
+					label = [lab.rstrip() for lab in label]
+
+					if len(find_indices(label,fai_label)) != 1:
+						print "number of instances of label ",fai_label," not equal 1"
+						return
+
+					fai_index = find_indices(label,fai_label)[0]
+					track = [track[fai_index]]
+				else:
+					track = [track[fai_index]]
 
 		track_a = numpy.zeros([len(track)+1, len(track[0])])
 		track_a[0] = current_YTZP

@@ -147,6 +147,11 @@ FNAME : A80
 SPNPRT #print spin coordinates wherever this appears
 SPNPRT
 
+SPNSTORE
+SPNSTORE
+FNAME, LABELS : A80, A1000 # put all labels in one string surrounded by square brackets
+IP : I
+
 TOSCA
 TOSCA
 IC, IL : 2I
