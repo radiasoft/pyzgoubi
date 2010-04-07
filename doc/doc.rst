@@ -501,6 +501,29 @@ or start a python shell and run::
 
 
 
+Upgrade Notes
+-------------
+
+Although it would be nice to have perfect backwards compatibility that sometimes interferes with progress, and things have to break. There should be no breaks between a version X.Y.Z and X.Y.Z+1, but there can be between X.Y.Z and X.Y+1.0.
+
+0.3.x to 0.4.x
+""""""""""""""
+
+PyZgoubi 0.4 supports the new fai/plt output formats introduced into Zgoubi in early 2010. These have a header that labels the columns. Reading the new format was taken as an opportunity to use numpy more extensively. If an older version of Zgoubi (5.1 or 5.0) is being used then the old fai/plt reading code will be used, and data will be returned as python dictionaries and arrays. If a newer version of Zgoubi is being used (SVN r251 or newer), then Results.get_all() will return a `numpy structured array <http://docs.scipy.org/doc/numpy/user/basics.rec.html>`_ with the column names.
+
+Some column names will change when using the new fai/plt files. This is because older versions of PyZgoubi muddled the S and X coordinates. The coordinate name is now taken from the fai/plt file directly.
+
+When using the new fai/plt files labels are stored as a fixed length string, and so include any whitespace, e.g. 'foc' vs. 'foc'. To  get back to the short version use strip(), e.g.::
+
+	label1 = 'foc     '
+	label_short = label1.strip()
+	#or
+	labels1 = ['foc     ', 'defoc   ']
+	labels2 = [x.strip() for x in labels1]
+
+Some obsolete functions have been removed: Results.plt_to_csv(), Results.get_all_old(), Line.split_line()
+
+The 'tol' parameter in find_closed_orbit() now is a measure of convergence rather than area. This should give better results over a wide range of scales. However, a large 'tol' is needed to give the same degree of accuracy. If you previously had tol=1e-10, then it may no longer converge, but if you change it to tol=1e-6 you will get a similar result to before.
 
 Tips
 ----

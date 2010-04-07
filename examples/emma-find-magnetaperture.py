@@ -90,6 +90,7 @@ for D_sel in D_list:
 	ob.add(Y=closedorb_YTZP[0], T=closedorb_YTZP[1], Z=closedorb_YTZP[2], P=closedorb_YTZP[3], LET='A', D=D_sel)
 	r = emma.run(xterm = False)
 	label =flatten(r.get_track('plt', ['element_label1']))
+	label = [x.strip() for x in label]
 	#find first point in F magnet
 	QF_start_index = min(find_indices(label,'foc'))
 	Y_co = flatten(r.get_track('plt', ['Y']))
