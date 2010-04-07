@@ -28,6 +28,11 @@ V, sig_s : 2E
 L, h : 2E
 V, sig_s :2E
 
+CHAMBR
+CHAMBR
+IA : I
+IFORM,YL,ZL,YC,ZC : I,4E
+
 CHANGREF
 CHANGREF
 XCE, YCE, ALE : 3E
@@ -134,9 +139,6 @@ REBELOTE
 REBELOTE
 NPASS, KWRIT, K : 3I
 
-SPNTRK1 #SPNTRK with KSO = 1 to 3
-SPNTRK
-KSO : I
 
 SPNPRNL #store spin coordinates into file FNAME
 SPNPRNL
@@ -144,6 +146,11 @@ FNAME : A80
 
 SPNPRT #print spin coordinates wherever this appears
 SPNPRT
+
+SPNSTORE
+SPNSTORE
+FNAME, LABELS : A80, A1000 # put all labels in one string surrounded by square brackets
+IP : I
 
 TOSCA
 TOSCA

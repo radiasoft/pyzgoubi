@@ -273,12 +273,14 @@ def show_file(file_path,mode):
 		system(command)
 
 
-def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-6, D=1):
+def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, fai_label = None, tol = 1e-6, D=1):
 	"""Find a closed orbit for the line. can optionally give a list of initial coordinates, init_YTZP, eg:
 	find_closed_orbit(line, init_YTZP=[1.2,2.1,0,0])
 	otherwise [0,0,0,0] are used.
 
-	The line is expected to have a OBJET2, and a FAISCNL at the end. It is recommend to have a REBELOTE, with several laps. The area of the phase space ellipse is approximated from the coordinates from the FAISCNL, and the center is used for the new coordinates. Once the relative variation between iterations is less that the tolerance, the function returns the closed orbit coordinates. If a coordinate is close to zero (less than the tolerance) then it is compared absolutely instead of relatively.
+	The line is expected to have a OBJET2 and either a FAISCNL at the end or, using FAISTORE, a MARKER at the end of the cell identified by fai_label. The latter option allows the zgoubi.fai file to contain coordinates throughout the lattice while using just those points with fai_label in this function.
+
+	It is recommend to have a REBELOTE, with several laps. The area of the phase space ellipse is approximated from the coordinates from the FAISCNL (or MARKER with fai_label), and the center is used for the new coordinates. Once the relative variation between iterations is less that the tolerance, the function returns the closed orbit coordinates. If a coordinate is close to zero (less than the tolerance) then it is compared absolutely instead of relatively.
 	
 	"""
 	#check line has an objet2
@@ -290,7 +292,7 @@ def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-6,
 		raise ValueError, "Line has no OBJET2 element"
 	
 	for e in line.element_list:
-		if ("FAISCNL" in str(type(e)).split("'")[1]):
+		if ("FAISCNL" or "FAISTORE" in str(type(e)).split("'")[1]):
 			break
 	else:
 		raise ValueError, "Line has no FAISCNL element"
@@ -312,6 +314,21 @@ def find_closed_orbit(line, init_YTZP=[0,0,0,0], max_iterations=100, tol = 1e-6,
 			return None
 		else:
 			track = r.get_track('fai', ['Y','T','Z','P'])
+			
+			#use track data at location given by fai_label
+			if fai_label != None:
+				if iteration == 0:
+					label = flatten(r.get_track('fai', ['element_label1']))
+					label = [lab.rstrip() for lab in label]
+
+					if len(find_indices(label,fai_label)) != 1:
+						print "number of instances of label ",fai_label," not equal 1"
+						return
+
+					fai_index = find_indices(label,fai_label)[0]
+					track = [track[fai_index]]
+				else:
+					track = [track[fai_index]]
 
 		track_a = numpy.zeros([len(track)+1, len(track[0])])
 		track_a[0] = current_YTZP
@@ -702,10 +719,12 @@ def get_twiss_profiles(line, file_result,input_twiss_parameters = [0,0,0,0,0,0])
 	return twiss_profiles
 
 
-def fourier_tune(line,initial_YTZP,D_in,nfourierturns, coords = []):
+def fourier_tune(line,initial_YTZP,D_in,nfourierturns, plot_fourier = False, coords = []):
 	"""Calculate tune using FFT. nfourierturns determines the number of passes through the lattice.
        Can supply set of horizontal and vertical coordinates in coords = [ycoords,zcoords], otherwise
          routine will calculate coordinates
+
+       Set plot_fourier= True to show Fourier spectrum. Default is False
 	"""
 	#check line has an objet2
 	for e in line.element_list:
@@ -771,8 +790,7 @@ def fourier_tune(line,initial_YTZP,D_in,nfourierturns, coords = []):
 	yfouriertune = ypeaksloc[0]/len(ycoords)
 	zfouriertune = zpeaksloc[0]/len(zcoords)
 
-	#plot tunes if desired
-	plot_fourier = True
+	#plot tunes if desired	
 	if(plot_fourier):
 		pylab.plot(yampfreq, 'k-')
 		pylab.plot(zampfreq, 'b-')
@@ -979,7 +997,7 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_gamma_input = 1, ncoords = 1):
 	"""Given some emittance in horizonal and vertical space
 
-	If ncoords >= 1 return points where phase space ellipse crosses the y,y' and z,z' axis.
+	If ncoords <= 1 return points where phase space ellipse crosses the y,y' and z,z' axis.
 
 	If ncoords > 1, will instead give a distribution of points (y,t) around the phase space ellipse uniform in angle theta where
 	    y = a*cos(theta)*cos(phi) - b*sin(theta)*sin(phi)
@@ -1106,6 +1124,33 @@ def scaling_to_dipole(k, r0, b0_in, d_r0=0, scale_factor=1.0, terms=4):
 
 	return bcoef, b0
 
+def scaling_to_poly(b0,k,r0,rmin,rmax,step,order=5):
+        import pylab
+        """In a scaling FFAG, the magnetic field follows the scaling law given by B=B0*(r/r0)^k where r is the radial coordinate,
+           B0 is the field at r=r0 and k is the scaling factor.
+           This def fits a polynomial of a given order to the scaling field at points in the region rmin < r < rmax, where the number of points is determined by the increment step. The coefficients of 
+           polynomial are returned.
+
+           Required input - 
+           b0 - the field at r0
+           r0 - the reference radius
+           rmin,rmax - region of fit
+           step - step size in (rmin,rmax) at which scaling field is evaluated
+
+           Optional input-
+           order - Order of polynomial fit (default 5)
+           
+           Author -  S. Sheehy """
+
+        x=numpy.arange(rmin,rmax,step)
+        def scalelaw(a): return b0*pow((r0+a)/r0,k)
+        By=map(scalelaw,x)
+        polyval = pylab.polyfit(x,By,order)
+        vals=polyval.tolist()
+        vals.reverse()
+        while len(vals)<6:
+                vals.append(0)
+        return vals
 
 def get_enclosing_circle(ellipse_data):
 	""" Find smallest circle that encloses a set of ellipses centred on the midplane. The ellipses are defined by their horizontal and vertical radii and by their centre along the horizontal axis (a,b,c). The algorithm optimised both the centre of the enclosing circle and its radius. 
@@ -1197,6 +1242,101 @@ def gaussian_cutoff(npoints, mean, sigma, sigma_cutoff, seed = None):
 	return dist
 
 
+def tune_diagram(tune_list, order = 3, xlim = [0,1], ylim= [0,1]):
+	"""Plot a list of tunes on a tune diagram with resonance line up to a given order.
+
+		Required input 
+			tune_list - format [[list of horizontal tunes],[list of vertical tunes]]
+
+		Optional
+			order - Integer denoting order up to which resonance lines are drawn. Default value 3 (third order).
+		    xlim = [lower_value, upper_value] - Limit horizontal axis
+		    ylim = [lower_value, upper_value] - Limit vertical axis  
+
+		At the moment, since the tune diagram covers the range [0,1] just fractional tunes can be shown.
+		The default value of order is 3. 
+		Written by Y. Giboudet """
+
+	import pylab
+
+	XL = xlim[0]
+	XR = xlim[1]
+	YB = ylim[0]
+	YT = ylim[1]
+	NY = 0
+	LOC=[0,0]
+	col=['b','r','g','m','y','k','c']*3
+	for I in xrange(1,order+1):
+		for J in xrange(-I,I+1):
+			NX = J
+			if (NX>=0) and (NY>=0):
+				NY =  I-NX
+			elif (NX>=0) and (NY<0):
+				NY = -I+NX
+			elif (NX<0) and (NY>=0):
+				NY =  I+NX
+			elif (NX<0) and (NY<0):
+				NY = -I-NX
+			for K in xrange(-I+1,I):
+				X1 = -1
+				X2 = -1
+				Y1 = -1
+				Y2 = -1
+				
+				if NX!=0:
+					if (float(K)/NX>0) and (float(K)/NX<=1):
+							X1 = K/float(NX)
+					if ((K-NY)/float(NX)>=0) and ((K-NY)/float(NX)<1):
+							X2 = (K-NY)/float(NX)  
+				if NY!=0:
+					if (float(K)/NY>=0) and (float(K)/NY<1):
+							Y1 = float(K)/NY
+					if ((K-NX)/float(NY)>0) and ((K-NX)/float(NY)<=1):
+							Y2 = (K-NX)/float(NY)
+				XM = 0
+				if X1!=-1:
+					if Y2!=-1 :
+						pylab.plot([X1,1],[0,Y2],color=col[I])    
+
+					elif Y1!=-1:
+						pylab.plot([X1,0],[0,Y1],color=col[I])
+						
+					elif X2!=-1:
+						pylab.plot([X1,X2],[0,1],color=col[I])
+												
+
+				if Y1!=-1:
+					if Y2!=-1 :
+						pylab.plot([0,1],[Y1,Y2],color=col[I])
+						
+
+					elif X2!=-1:
+						pylab.plot([0,X2],[Y1,1],color=col[I])
+						
+				if X2!=-1 :
+					if Y2!=-1:
+						pylab.plot([X2,1],[1,Y2],color=col[I])
+						
+						
+	#plot box around area of resonance lines
+	pylab.plot([XL  ,XL  +XL  ],[YB,YB+YT],color='k')
+	pylab.plot([XL  +XL  ,XL  +XR  ],[YB+YT,YB+YT],color='k')
+	pylab.plot([XL  +XR  ,XL  +XR  ],[YB+YT,YB+YB],color='k')
+	pylab.plot([XL  +XR  ,XL  +XL  ],[YB+YB,YB+YB],color='k')
+
+	#plot list of tunes
+	pylab.plot(tune_list[0],tune_list[1],'k+')
+
+	#pylab.xlim( (xlim[0] ,xlim[1]) )
+	#pylab.axis([-0.05,1.05,-0.05,1.05])
+	pylab.axis([xlim[0],xlim[1],ylim[0],ylim[1]])
+
+	pylab.savefig('tune_diagram')
+	pylab.cla()
+	
+
+
+ 
 def plot_data_xy(data, filename, labels=["","",""], style='b-', xlim = [0,0], ylim = [0,0]):
 	import pylab
 	data_a = numpy.array(data)
@@ -1210,6 +1350,8 @@ def plot_data_xy(data, filename, labels=["","",""], style='b-', xlim = [0,0], yl
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])
 	pylab.savefig(filename)
+
+	pylab.cla()
 
 
 def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["","",""], style='', legend = ' ', legend_location = 'best',xlim = [0,0], ylim = [0,0]):

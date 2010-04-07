@@ -723,7 +723,7 @@ class Results(object):
 		l4_re_plt = trans_to_regex('%f +%f +%f +%f +%d %8c %8c%8c +%d')
 
 		l0_spn =    trans_to_regex('%d +%f +%f +%f +%f +%f +%f +%f +%f')
-		l1_spn =    trans_to_regex('%f +%d +%d +%d +%d')
+		l1_spn =    trans_to_regex('%f +%d +%d +%d %8c +%d')
 
 		#no of lines per fai, plt or spn data point
 		if file != 'spn':
@@ -852,17 +852,17 @@ class Results(object):
 					p['Z'] = self._bad_float(l0[11])
 					p['P'] = self._bad_float(l0[12])
 					p['S'] = self._bad_float(l0[13])
-					p['tof'] = self._bad_float(l0[14]) # time of flight
+					p['tof'] = self._bad_float(l0[14]) # time of flight in microseconds
 					if file=='fai':
 						p['KE'] = self._bad_float(l0[15]) # Kinetic energy
 						p['E'] = self._bad_float(l0[16]) # Total energy
 						p['ID'] = int(l0[17])
 						p['IREP'] = int(l0[18])
-						p['SORT'] = l0[19]
+						p['SORT'] = float(l0[19])
 						p['AMQ'] = l0[20:25]
-						p['RET'] = l0[25]
-						p['DPR'] = l0[26]
-						p['PS'] = l0[27]
+						p['RET'] = float(l0[25])
+						p['DPR'] = float(l0[26])
+						p['PS'] = float(l0[27])
 						p['BORO'] = float(l0[28])
 						p['PASS'] = int(l0[29])
 						p['NOEL'] = int(l0[30])
@@ -871,19 +871,18 @@ class Results(object):
 						p['element_label2']  = l0_stringpart[2].strip('\'')
 						p['LET'] = l0_stringpart[3].strip('\'')
 					elif file=='plt':
-						p['tof'] = p['tof'] / 1e5  #a strange bug prehaps - ensure tof is in microseconds
 						p['beta'] = self._bad_float(l0[15]) # Relativistic beta
 						p['DS'] = self._bad_float(l0[16]) # Relativistic beta
 						p['ID'] = int(l0[18])
 						p['IREP'] = int(l0[19])
-						p['SORT'] = l0[20]
+						p['SORT'] = float(l0[20])
 						p['X'] = float(l0[21])
 						p['Bx'] = float(l0[22])
 						p['By'] = float(l0[23])
 						p['Bz'] = float(l0[24])
-						p['RET'] = l0[25]
-						p['DPR'] = l0[26]
-						p['PS'] = l0[27]
+						p['RET'] = float(l0[25])
+						p['DPR'] = float(l0[26])
+						p['PS'] = float(l0[27])
 						p['BORO'] = float(l0[39])
 						p['PASS'] = int(l0[40])
 						p['NOEL'] = int(l0[41])
