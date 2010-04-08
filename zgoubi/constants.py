@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 from __future__ import division
-from math import log
 
 ELECTRON_MASS = 0.51099892e6 #eV
 ELECTRON_CHARGE = -1.60217653e-19 #C

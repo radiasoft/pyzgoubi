@@ -32,25 +32,25 @@ from glob import glob
 import copy
 try:
 	import numpy
-except:
+except ImportError:
 	print "could not import numpy, some functions will give errors about numpy not being defined"
 try:
 	from operator import itemgetter
-except:
+except ImportError:
 	print "please use python 2.5 or newer"
 	sys.exit(1)
 try:
 	import cairo
-except:
+except ImportError:
 	pass
 #	print "cairo not found, no plotting available"
 
-from constants import *
-from exceptions import *
-import io
+from zgoubi.constants import *
+from zgoubi.exceptions import *
+import zgoubi.io as io
 
 
-from settings import zgoubi_settings
+from zgoubi.settings import zgoubi_settings
 
 zgoubi_module_path = os.path.dirname( os.path.realpath( __file__ ) )
 zgoubi_path = zgoubi_settings['zgoubi_path']
@@ -118,27 +118,28 @@ if need_def_compile:
 
 
 def yield_n_lines(fh, n):
-        "yields n lines at a time"
+	"yields n lines at a time"
 
-        lines = []
-        for line in fh:
-                lines.append(line)
-                if (len(lines) == n):
-                        yield lines
-                        lines = []
+	lines = []
+	for line in fh:
+		lines.append(line)
+		if (len(lines) == n):
+			yield lines
+			lines = []
 
-        yield lines
+	yield lines
 
 
 def read_n_lines(fh, n):
-        "reads n lines at a time"
+	"reads n lines at a time"
 
-        lines = []
-        for x in xrange(n):
-                lines.append(fh.readline())
-        return lines
+	lines = []
+	for x in xrange(n):
+		lines.append(fh.readline())
+	return lines
 
 def trans_to_regex(fmt):
+	"Transform a printf style format in to a regular expression"
 	fmt = fmt.replace('%c', '(.)')
 	fmt = re.sub('%(\d+)c', r'(.{\1})', fmt)
 	fmt = fmt.replace('%d', '([-+]?\d+)')
@@ -486,7 +487,6 @@ class Line(object):
 		l.add_input_files(pattern="maps/*")
 
 		"""
-		import glob
 
 		if pattern != None:
 			globbed_files = glob.glob(pattern)

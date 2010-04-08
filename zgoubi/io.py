@@ -6,7 +6,7 @@ import hashlib
 import os
 import struct
 
-from exceptions import OldFormatError
+from zgoubi.exceptions import OldFormatError
 
 # translate some of the column names for compatibility with old pyzgoubi
 col_name_trans ={
