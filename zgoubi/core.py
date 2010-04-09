@@ -48,6 +48,7 @@ except ImportError:
 from zgoubi.constants import *
 from zgoubi.exceptions import *
 import zgoubi.io as io
+import zgoubi.bunch
 
 
 from zgoubi.settings import zgoubi_settings
@@ -384,7 +385,27 @@ class Line(object):
 		
 		self.has_run = True	
 		return Results(line=self,rundir=tmpdir)
+	
+	def track_bunch(self, bunch):
+		"Track a bunch through a Line, and return the bunch. This function will uses the OBJET_bunch object, and so need needs a Line that does not already have a OBJET"
+		if self.full_line:
+			raise BadLineError("If line already has an OBJET use run()")
+
+		#build a line with the bunch OBJET and segment we were passed
+		new_line = Line("bunch_line")
+		new_line.add(OBJET_bunch(bunch, binary=False))
+		new_line.add(self)
+		#mark the faiscnl that we are interested in
+		new_line.add(MARKER("trackbun"))
+		new_line.add(FAISCNL(FNAME='b_zgoubi.fai'))
+		new_line.add(END())
+
+		# run the line
+		result = new_line.run(xterm=0)
 		
+		# return the track bunch
+		return  result.get_bunch('bfai', end_label="trackbun")
+
 	def clean(self):
 		"clean up temp directories"
 		for dir in self.tmp_folders:
@@ -947,6 +968,37 @@ class Results(object):
 					this_coord.append(p[c] * multi_list[n])
 			coords.append(this_coord)
 		return coords
+	
+	def get_bunch(self, file, end_label=None):
+		""""Get back a bunch object from the fai file. It is recommended that you put a MARKER before the last FAISCNL, and pass its label as end_label, so that only the bunch at the final position will be returned. All but the final lap is ignored automatically.
+		"""
+		all = self.get_all(file)
+
+		if not (type(all) == type(numpy.zeros(0))):
+			raise OldFormatError("get_bunch() only works with the new fai format")
+		
+		# select only the particles that made it to the last lap
+		last_lap = all[ all['PASS'] == all['PASS'].max() ]
+		# also select only particles at FAISTORE with matching end_label
+		if end_label:
+			end_label = end_label.ljust(8) # pad to match zgoubi
+			last_lap = last_lap[ last_lap['element_label1'] == end_label ]
+
+		#print last_lap[:10]['BORO']
+		#print last_lap[:10]['D-1']
+
+		# Create a new bunch and copy the values arcoss (with conversion to SI)
+		last_bunch = zgoubi.bunch.Bunch(nparticles=last_lap.size, rigidity=last_lap[0]['BORO']/1000 )
+		particles = last_bunch.particles()
+#		print last_lap.dtype
+		particles['Y'] = last_lap['Y'] /100
+		particles['T'] = last_lap['T'] /1000
+		particles['Z'] = last_lap['Z'] /100
+		particles['P'] = last_lap['P'] /1000
+		particles['D'] = last_lap['D-1'] +1
+
+		return last_bunch
+
 
 	def get_extremes(self, file, element_label=None, coord='Y', id=None):
 		"""

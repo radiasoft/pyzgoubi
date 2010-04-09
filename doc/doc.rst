@@ -511,7 +511,7 @@ Although it would be nice to have perfect backwards compatibility that sometimes
 
 PyZgoubi 0.4 supports the new fai/plt output formats introduced into Zgoubi in early 2010. These have a header that labels the columns. Reading the new format was taken as an opportunity to use numpy more extensively. If an older version of Zgoubi (5.1 or 5.0) is being used then the old fai/plt reading code will be used, and data will be returned as python dictionaries and arrays. If a newer version of Zgoubi is being used (SVN r251 or newer), then Results.get_all() will return a `numpy structured array <http://docs.scipy.org/doc/numpy/user/basics.rec.html>`_ with the column names.
 
-Some column names will change when using the new fai/plt files. This is because older versions of PyZgoubi muddled the S and X coordinates. The coordinate name is now taken from the fai/plt file directly.
+Some column names will change when using the new fai/plt files. This is because older versions of PyZgoubi muddled the S and X coordinates. Also 'D' and 'D0' are now the more accurate 'D-1' and 'D0-1'. The coordinate name is now taken from the fai/plt file directly.
 
 When using the new fai/plt files labels are stored as a fixed length string, and so include any whitespace, e.g. 'foc' vs. 'foc'. To  get back to the short version use strip(), e.g.::
 

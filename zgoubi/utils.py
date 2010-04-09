@@ -419,11 +419,13 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=[0, 0, 0, 0, 0,
 			plt_track = r.get_track('fai', ['LET', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'X0', 'D', 'Y', 'T', 'Z', 'P', 'S'])
 			track_type = 'fai'
 	except ValueError:
+		# new file format has no 'X0', now called 'S0' to match zgoubi output
+		# also 'D' is now know as 'D-1'
 		try:
-			plt_track = r.get_track('plt', ['LET', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'D', 'Y', 'T', 'Z', 'P', 'X', 'S'])
+			plt_track = r.get_track('plt', ['LET', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'D-1', 'Y', 'T', 'Z', 'P', 'X', 'S'])
 			track_type = 'plt'
 		except IOError:
-			plt_track = r.get_track('fai', ['LET', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'D', 'Y', 'T', 'Z', 'P', 'S'])
+			plt_track = r.get_track('fai', ['LET', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'D-1', 'Y', 'T', 'Z', 'P', 'S'])
 			track_type = 'fai'
 
 	transpose_plt_track = map(list, zip(*plt_track))
