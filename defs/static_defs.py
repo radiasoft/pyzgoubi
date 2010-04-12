@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import os.path
+
 class OBJET1(zgoubi_element):
 	"""Beam made of grid of particles, default params give just 1 reference particle.
 	Equivilent to OBJET with a KOBJ=1
@@ -163,11 +165,11 @@ class OBJET_bunch(zgoubi_element):
 		self.bunch = bunch
 		self.binary = binary
 
-	def setup(self):
+	def setup(self, rundir):
 		if self.binary:
-			self.bunch.write_YTZPSD("b_coords.dat", binary=True)
+			self.bunch.write_YTZPSD(os.path.join(rundir, "b_coords.dat"), binary=True)
 		else:
-			self.bunch.write_YTZPSD("coords.dat", binary=False)
+			self.bunch.write_YTZPSD(os.path.join(rundir, "coords.dat"), binary=False)
 
 	def output(self):
 		if self.bunch == None:

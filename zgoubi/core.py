@@ -30,6 +30,10 @@ import re
 import struct
 from glob import glob
 import copy
+import threading
+import Queue
+import subprocess
+
 try:
 	import numpy
 except ImportError:
@@ -328,8 +332,8 @@ class Line(object):
 	def run(self, xterm=False, tmp_prefix=zgoubi_settings['tmp_dir'], silence=False):
 		"Run zgoubi on line. If break is true, stop after running zgoubi, and open an xterm for the user in the tmp dir. From here zpop can be run."
 		orig_cwd = os.getcwd()
-		self.tmpdir = tempfile.mkdtemp("zgoubi", prefix=tmp_prefix)
-		tmpdir = self.tmpdir
+		tmpdir = tempfile.mkdtemp("zgoubi", prefix=tmp_prefix)
+		self.tmpdir = tmpdir
 	
 		for file in self.input_files:
 			src = os.path.join(orig_cwd, file)
@@ -344,12 +348,12 @@ class Line(object):
 				shutil.copyfile(src, dst)
 	
 		self.tmp_folders.append(tmpdir)
-		os.chdir(tmpdir)
+		#os.chdir(tmpdir)
 		
 		for element in self.elements():
 			# some elements may have a setup function, to be run before zgoubi
 			if hasattr(element, "setup"):
-				element.setup()
+				element.setup(tmpdir)
 		
 		infile = open(tmpdir+"/zgoubi.dat", 'w')
 		infile.write(self.output())
@@ -358,7 +362,10 @@ class Line(object):
 		command = zgoubi_settings['zgoubi_path']
 		if silence:
 			command += " > zgoubi.stdout 2> zgoubi.sdterr"
-		exe_result = os.system(command)
+		#exe_result = os.system(command)
+		z_proc = subprocess.Popen(command, shell=True, cwd=tmpdir)
+		exe_result = z_proc.wait()
+
 		if exe_result != 0:
 			print "zgoubi failed to run"
 			print "It returned:", exe_result
@@ -381,10 +388,10 @@ class Line(object):
 		self.spn_file = tmpdir+"/zgoubi.spn"
 		#output = outfile.read()
 		
-		os.chdir(orig_cwd)
+		#os.chdir(orig_cwd)
 		
 		self.has_run = True	
-		return Results(line=self,rundir=tmpdir)
+		return Results(line=self, rundir=tmpdir)
 	
 	def track_bunch(self, bunch):
 		"Track a bunch through a Line, and return the bunch. This function will uses the OBJET_bunch object, and so need needs a Line that does not already have a OBJET"
@@ -405,6 +412,52 @@ class Line(object):
 		
 		# return the track bunch
 		return  result.get_bunch('bfai', end_label="trackbun")
+		
+	def track_bunch_mt(self, bunch, n_threads=4):
+		in_q = Queue.Queue()
+		out_q = Queue.Queue()
+
+		def worker(in_q, out_q, work_line, name):
+			while True:
+				start_index, work_bunch = in_q.get()
+				print "Thread", name, "working"
+				done_bunch = work_line.track_bunch(work_bunch)
+				out_q.put((start_index, done_bunch.particles()))
+				in_q.task_done()
+				print "Thread", name, "task done"
+
+		for x in xrange(n_threads):
+			t = threading.Thread(target=worker,
+			                     kwargs={'in_q':in_q, 'out_q':out_q, 'work_line':self, 'name':x})
+			t.setDaemon(True)
+			t.start()
+			print "Created thread", x
+		
+		start_index = 0
+		n_tasks = 0
+		print "Queuing work"
+		for item in bunch.split_bunch(max_particles=10000, n_slices=n_threads):
+			print "Queue task", n_tasks
+			in_q.put((start_index, item))
+			start_index += len(item)
+			n_tasks +=1
+		print "Work queued"
+		#in_q.join()
+		#print "Work done"
+
+		final_bunch = zgoubi.bunch.Bunch(nparticles = len(bunch), rigidity=bunch.get_bunch_rigidity(), mass=bunch.mass, charge=bunch.charge)
+		for x in xrange(n_tasks):
+			print "collecting task", x
+			start_index, done_bunch = out_q.get()
+			out_q.task_done()
+			final_bunch.particles()[start_index:start_index+len(done_bunch)] = done_bunch
+
+		print "all done"
+		return final_bunch
+
+
+
+
 
 	def clean(self):
 		"clean up temp directories"

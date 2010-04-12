@@ -2,6 +2,7 @@
 
 "A bunch object to hold the coordinates for many particles"
 
+from __future__ import division
 from math import *
 import numpy
 import pylab
@@ -30,8 +31,11 @@ class Bunch(object):
 	# might be interesting to have bunch hold more coordinates, but not yet implemented.
 	#fai_data_def = io.z251_fai_dtype
 
-	def __init__(self, nparticles=0, ke=0, rigidity=0, mass=0, charge=1):
-		self.coords = numpy.zeros(nparticles, self.min_data_def)
+	def __init__(self, nparticles=0, ke=0, rigidity=0, mass=0, charge=1, particles=None):
+		if particles != None:
+			self.coords = particles
+		else:
+			self.coords = numpy.zeros(nparticles, self.min_data_def)
 		self.mass = mass
 		self.charge = charge
 		self.rigidity = rigidity 
@@ -39,7 +43,19 @@ class Bunch(object):
 			self.set_bunch_ke(ke)
 		self.coords['D'] = 1
 
-	
+	def split_bunch(self, max_particles, n_slices):
+		"Split a bunch into n_slices smaller bunches, or more if they would have too many particles in."
+		if ceil(len(self.coords) / n_slices) > max_particles:
+			n_slices = ceil(len(self.coords)/max_particles)
+
+		for pslice in numpy.array_split(self.coords, n_slices):
+			yield Bunch(rigidity=self.get_bunch_rigidity(), mass=self.mass, charge=self.charge,
+			            particles=pslice)
+
+
+		
+
+
 	def set_bunch_ke(self, ke):
 		"Set bunch kinetic energy"
 		if self.mass == 0:
