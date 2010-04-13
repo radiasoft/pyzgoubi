@@ -3,13 +3,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.5: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.6: http://docutils.sourceforge.net/" />
 <title>PyZgoubi Documentation</title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 5196 2007-06-03 20:25:28Z wiemann $
+:Id: $Id: html4css1.css 5951 2009-05-18 18:03:10Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -157,11 +157,32 @@ h2.subtitle {
 hr.docutils {
   width: 75% }
 
-img.align-left {
-  clear: left }
+img.align-left, .figure.align-left{
+  clear: left ;
+  float: left ;
+  margin-right: 1em }
 
-img.align-right {
-  clear: right }
+img.align-right, .figure.align-right {
+  clear: right ;
+  float: right ;
+  margin-left: 1em }
+
+.align-left {
+  text-align: left }
+
+.align-center {
+  clear: both ;
+  text-align: center }
+
+.align-right {
+  text-align: right }
+
+/* reset inner alignment in figures */
+div.align-right {
+  text-align: left }
+
+/* div.align-center * { */
+/*   text-align: left } */
 
 ol.simple, ul.simple {
   margin-bottom: 1em }
@@ -216,8 +237,7 @@ p.topic-title {
 pre.address {
   margin-bottom: 0 ;
   margin-top: 0 ;
-  font-family: serif ;
-  font-size: 100% }
+  font: inherit }
 
 pre.literal-block, pre.doctest-block {
   margin-left: 2em ;
@@ -293,24 +313,27 @@ ul.auto-toc {
 <ul class="simple">
 <li><a class="reference internal" href="#introduction" id="id1">Introduction</a></li>
 <li><a class="reference internal" href="#quick-start" id="id2">Quick Start</a></li>
-<li><a class="reference internal" href="#generating-zgoubi-dat-files" id="id3">Generating zgoubi.dat files</a></li>
-<li><a class="reference internal" href="#elements" id="id4">Elements</a><ul>
-<li><a class="reference internal" href="#available-elements" id="id5">Available Elements</a></li>
+<li><a class="reference internal" href="#generating-zgoubi-dat-files" id="id3">Generating zgoubi.dat files</a><ul>
+<li><a class="reference internal" href="#particles-particuls" id="id4">Particles / Particuls</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#running-zgoubi" id="id6">Running Zgoubi</a></li>
-<li><a class="reference internal" href="#results-object" id="id7">Results Object</a></li>
-<li><a class="reference internal" href="#loops" id="id8">Loops</a></li>
-<li><a class="reference internal" href="#command-line-arguments" id="id9">Command line arguments</a></li>
-<li><a class="reference internal" href="#units" id="id10">Units</a></li>
-<li><a class="reference internal" href="#settings-and-options" id="id11">Settings and Options</a></li>
-<li><a class="reference internal" href="#debugging-and-profiling" id="id12">Debugging and Profiling</a></li>
-<li><a class="reference internal" href="#upgrade-notes" id="id13">Upgrade Notes</a><ul>
-<li><a class="reference internal" href="#x-to-0-4-x" id="id14">0.3.x to 0.4.x</a></li>
+<li><a class="reference internal" href="#defining-elements" id="id5">Defining Elements</a><ul>
+<li><a class="reference internal" href="#available-elements" id="id6">Available Elements</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#tips" id="id15">Tips</a><ul>
-<li><a class="reference internal" href="#python-hints" id="id16">Python hints</a></li>
+<li><a class="reference internal" href="#running-zgoubi" id="id7">Running Zgoubi</a></li>
+<li><a class="reference internal" href="#results-object" id="id8">Results Object</a></li>
+<li><a class="reference internal" href="#loops" id="id9">Loops</a></li>
+<li><a class="reference internal" href="#command-line-arguments" id="id10">Command line arguments</a></li>
+<li><a class="reference internal" href="#units" id="id11">Units</a></li>
+<li><a class="reference internal" href="#settings-and-options" id="id12">Settings and Options</a></li>
+<li><a class="reference internal" href="#debugging-and-profiling" id="id13">Debugging and Profiling</a></li>
+<li><a class="reference internal" href="#upgrade-notes" id="id14">Upgrade Notes</a><ul>
+<li><a class="reference internal" href="#x-to-0-4-x" id="id15">0.3.x to 0.4.x</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#tips" id="id16">Tips</a><ul>
+<li><a class="reference internal" href="#python-hints" id="id17">Python hints</a></li>
 </ul>
 </li>
 </ul>
@@ -468,9 +491,27 @@ print emma.output()
 pyzgoubi emma.py
 </pre>
 <p>It will build a Line and print the zgoubi.dat input to the screen. The '.py' extension is not necessary, but will cause your text editor to use python syntax highlighting.</p>
+<div class="section" id="particles-particuls">
+<h2><a class="toc-backref" href="#id4">Particles / Particuls</a></h2>
+<p>Zgoubi allows a particles parameters such as charge, mass and half-life to be set with the PARTICUL element. These not needed for basic tracking, as the rigidity is given in the OBJET element. PyZgoubi offers some pre-made particles:</p>
+<pre class="literal-block">
+ELECTRON
+PROTON
+MUON
+IMMORTAL_MUON
+</pre>
+<p>The IMMORTAL_MUON is a muon with an infinite lifetime, for use when decay is not needed. Anti particles with opposite can me made by negating a particle. eg:</p>
+<pre class="literal-block">
+m = -MUON()
+my_line.add(m)
+#or
+my_line.add(-MUON())
+</pre>
+<p>The masses and charges are defined in zgoubi/constants.py</p>
 </div>
-<div class="section" id="elements">
-<h1><a class="toc-backref" href="#id4">Elements</a></h1>
+</div>
+<div class="section" id="defining-elements">
+<h1><a class="toc-backref" href="#id5">Defining Elements</a></h1>
 <p>There are two ways Elements can be defined in pyzgoubi. Most Elements are simple, they have a static list of parameters. Some have some extra complexity, for example different parameters depending on options, sections repeated N times. These elements can be defined using a simple syntax, which is then converted into python code. More complex elements must be written in python.</p>
 <p>The simple elements are defined in defs/simple_elements.defs. For each element there is a number of lines of text, delimited by blank lines. Comments can be put after a '#' character. The first line gives the name of the class, this is the name you use in the input file. The second line gives the name used by Zgoubi, this must match the Zgoubi manual. Then follows a line for each line of output in the zgoubi.dat file; first the names of the parameters, then a ':', then the types. For example:</p>
 <pre class="literal-block">
@@ -558,7 +599,7 @@ change = FAKE_ELEM(change_txt)
 line.add(change)
 </pre>
 <div class="section" id="available-elements">
-<h2><a class="toc-backref" href="#id5">Available Elements</a></h2>
+<h2><a class="toc-backref" href="#id6">Available Elements</a></h2>
 <ul class="simple">
 <li>BEND</li>
 <li>CAVITE</li>
@@ -601,7 +642,7 @@ pyzgoubi help MULTIPOL
 </div>
 </div>
 <div class="section" id="running-zgoubi">
-<h1><a class="toc-backref" href="#id6">Running Zgoubi</a></h1>
+<h1><a class="toc-backref" href="#id7">Running Zgoubi</a></h1>
 <p>Once a line has been created and had the needed elements added it can be run. PyZgoubi will take care of creating a temporary directory, creating the zgoubi.dat file and running Zgoubi. This is done to prevent zgoubi from overwriting any existing files. If you wish to keep any of the output files you must use the commands to copy these to where you want them.</p>
 <p>The following example shows how to run a line:</p>
 <pre class="literal-block">
@@ -638,7 +679,7 @@ emma.clean()
 </pre>
 </div>
 <div class="section" id="results-object">
-<h1><a class="toc-backref" href="#id7">Results Object</a></h1>
+<h1><a class="toc-backref" href="#id8">Results Object</a></h1>
 <p>When you run a line it creates a Results object, that can be used to get information about the paths of the particles.:</p>
 <pre class="literal-block">
 res = pamela.run()
@@ -651,7 +692,7 @@ print res.get_track('fai', ['Y','T'])
 </pre>
 </div>
 <div class="section" id="loops">
-<h1><a class="toc-backref" href="#id8">Loops</a></h1>
+<h1><a class="toc-backref" href="#id9">Loops</a></h1>
 <p>For making complex lines it can be useful to use python features such as loops, e.g. to put 5 identical FODO cells you could use</p>
 <pre class="literal-block">
 line = Line(&quot;example&quot;)
@@ -680,7 +721,7 @@ for x in range(5):
 </pre>
 </div>
 <div class="section" id="command-line-arguments">
-<h1><a class="toc-backref" href="#id9">Command line arguments</a></h1>
+<h1><a class="toc-backref" href="#id10">Command line arguments</a></h1>
 <p>There is a convenience function for using command line arguments. For example near the start of the code put:</p>
 <pre class="literal-block">
 number_of_laps = int(get_cmd_param('laps', 10))
@@ -700,7 +741,7 @@ particle_energy = float(get_cmd_param('energy'))
 <p>then you will receive and error if you don't provide a value as an argument.</p>
 </div>
 <div class="section" id="units">
-<h1><a class="toc-backref" href="#id10">Units</a></h1>
+<h1><a class="toc-backref" href="#id11">Units</a></h1>
 <p>PyZgoubi does not do any automatic unit conversion. When you give a parameter you must give the units that Zgoubi expects. However PyZgoubi does define some values to save some effort, in the conversion. Any of the following will set x to 2:</p>
 <pre class="literal-block">
 x = 2 * m
@@ -734,7 +775,7 @@ radians(180) # gives 3.1416...
 </pre>
 </div>
 <div class="section" id="settings-and-options">
-<h1><a class="toc-backref" href="#id11">Settings and Options</a></h1>
+<h1><a class="toc-backref" href="#id12">Settings and Options</a></h1>
 <p>PyZgoubi settings are stored in a file .pyzgoubi/settings.ini in your home folder. It is automatically created the first time pyzgoubi is used. It can be used to customise some PyZgoubi options.</p>
 <p>The following keys can be set:</p>
 <pre class="literal-block">
@@ -751,7 +792,7 @@ zgoubi_path
 <p>The path to the zgoubi binary file. Note that this can also be set with the commandline option --zgoubi=/path/to/zgoubi.</p>
 </div>
 <div class="section" id="debugging-and-profiling">
-<h1><a class="toc-backref" href="#id12">Debugging and Profiling</a></h1>
+<h1><a class="toc-backref" href="#id13">Debugging and Profiling</a></h1>
 <p>When installing PyZgoubi it will suggest adding some aliases to your .bashrc file. These are:</p>
 <pre class="literal-block">
 pyzgoubi - run PyZgoubi normally
@@ -771,10 +812,10 @@ python -c &quot;import pstats; pstats.Stats('prof.log').sort_stats('cumulative')
 </pre>
 </div>
 <div class="section" id="upgrade-notes">
-<h1><a class="toc-backref" href="#id13">Upgrade Notes</a></h1>
+<h1><a class="toc-backref" href="#id14">Upgrade Notes</a></h1>
 <p>Although it would be nice to have perfect backwards compatibility that sometimes interferes with progress, and things have to break. There should be no breaks between a version X.Y.Z and X.Y.Z+1, but there can be between X.Y.Z and X.Y+1.0.</p>
 <div class="section" id="x-to-0-4-x">
-<h2><a class="toc-backref" href="#id14">0.3.x to 0.4.x</a></h2>
+<h2><a class="toc-backref" href="#id15">0.3.x to 0.4.x</a></h2>
 <p>PyZgoubi 0.4 supports the new fai/plt output formats introduced into Zgoubi in early 2010. These have a header that labels the columns. Reading the new format was taken as an opportunity to use numpy more extensively. If an older version of Zgoubi (5.1 or 5.0) is being used then the old fai/plt reading code will be used, and data will be returned as python dictionaries and arrays. If a newer version of Zgoubi is being used (SVN r251 or newer), then Results.get_all() will return a <a class="reference external" href="http://docs.scipy.org/doc/numpy/user/basics.rec.html">numpy structured array</a> with the column names.</p>
 <p>Some column names will change when using the new fai/plt files. This is because older versions of PyZgoubi muddled the S and X coordinates. Also 'D' and 'D0' are now the more accurate 'D-1' and 'D0-1'. The coordinate name is now taken from the fai/plt file directly.</p>
 <p>When using the new fai/plt files labels are stored as a fixed length string, and so include any whitespace, e.g. 'foc' vs. 'foc'. To  get back to the short version use strip(), e.g.:</p>
@@ -790,9 +831,9 @@ labels2 = [x.strip() for x in labels1]
 </div>
 </div>
 <div class="section" id="tips">
-<h1><a class="toc-backref" href="#id15">Tips</a></h1>
+<h1><a class="toc-backref" href="#id16">Tips</a></h1>
 <div class="section" id="python-hints">
-<h2><a class="toc-backref" href="#id16">Python hints</a></h2>
+<h2><a class="toc-backref" href="#id17">Python hints</a></h2>
 <p>If there is a '#' character on a line, everything after it is treated as a comment.</p>
 <p>Python uses whitespace to delimit blocks (instead of braces '{' and '}' in C/C++). The PyZgoubi code uses tabs, so it is best to use tabs in your input files. If you get an 'IndentationError' check that you have not mixed spaces and tabs, or accidentally started a line with a space/tab.</p>
 <p>Python identifiers (variable, function, object names etc) are case sensitive, they must start with a letter and only contain letters, numbers and underscores.</p>

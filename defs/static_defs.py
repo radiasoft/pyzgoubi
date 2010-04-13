@@ -284,8 +284,17 @@ class MCOBJET3(zgoubi_element):
 
 # define some useful particles
 # constants defined in zgoubi_constants.py
-class ELECTRON(zgoubi_element):
+
+class zgoubi_particul(zgoubi_element):
+	def __neg__(self):
+		"Return an anti-particle, by inverting charge"
+		new_particul = copy.copy(self)
+		new_particul.anti *= -1
+		return new_particul
+
+class ELECTRON(zgoubi_particul):
 	def __init__(self):
+		self.anti = 1 # 1=particle, -1=anti particle
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
@@ -296,11 +305,12 @@ class ELECTRON(zgoubi_element):
 		i = self.i2s
 		
 		out = "'PARTICUL'" +nl
-		out += f(ELECTRON_MASS/1e6) +' '+ f(ELECTRON_CHARGE) +' '+ f(ELECTRON_ANOM_MAG_MOM) +' '+ f(ELECTRON_MEAN_LIFE) +' 0' +nl
+		out += f(ELECTRON_MASS/1e6) +' '+ f(self.anti * ELECTRON_CHARGE) +' '+ f(ELECTRON_ANOM_MAG_MOM) +' '+ f(ELECTRON_MEAN_LIFE) +' 0' +nl
 		return out
 
-class PROTON(zgoubi_element):
+class PROTON(zgoubi_particul):
 	def __init__(self):
+		self.anti = 1 # 1=particle, -1=anti particle
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
@@ -311,11 +321,12 @@ class PROTON(zgoubi_element):
 		i = self.i2s
 		
 		out = "'PARTICUL'" +nl
-		out += f(PROTON_MASS/1e6) +' '+ f(PROTON_CHARGE) +' '+ f(PROTON_ANOM_MAG_MOM) +' '+ f(PROTON_MEAN_LIFE) +' 0' +nl
+		out += f(PROTON_MASS/1e6) +' '+ f(self.anti * PROTON_CHARGE) +' '+ f(PROTON_ANOM_MAG_MOM) +' '+ f(PROTON_MEAN_LIFE) +' 0' +nl
 		return out
 
-class MUON(zgoubi_element):
+class MUON(zgoubi_particul):
 	def __init__(self):
+		self.anti = 1 # 1=particle, -1=anti particle
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
@@ -326,12 +337,13 @@ class MUON(zgoubi_element):
 		i = self.i2s
 
 		out = "'PARTICUL'" +nl
-		out += f(MUON_MASS/1e6) +' '+ f(MUON_CHARGE) +' '+ f(MUON_ANOM_MAG_MOM) +' '+ f(MUON_MEAN_LIFE) +' 0' +nl
+		out += f(MUON_MASS/1e6) +' '+ f(self.anti * MUON_CHARGE) +' '+ f(MUON_ANOM_MAG_MOM) +' '+ f(MUON_MEAN_LIFE) +' 0' +nl
 		return out
 
-class IMMORTAL_MUON(zgoubi_element):
+class IMMORTAL_MUON(zgoubi_particul):
 	"non decaying muon"
 	def __init__(self):
+		self.anti = 1 # 1=particle, -1=anti particle
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
@@ -342,7 +354,7 @@ class IMMORTAL_MUON(zgoubi_element):
 		i = self.i2s
 
 		out = "'PARTICUL'" +nl
-		out += f(MUON_MASS/1e6) +' '+ f(MUON_CHARGE) +' '+ f(MUON_ANOM_MAG_MOM) +' '+ f(0) +' 0' +nl
+		out += f(MUON_MASS/1e6) +' '+ f(self.anti * MUON_CHARGE) +' '+ f(MUON_ANOM_MAG_MOM) +' '+ f(0) +' 0' +nl
 		return out
 
 

@@ -76,10 +76,10 @@ def _show_help(help_arg):
 
 		for k,v in globals().items():
 			try:
-				for b in v.__bases__:
-					if "zgoubi_element" in str(b):
+				if issubclass(v, zgoubi_element):
+					if not k in ['zgoubi_element','zgoubi_particul']:
 						elements.append(k)
-			except AttributeError:
+			except TypeError:
 				pass
 		elements.sort()
 		print '\n'.join(elements)

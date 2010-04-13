@@ -12,7 +12,7 @@ PROTON_ANOM_MAG_MOM = (5.585694701 -2)/2 # from http://en.wikipedia.org/wiki/G-f
 PROTON_MEAN_LIFE = 0
 
 MUON_MASS = 105.65837e6 #eV
-MUON_CHARGE = 1.60217653e-19 #C
+MUON_CHARGE = -1.60217653e-19 #C
 MUON_ANOM_MAG_MOM = (2.0023318396 -2)/2 # from http://en.wikipedia.org/wiki/G-factor
 MUON_MEAN_LIFE = 2.197029e-6  #
 

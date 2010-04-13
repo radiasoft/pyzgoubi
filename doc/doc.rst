@@ -170,10 +170,28 @@ This can be run with the command::
 
 It will build a Line and print the zgoubi.dat input to the screen. The '.py' extension is not necessary, but will cause your text editor to use python syntax highlighting.
 
+Particles / Particuls
+"""""""""""""""""""""
+
+Zgoubi allows a particles parameters such as charge, mass and half-life to be set with the PARTICUL element. These not needed for basic tracking, as the rigidity is given in the OBJET element. PyZgoubi offers some pre-made particles::
+
+	ELECTRON
+	PROTON
+	MUON
+	IMMORTAL_MUON
+
+The IMMORTAL_MUON is a muon with an infinite lifetime, for use when decay is not needed. Anti particles with opposite can me made by negating a particle. eg::
+
+	m = -MUON()
+	my_line.add(m)
+	#or
+	my_line.add(-MUON())
+
+The masses and charges are defined in zgoubi/constants.py
 
 
-Elements
---------
+Defining Elements
+-----------------
 
 There are two ways Elements can be defined in pyzgoubi. Most Elements are simple, they have a static list of parameters. Some have some extra complexity, for example different parameters depending on options, sections repeated N times. These elements can be defined using a simple syntax, which is then converted into python code. More complex elements must be written in python.
 
