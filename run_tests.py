@@ -69,7 +69,7 @@ install_res = subprocess.Popen(["./setup.py", "install", "--prefix=%s"%install_d
 
 for line in install_res.communicate()[0].split('\n'):
 	print >>log, line
-	if line.startswith('alias'):
+	if line.startswith('alias pyzgoubi='):
 		pyzgoubi_cmd = line.partition('=')[2]
 		pyzgoubi_cmd = pyzgoubi_cmd.strip('"')
 		

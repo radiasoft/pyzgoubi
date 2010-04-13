@@ -1,7 +1,7 @@
 #!/usr/bin/env python
+"Algorithm by J. Scott Berg to find the smallest circle that enclose a set of ellipses that lie on the midplane."
 
 from math import sqrt
-# Algorithm by J. Scott Berg to find the smallest circle that enclose a set of ellipses that lie on the midplane.  
 
 def ivl_add(l, ivl):
 	"""Add the interval ivl=(min, max) to the interval list l
@@ -35,7 +35,7 @@ def solemm(c1, a1, c2, a2, b2):
 			(a2 * a2)
 	else:
 		return c2 + (x - b2) * (x + b2) / \
-			(b2 * sqrt((x - a2) * (x + a2) / b2a2) - x);
+			(b2 * sqrt((x - a2) * (x + a2) / b2a2) - x)
 
 def solemp(c1, a1, c2, a2, b2):
 	b2a2 = (b2 - a2) * (b2 + a2)
@@ -45,7 +45,7 @@ def solemp(c1, a1, c2, a2, b2):
 			(a2 * a2)
 	else:
 		return c2 + (b2 - x) * (b2 + x) / \
-			(b2 * sqrt((x - a2) * (x + a2) / b2a2) + x);
+			(b2 * sqrt((x - a2) * (x + a2) / b2a2) + x)
 
 def solC4(c1, a1, b1, c2, a2, b2, sqrtplus):
 	c21 = c2 - c1
@@ -155,7 +155,7 @@ def intersect_ellipses(e1, e2):
 	else:
 		return ielpp(c2, a2, b2, c1, a1, b1)
 
-def ellipse_radius2(e,z):
+def ellipse_radius2(e, z):
 	a = e[0]
 	b = e[1]
 	c = e[2]
@@ -299,7 +299,7 @@ class BestCircle:
 		for ei in self.l:
 			for ivl in ei[1]:
 				if ivl[0] <= z <= ivl[1]:
-					return sqrt(ellipse_radius2(ei[0],z))
+					return sqrt(ellipse_radius2(ei[0], z))
 		return 0
 
 	def get_circle(self):
@@ -310,9 +310,9 @@ class BestCircle:
 		z = 0.0
 		for ei in self.l:
 			for ivl in ei[1]:
-				if ivl[0] != float('inf') and ellipse_radius2(ei[0],ivl[0]) < r:
+				if ivl[0] != float('inf') and ellipse_radius2(ei[0], ivl[0]) < r:
 					z = ivl[0]
-					r = ellipse_radius2(ei[0],z)
+					r = ellipse_radius2(ei[0], z)
 			a = ei[0][0]
 			b = ei[0][1]
 			if a >= b and a*a < r or a <= b and b*b < r:
@@ -326,6 +326,6 @@ class BestCircle:
 						r = a*a
 					else:
 						r = b*b
-		return (z,sqrt(r))
+		return (z, sqrt(r))
 
 

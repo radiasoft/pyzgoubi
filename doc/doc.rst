@@ -170,10 +170,28 @@ This can be run with the command::
 
 It will build a Line and print the zgoubi.dat input to the screen. The '.py' extension is not necessary, but will cause your text editor to use python syntax highlighting.
 
+Particles / Particuls
+"""""""""""""""""""""
+
+Zgoubi allows a particles parameters such as charge, mass and half-life to be set with the PARTICUL element. These not needed for basic tracking, as the rigidity is given in the OBJET element. PyZgoubi offers some pre-made particles::
+
+	ELECTRON
+	PROTON
+	MUON
+	IMMORTAL_MUON
+
+The IMMORTAL_MUON is a muon with an infinite lifetime, for use when decay is not needed. Anti particles with opposite can me made by negating a particle. eg::
+
+	m = -MUON()
+	my_line.add(m)
+	#or
+	my_line.add(-MUON())
+
+The masses and charges are defined in zgoubi/constants.py
 
 
-Elements
---------
+Defining Elements
+-----------------
 
 There are two ways Elements can be defined in pyzgoubi. Most Elements are simple, they have a static list of parameters. Some have some extra complexity, for example different parameters depending on options, sections repeated N times. These elements can be defined using a simple syntax, which is then converted into python code. More complex elements must be written in python.
 
@@ -478,6 +496,52 @@ Where temporary files should be written, this is most likely /tmp/, but in some 
 
 The path to the zgoubi binary file. Note that this can also be set with the commandline option --zgoubi=/path/to/zgoubi.
 
+Debugging and Profiling
+-----------------------
+
+When installing PyZgoubi it will suggest adding some aliases to your .bashrc file. These are::
+
+	pyzgoubi - run PyZgoubi normally
+	pyzgoubii - run PyZgoubi, and start an interactive python shell when its done, or fails
+	pyzgoubip - run PyZgoubi, and save profiling information to prof.log
+
+The interactive shell can be used to check the values of variables at the point of a crash.
+
+The profiling information can be read with the python pstats module (part of cProfile). For example to see in which functions most time was spent run::
+
+	python -c "import pstats; pstats.Stats('prof.log').sort_stats('cumulative').print_stats()"
+
+or start a python shell and run::
+
+	>>> import pstats
+	>>> p = pstats.Stats('prof.log')
+	>>> p.sort_stats('cumulative').print_stats()
+
+
+
+Upgrade Notes
+-------------
+
+Although it would be nice to have perfect backwards compatibility that sometimes interferes with progress, and things have to break. There should be no breaks between a version X.Y.Z and X.Y.Z+1, but there can be between X.Y.Z and X.Y+1.0.
+
+0.3.x to 0.4.x
+""""""""""""""
+
+PyZgoubi 0.4 supports the new fai/plt output formats introduced into Zgoubi in early 2010. These have a header that labels the columns. Reading the new format was taken as an opportunity to use numpy more extensively. If an older version of Zgoubi (5.1 or 5.0) is being used then the old fai/plt reading code will be used, and data will be returned as python dictionaries and arrays. If a newer version of Zgoubi is being used (SVN r251 or newer), then Results.get_all() will return a `numpy structured array <http://docs.scipy.org/doc/numpy/user/basics.rec.html>`_ with the column names.
+
+Some column names will change when using the new fai/plt files. This is because older versions of PyZgoubi muddled the S and X coordinates. Also 'D' and 'D0' are now the more accurate 'D-1' and 'D0-1'. The coordinate name is now taken from the fai/plt file directly.
+
+When using the new fai/plt files labels are stored as a fixed length string, and so include any whitespace, e.g. 'foc' vs. 'foc'. To  get back to the short version use strip(), e.g.::
+
+	label1 = 'foc     '
+	label_short = label1.strip()
+	#or
+	labels1 = ['foc     ', 'defoc   ']
+	labels2 = [x.strip() for x in labels1]
+
+Some obsolete functions have been removed: Results.plt_to_csv(), Results.get_all_old(), Line.split_line()
+
+The 'tol' parameter in find_closed_orbit() now is a measure of convergence rather than area. This should give better results over a wide range of scales. However, a large 'tol' is needed to give the same degree of accuracy. If you previously had tol=1e-10, then it may no longer converge, but if you change it to tol=1e-6 you will get a similar result to before.
 
 Tips
 ----

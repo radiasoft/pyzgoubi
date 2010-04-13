@@ -6,19 +6,19 @@ import hashlib
 import os
 import struct
 
-from exceptions import OldFormatError
+from zgoubi.exceptions import OldFormatError
 
 # translate some of the column names for compatibility with old pyzgoubi
 col_name_trans ={
 "KEX":"IEX",
-"Do-1":"D0",
+"Do-1":"D0-1",
 "Yo":"Y0",
 "To":"T0",
 "Zo":"Z0",
 "Po":"P0",
 "So":"S0",
 "to":"tof0",
-"D-1":"D",
+"D-1":"D-1",
 "Y":"Y",
 "T":"T",
 "Z":"Z",
@@ -52,13 +52,17 @@ col_name_trans ={
 # store some definitions, to speed loading, and to work around some issues
 definition_lookup = {}
 # from zgoubi svn 251
-definition_lookup['7e0d6c789529cad60f97c7a9f3ff8894'] = {'file_mode': 'ascii', 'file_type': 'fai', 'names': ['IEX', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'tof0', 'D-1', 'Y', 'T', 'Z', 'P', 'S', 'tof', 'SXo', 'SYo', 'SZo', 'modSo', 'SX', 'SY', 'SZ', 'modS', 'KE', 'E', 'ID', 'IREP', 'SORT', 'M', 'Q', 'G', 'tau', 'unused', 'RET', 'DPR', 'PS', 'BORO', 'PASS', 'NOEL', 'element_type', 'element_label1', 'element_label2', 'LET'], 'signature': '7e0d6c789529cad60f97c7a9f3ff8894', 'units': ['int', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'MeV', 'MeV', 'int', 'int', 'cm', 'MeV/c2', 'C', 'float', 'float', 'float', 'float', 'float', 'float', 'kG.cm', 'int', 'int', 'string', 'string', 'string', 'string'], 'types': ['i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'a10', 'a8', 'a8', 'a1']}
+definition_lookup['7e0d6c789529cad60f97c7a9f3ff8894'] = {'file_mode': 'ascii', 'file_type': 'fai', 'names': ['IEX', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'tof0', 'D-1', 'Y', 'T', 'Z', 'P', 'S', 'tof', 'SXo', 'SYo', 'SZo', 'modSo', 'SX', 'SY', 'SZ', 'modS', 'KE', 'E', 'ID', 'IREP', 'SORT', 'M', 'Q', 'G', 'tau', 'unused', 'RET', 'DPR', 'PS', 'BORO', 'PASS', 'NOEL', 'element_type', 'element_label1', 'element_label2', 'LET'], 'signature': '7e0d6c789529cad60f97c7a9f3ff8894', 'units': ['int', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'MeV', 'MeV', 'int', 'int', 'cm', 'MeV/c2', 'C', 'float', 'float', 'float', 'float', 'float', 'float', 'kG.cm', 'int', 'int', 'string', 'string', 'string', 'string'], 'types': ['i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'a10', 'a8', 'a8', 'a1']}
 
-definition_lookup['09173c37cdb73b2a6c7b1c2f12519f2e'] = {'header_length': 922, 'file_mode': 'binary', 'file_type': 'fai', 'record_length': 327, 'names': ['IEX', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'tof0', 'D-1', 'Y', 'T', 'Z', 'P', 'S', 'tof', 'SXo', 'SYo', 'SZo', 'modSo', 'SX', 'SY', 'SZ', 'modS', 'KE', 'E', 'ID', 'IREP', 'SORT', 'M', 'Q', 'G', 'tau', 'unused', 'RET', 'DPR', 'PS', 'BORO', 'PASS', 'NOEL', 'element_type', 'element_label1', 'element_label2', 'LET'], 'signature': '09173c37cdb73b2a6c7b1c2f12519f2e', 'units': ['int', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'MeV', 'MeV', 'int', 'int', 'cm', 'MeV/c2', 'C', 'float', 'float', 'float', 'float', 'float', 'float', 'kG.cm', 'int', 'int', 'string', 'string', 'string', 'string'], 'types': ['i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'a10', 'a8', 'a8', 'a1']}
+definition_lookup['09173c37cdb73b2a6c7b1c2f12519f2e'] = {'header_length': 922, 'file_mode': 'binary', 'file_type': 'fai', 'record_length': 327, 'names': ['IEX', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'tof0', 'D-1', 'Y', 'T', 'Z', 'P', 'S', 'tof', 'SXo', 'SYo', 'SZo', 'modSo', 'SX', 'SY', 'SZ', 'modS', 'KE', 'E', 'ID', 'IREP', 'SORT', 'M', 'Q', 'G', 'tau', 'unused', 'RET', 'DPR', 'PS', 'BORO', 'PASS', 'NOEL', 'element_type', 'element_label1', 'element_label2', 'LET'], 'signature': '09173c37cdb73b2a6c7b1c2f12519f2e', 'units': ['int', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'MeV', 'MeV', 'int', 'int', 'cm', 'MeV/c2', 'C', 'float', 'float', 'float', 'float', 'float', 'float', 'kG.cm', 'int', 'int', 'string', 'string', 'string', 'string'], 'types': ['i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'a10', 'a8', 'a8', 'a1']}
 
-definition_lookup['ea298b3ccc3f5b75bb672363221ec9da'] = {'file_mode': 'ascii', 'file_type': 'plt', 'names': ['IEX', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'tof0', 'D-1', 'Y', 'T', 'Z', 'P', 'S', 'tof', 'beta', 'DS', 'KART', 'ID', 'IREP', 'SORT', 'X', 'BX', 'BY', 'BZ', 'RET', 'DPR', 'PS', 'SXo', 'SYo', 'SZo', 'modSo', 'SX', 'SY', 'SZ', 'modS', 'EX', 'EY', 'EZ', 'BORO', 'PASS', 'NOEL', 'element_type', 'element_label1', 'element_label2', 'LET'], 'signature': 'ea298b3ccc3f5b75bb672363221ec9da', 'units': ['int', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'v/c', 'cm', 'int', 'int', 'int', 'cm', 'cm', 'kG', 'kG', 'kG', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'V/m', 'V/m', 'V/m', 'kG.cm', 'int', 'int', 'string', 'string', 'string', 'string'], 'types': ['i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'a10', 'a8', 'a8', 'a1']}
+definition_lookup['ea298b3ccc3f5b75bb672363221ec9da'] = {'file_mode': 'ascii', 'file_type': 'plt', 'names': ['IEX', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'tof0', 'D-1', 'Y', 'T', 'Z', 'P', 'S', 'tof', 'beta', 'DS', 'KART', 'ID', 'IREP', 'SORT', 'X', 'BX', 'BY', 'BZ', 'RET', 'DPR', 'PS', 'SXo', 'SYo', 'SZo', 'modSo', 'SX', 'SY', 'SZ', 'modS', 'EX', 'EY', 'EZ', 'BORO', 'PASS', 'NOEL', 'element_type', 'element_label1', 'element_label2', 'LET'], 'signature': 'ea298b3ccc3f5b75bb672363221ec9da', 'units': ['int', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'v/c', 'cm', 'int', 'int', 'int', 'cm', 'cm', 'kG', 'kG', 'kG', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'V/m', 'V/m', 'V/m', 'kG.cm', 'int', 'int', 'string', 'string', 'string', 'string'], 'types': ['i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'a10', 'a8', 'a8', 'a1']}
 
-definition_lookup['98dfe80e482e210e6ed827aff0c70b53'] = {'header_length': 922, 'file_mode': 'binary', 'file_type': 'plt', 'record_length': 347, 'names': ['IEX', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'tof0', 'D-1', 'Y', 'T', 'Z', 'P', 'S', 'tof', 'beta', 'DS', 'KART', 'ID', 'IREP', 'SORT', 'X', 'BX', 'BY', 'BZ', 'RET', 'DPR', 'PS', 'SXo', 'SYo', 'SZo', 'modSo', 'SX', 'SY', 'SZ', 'modS', 'EX', 'EY', 'EZ', 'BORO', 'PASS', 'NOEL', 'element_type', 'element_label1', 'element_label2', 'LET'], 'signature': '98dfe80e482e210e6ed827aff0c70b53', 'units': ['int', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'v/c', 'cm', 'int', 'int', 'int', 'cm', 'cm', 'kG', 'kG', 'kG', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'V/m', 'V/m', 'V/m', 'kG.cm', 'int', 'int', 'string', 'string', 'string', 'string'], 'types': ['i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'a10', 'a8', 'a8', 'a1']}
+definition_lookup['98dfe80e482e210e6ed827aff0c70b53'] = {'header_length': 922, 'file_mode': 'binary', 'file_type': 'plt', 'record_length': 347, 'names': ['IEX', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'tof0', 'D-1', 'Y', 'T', 'Z', 'P', 'S', 'tof', 'beta', 'DS', 'KART', 'ID', 'IREP', 'SORT', 'X', 'BX', 'BY', 'BZ', 'RET', 'DPR', 'PS', 'SXo', 'SYo', 'SZo', 'modSo', 'SX', 'SY', 'SZ', 'modS', 'EX', 'EY', 'EZ', 'BORO', 'PASS', 'NOEL', 'element_type', 'element_label1', 'element_label2', 'LET'], 'signature': '98dfe80e482e210e6ed827aff0c70b53', 'units': ['int', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'v/c', 'cm', 'int', 'int', 'int', 'cm', 'cm', 'kG', 'kG', 'kG', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'V/m', 'V/m', 'V/m', 'kG.cm', 'int', 'int', 'string', 'string', 'string', 'string'], 'types': ['i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'a10', 'a8', 'a8', 'a1']}
+
+
+z251_fai_def = definition_lookup['7e0d6c789529cad60f97c7a9f3ff8894']
+z251_fai_dtype = zip(z251_fai_def['names'], z251_fai_def['types'])
 
 
 def open_file_or_name(forn, mode="r"):
@@ -70,7 +74,7 @@ def open_file_or_name(forn, mode="r"):
 
 
 
-def fortran_record(fh):
+def read_fortran_record(fh):
 	"Read 1 record from a fortran file"
 	# length of each record is at start and end of record.
 	# read length
@@ -86,6 +90,15 @@ def fortran_record(fh):
 	rec_len_r2 = fh.read(4)
 	assert (rec_len_r == rec_len_r2), "record should start and end with length"
 	return record
+
+def write_fortran_record(fh, record):
+	"Write a record, adds record length to start and end"
+	rec_len = len(record)
+	rec_len_r = struct.pack("i", rec_len)
+	fh.write(rec_len_r)
+	fh.write(record)
+	fh.write(rec_len_r)
+
 
 
 def define_file(fname, allow_lookup=True):
@@ -111,7 +124,7 @@ def define_file(fname, allow_lookup=True):
 	if file_mode == 'ascii':
 		header = [fh.readline() for x in xrange(4)]
 	else:
-		header = [fortran_record(fh) for x in xrange(4)]
+		header = [read_fortran_record(fh) for x in xrange(4)]
 	
 	if header[2].startswith("..."):
 		raise OldFormatError, "This is an old format that does not define column headings"
@@ -130,7 +143,7 @@ def define_file(fname, allow_lookup=True):
 	if file_mode == 'binary':
 		header_length += 4*8 # extra bytes from record lengths
 		#file_length = os.path.getsize(fname)
-		record_length = len(fortran_record(fh)) +8
+		record_length = len(read_fortran_record(fh)) +8
 
 		#file_length = len(whole_file)
 		#print "file_length", file_length
@@ -216,14 +229,13 @@ def read_file(fname):
 		head_len = file_def["header_length"]
 		fh.seek(head_len)
 		
-		types = file_def['types']
-		types = listreplace(types, 'f8', 'd')
-		types = listreplace(types, 'i4', 'i')
-		types = listreplace(types, 'a8', '8s')
-		types = listreplace(types, 'a10', '10s')
-		types = listreplace(types, 'a1', 'c')
-		
-		data_format = "="+"".join(types)
+		#types = file_def['types']
+		#types = listreplace(types, 'f8', 'd')
+		#types = listreplace(types, 'i4', 'i')
+		#types = listreplace(types, 'a8', '8s')
+		#types = listreplace(types, 'a10', '10s')
+		#types = listreplace(types, 'a1', 'c')
+		#data_format = "="+"".join(types)
 
 		file_size = os.path.getsize(fname)
 		num_records = (file_size - head_len) / rec_len

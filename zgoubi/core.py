@@ -30,27 +30,32 @@ import re
 import struct
 from glob import glob
 import copy
+import threading
+import Queue
+import subprocess
+
 try:
 	import numpy
-except:
+except ImportError:
 	print "could not import numpy, some functions will give errors about numpy not being defined"
 try:
 	from operator import itemgetter
-except:
+except ImportError:
 	print "please use python 2.5 or newer"
 	sys.exit(1)
 try:
 	import cairo
-except:
+except ImportError:
 	pass
 #	print "cairo not found, no plotting available"
 
-from constants import *
-from exceptions import *
-import io
+from zgoubi.constants import *
+from zgoubi.exceptions import *
+import zgoubi.io as io
+import zgoubi.bunch
 
 
-from settings import zgoubi_settings
+from zgoubi.settings import zgoubi_settings
 
 zgoubi_module_path = os.path.dirname( os.path.realpath( __file__ ) )
 zgoubi_path = zgoubi_settings['zgoubi_path']
@@ -118,27 +123,28 @@ if need_def_compile:
 
 
 def yield_n_lines(fh, n):
-        "yields n lines at a time"
+	"yields n lines at a time"
 
-        lines = []
-        for line in fh:
-                lines.append(line)
-                if (len(lines) == n):
-                        yield lines
-                        lines = []
+	lines = []
+	for line in fh:
+		lines.append(line)
+		if (len(lines) == n):
+			yield lines
+			lines = []
 
-        yield lines
+	yield lines
 
 
 def read_n_lines(fh, n):
-        "reads n lines at a time"
+	"reads n lines at a time"
 
-        lines = []
-        for x in xrange(n):
-                lines.append(fh.readline())
-        return lines
+	lines = []
+	for x in xrange(n):
+		lines.append(fh.readline())
+	return lines
 
 def trans_to_regex(fmt):
+	"Transform a printf style format in to a regular expression"
 	fmt = fmt.replace('%c', '(.)')
 	fmt = re.sub('%(\d+)c', r'(.{\1})', fmt)
 	fmt = fmt.replace('%d', '([-+]?\d+)')
@@ -290,7 +296,7 @@ class Line(object):
 		use line.full_tracking(False) to disable tracking
 
 		"""
-		for e in self.element_list:
+		for e in self.elements():
 			#t = str(type(e)).split("'")[1] #get type, eg zgoubi22.QUADRUPO
 			#print t
 
@@ -326,8 +332,8 @@ class Line(object):
 	def run(self, xterm=False, tmp_prefix=zgoubi_settings['tmp_dir'], silence=False):
 		"Run zgoubi on line. If break is true, stop after running zgoubi, and open an xterm for the user in the tmp dir. From here zpop can be run."
 		orig_cwd = os.getcwd()
-		self.tmpdir = tempfile.mkdtemp("zgoubi", prefix=tmp_prefix)
-		tmpdir = self.tmpdir
+		tmpdir = tempfile.mkdtemp("zgoubi", prefix=tmp_prefix)
+		self.tmpdir = tmpdir
 	
 		for file in self.input_files:
 			src = os.path.join(orig_cwd, file)
@@ -342,16 +348,24 @@ class Line(object):
 				shutil.copyfile(src, dst)
 	
 		self.tmp_folders.append(tmpdir)
-		os.chdir(tmpdir)
+		#os.chdir(tmpdir)
+		
+		for element in self.elements():
+			# some elements may have a setup function, to be run before zgoubi
+			if hasattr(element, "setup"):
+				element.setup(tmpdir)
 		
 		infile = open(tmpdir+"/zgoubi.dat", 'w')
 		infile.write(self.output())
 		infile.close()
-		
+
 		command = zgoubi_settings['zgoubi_path']
 		if silence:
 			command += " > zgoubi.stdout 2> zgoubi.sdterr"
-		exe_result = os.system(command)
+		#exe_result = os.system(command)
+		z_proc = subprocess.Popen(command, shell=True, cwd=tmpdir)
+		exe_result = z_proc.wait()
+
 		if exe_result != 0:
 			print "zgoubi failed to run"
 			print "It returned:", exe_result
@@ -374,11 +388,77 @@ class Line(object):
 		self.spn_file = tmpdir+"/zgoubi.spn"
 		#output = outfile.read()
 		
-		os.chdir(orig_cwd)
+		#os.chdir(orig_cwd)
 		
 		self.has_run = True	
-		return Results(line=self,rundir=tmpdir)
+		return Results(line=self, rundir=tmpdir)
+	
+	def track_bunch(self, bunch):
+		"Track a bunch through a Line, and return the bunch. This function will uses the OBJET_bunch object, and so need needs a Line that does not already have a OBJET"
+		if self.full_line:
+			raise BadLineError("If line already has an OBJET use run()")
+
+		#build a line with the bunch OBJET and segment we were passed
+		new_line = Line("bunch_line")
+		new_line.add(OBJET_bunch(bunch, binary=False))
+		new_line.add(self)
+		#mark the faiscnl that we are interested in
+		new_line.add(MARKER("trackbun"))
+		new_line.add(FAISCNL(FNAME='b_zgoubi.fai'))
+		new_line.add(END())
+
+		# run the line
+		result = new_line.run(xterm=0)
 		
+		# return the track bunch
+		return  result.get_bunch('bfai', end_label="trackbun")
+		
+	def track_bunch_mt(self, bunch, n_threads=4):
+		in_q = Queue.Queue()
+		out_q = Queue.Queue()
+
+		def worker(in_q, out_q, work_line, name):
+			while True:
+				start_index, work_bunch = in_q.get()
+				print "Thread", name, "working"
+				done_bunch = work_line.track_bunch(work_bunch)
+				out_q.put((start_index, done_bunch.particles()))
+				in_q.task_done()
+				print "Thread", name, "task done"
+
+		for x in xrange(n_threads):
+			t = threading.Thread(target=worker,
+			                     kwargs={'in_q':in_q, 'out_q':out_q, 'work_line':self, 'name':x})
+			t.setDaemon(True)
+			t.start()
+			print "Created thread", x
+		
+		start_index = 0
+		n_tasks = 0
+		print "Queuing work"
+		for item in bunch.split_bunch(max_particles=10000, n_slices=n_threads):
+			print "Queue task", n_tasks
+			in_q.put((start_index, item))
+			start_index += len(item)
+			n_tasks +=1
+		print "Work queued"
+		#in_q.join()
+		#print "Work done"
+
+		final_bunch = zgoubi.bunch.Bunch(nparticles = len(bunch), rigidity=bunch.get_bunch_rigidity(), mass=bunch.mass, charge=bunch.charge)
+		for x in xrange(n_tasks):
+			print "collecting task", x
+			start_index, done_bunch = out_q.get()
+			out_q.task_done()
+			final_bunch.particles()[start_index:start_index+len(done_bunch)] = done_bunch
+
+		print "all done"
+		return final_bunch
+
+
+
+
+
 	def clean(self):
 		"clean up temp directories"
 		for dir in self.tmp_folders:
@@ -481,7 +561,6 @@ class Line(object):
 		l.add_input_files(pattern="maps/*")
 
 		"""
-		import glob
 
 		if pattern != None:
 			globbed_files = glob.glob(pattern)
@@ -902,21 +981,27 @@ class Results(object):
 		#check if we are using the new zgoubi.io version
 		if (type(all) == type(numpy.zeros(0))):
 			#coords = numpy.zeros([all.size, len(coord_list)])
-			dtypes = []
-			best_type = numpy.dtype('i')
-			for n,c in enumerate(coord_list):
-				if all[c].dtype == numpy.dtype('i'):
-					continue
-				elif all[c].dtype == numpy.dtype('f'):
-					# not all cols are int, so use float
-					best_type = numpy.dtype('f')
-				else:
-					best_type = "mixed"
+			
+			# is set logic to see what best array type is
+			# mixed arrays might break some old code, so fall back to dicts
+			dtypes =  set([all[c].dtype for c in coord_list])
+			if not( dtypes - set([numpy.dtype('i')]) ):
+				# if there is nothing but ints, use int
+				best_type = 'i'
+			elif not( dtypes - set([numpy.dtype('i'), numpy.dtype('f'), numpy.dtype('d')]) ):
+				# if there is nothing but ints and float/double, use double
+				best_type = 'd'
+			else:
+				# otherwise fall back to dicts
+				best_type = "mixed"
+
+
 			if best_type != "mixed":
 				# all cols numeric, so give a fast numpy array
-				coords = numpy.zeros([all.size], dtype=(best_type * len(coord_list)))
+				coords = numpy.zeros([all.size, len(coord_list)], dtype=(best_type))
 
 				for n,c in enumerate(coord_list):
+					print c
 					coords[:,n] = all[c]
 					if multi_list:
 						if multi_list[n]:
@@ -936,6 +1021,37 @@ class Results(object):
 					this_coord.append(p[c] * multi_list[n])
 			coords.append(this_coord)
 		return coords
+	
+	def get_bunch(self, file, end_label=None):
+		""""Get back a bunch object from the fai file. It is recommended that you put a MARKER before the last FAISCNL, and pass its label as end_label, so that only the bunch at the final position will be returned. All but the final lap is ignored automatically.
+		"""
+		all = self.get_all(file)
+
+		if not (type(all) == type(numpy.zeros(0))):
+			raise OldFormatError("get_bunch() only works with the new fai format")
+		
+		# select only the particles that made it to the last lap
+		last_lap = all[ all['PASS'] == all['PASS'].max() ]
+		# also select only particles at FAISTORE with matching end_label
+		if end_label:
+			end_label = end_label.ljust(8) # pad to match zgoubi
+			last_lap = last_lap[ last_lap['element_label1'] == end_label ]
+
+		#print last_lap[:10]['BORO']
+		#print last_lap[:10]['D-1']
+
+		# Create a new bunch and copy the values arcoss (with conversion to SI)
+		last_bunch = zgoubi.bunch.Bunch(nparticles=last_lap.size, rigidity=last_lap[0]['BORO']/1000 )
+		particles = last_bunch.particles()
+#		print last_lap.dtype
+		particles['Y'] = last_lap['Y'] /100
+		particles['T'] = last_lap['T'] /1000
+		particles['Z'] = last_lap['Z'] /100
+		particles['P'] = last_lap['P'] /1000
+		particles['D'] = last_lap['D-1'] +1
+
+		return last_bunch
+
 
 	def get_extremes(self, file, element_label=None, coord='Y', id=None):
 		"""
@@ -1101,7 +1217,7 @@ class Results(object):
 		"""
 		has_object5 = False
 		has_matrix = False
-		for e in self.line.element_list:
+		for e in self.line.elements():
 			t = str(type(e)).split("'")[1].rpartition(".")[2]
 			if t == 'OBJET5':
 				has_object5 = True
@@ -1147,7 +1263,7 @@ class Results(object):
 		"""
 		has_object5 = False
 		has_matrix = False
-		for e in self.line.element_list:
+		for e in self.line.elements():
 			t = str(type(e)).split("'")[1].rpartition(".")[2]
 			if t == 'OBJET5':
 				has_object5 = True
@@ -1189,13 +1305,41 @@ class Results(object):
 				found_row4 = True
 				return (beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z)
 
+	def show_particle_info(self):
+		"show the particle info, a good check of energies, mass etc"
+		in_particle = False
+		past_input = False
+		fh = self.res_fh()
+		while True:
+			line = fh.readline()
+			if line.startswith("***"):
+				if in_particle: # going into a new section, so can break
+					break
+				past_input = True
+				section = fh.readline().strip().split()[-1]
+				if section == "PARTICUL": #entering particle
+					in_particle = True
+				continue
+
+			if not past_input:
+				continue
+			if in_particle:
+				if line.strip().startswith("I, AMQ(1,I)"):
+					break
+				print line,
+
+
+
+
+
+
 	def test_rebelote(self):
 		"""Return true if end of REBELOTE procedure reported
 		Needs a REBELOTE element.
 
 		"""
 		has_reb = False
-		for e in self.line.element_list:
+		for e in self.line.elements():
 			t = str(type(e)).split("'")[1].rpartition(".")[2]
 			if t == 'REBELOTE':
 				has_reb = True
@@ -1284,7 +1428,7 @@ class Plotter(object):
 		angle = 0
 		position = [0,0]
 		self.elements = {}
-		for elem in self.line.element_list:
+		for elem in self.line.elements():
 			classtype =  str(type(elem))
 			classtype = classtype.split("'")[-2]
 			classtype = classtype.split(".")[-1]

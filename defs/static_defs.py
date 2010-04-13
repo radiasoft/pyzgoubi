@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import os.path
+
 class OBJET1(zgoubi_element):
 	"""Beam made of grid of particles, default params give just 1 reference particle.
 	Equivilent to OBJET with a KOBJ=1
@@ -154,6 +156,43 @@ class OBJET3(zgoubi_element):
 		out += self.FNAME +nl
 		return out
 
+class OBJET_bunch(zgoubi_element):
+	def __init__(self,bunch=None, binary=False,**settings):
+		self._zgoubi_name = "OBJET"
+		self._params = {}
+		self.label1 = ""
+		self.label2 = ""
+		self.bunch = bunch
+		self.binary = binary
+
+	def setup(self, rundir):
+		if self.binary:
+			self.bunch.write_YTZPSD(os.path.join(rundir, "b_coords.dat"), binary=True)
+		else:
+			self.bunch.write_YTZPSD(os.path.join(rundir, "coords.dat"), binary=False)
+
+	def output(self):
+		if self.bunch == None:
+			raise BadLineError, "OBJET_bunch has no bunch set"
+
+		f = self.f2s
+		i = self.i2s
+		out = "'OBJET'" +nl
+		out += f(self.bunch.get_bunch_rigidity() *1000) + nl # convert from T.m to kG.cm
+		out += "3.01" +nl
+		out += "1 " + i(len(self.bunch)) + " 1" + nl
+		out += "1 1 1" + nl
+		out += "100 1000 100 1000 100 1 1 *" + nl
+		out += "0 0 0 0 0 0 0" + nl
+		out += "0" + nl
+		if self.binary:
+			out += "b_coords.dat" + nl
+		else:
+			out += "coords.dat" + nl
+
+		return out
+
+
 
 class OBJET5(zgoubi_element):
 	"""Beam made of particles, for use with matrix
@@ -245,8 +284,17 @@ class MCOBJET3(zgoubi_element):
 
 # define some useful particles
 # constants defined in zgoubi_constants.py
-class ELECTRON(zgoubi_element):
+
+class zgoubi_particul(zgoubi_element):
+	def __neg__(self):
+		"Return an anti-particle, by inverting charge"
+		new_particul = copy.copy(self)
+		new_particul.anti *= -1
+		return new_particul
+
+class ELECTRON(zgoubi_particul):
 	def __init__(self):
+		self.anti = 1 # 1=particle, -1=anti particle
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
@@ -257,11 +305,12 @@ class ELECTRON(zgoubi_element):
 		i = self.i2s
 		
 		out = "'PARTICUL'" +nl
-		out += f(ELECTRON_MASS/1e6) +' '+ f(ELECTRON_CHARGE) +' '+ f(ELECTRON_ANOM_MAG_MOM) +' '+ f(ELECTRON_MEAN_LIFE) +' 0' +nl
+		out += f(ELECTRON_MASS/1e6) +' '+ f(self.anti * ELECTRON_CHARGE) +' '+ f(ELECTRON_ANOM_MAG_MOM) +' '+ f(ELECTRON_MEAN_LIFE) +' 0' +nl
 		return out
 
-class PROTON(zgoubi_element):
+class PROTON(zgoubi_particul):
 	def __init__(self):
+		self.anti = 1 # 1=particle, -1=anti particle
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
@@ -272,11 +321,12 @@ class PROTON(zgoubi_element):
 		i = self.i2s
 		
 		out = "'PARTICUL'" +nl
-		out += f(PROTON_MASS/1e6) +' '+ f(PROTON_CHARGE) +' '+ f(PROTON_ANOM_MAG_MOM) +' '+ f(PROTON_MEAN_LIFE) +' 0' +nl
+		out += f(PROTON_MASS/1e6) +' '+ f(self.anti * PROTON_CHARGE) +' '+ f(PROTON_ANOM_MAG_MOM) +' '+ f(PROTON_MEAN_LIFE) +' 0' +nl
 		return out
 
-class MUON(zgoubi_element):
+class MUON(zgoubi_particul):
 	def __init__(self):
+		self.anti = 1 # 1=particle, -1=anti particle
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
@@ -287,12 +337,13 @@ class MUON(zgoubi_element):
 		i = self.i2s
 
 		out = "'PARTICUL'" +nl
-		out += f(MUON_MASS/1e6) +' '+ f(MUON_CHARGE) +' '+ f(MUON_ANOM_MAG_MOM) +' '+ f(MUON_MEAN_LIFE) +' 0' +nl
+		out += f(MUON_MASS/1e6) +' '+ f(self.anti * MUON_CHARGE) +' '+ f(MUON_ANOM_MAG_MOM) +' '+ f(MUON_MEAN_LIFE) +' 0' +nl
 		return out
 
-class IMMORTAL_MUON(zgoubi_element):
+class IMMORTAL_MUON(zgoubi_particul):
 	"non decaying muon"
 	def __init__(self):
+		self.anti = 1 # 1=particle, -1=anti particle
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
@@ -303,7 +354,7 @@ class IMMORTAL_MUON(zgoubi_element):
 		i = self.i2s
 
 		out = "'PARTICUL'" +nl
-		out += f(MUON_MASS/1e6) +' '+ f(MUON_CHARGE) +' '+ f(MUON_ANOM_MAG_MOM) +' '+ f(0) +' 0' +nl
+		out += f(MUON_MASS/1e6) +' '+ f(self.anti * MUON_CHARGE) +' '+ f(MUON_ANOM_MAG_MOM) +' '+ f(0) +' 0' +nl
 		return out
 
 

@@ -70,6 +70,8 @@ if ("install" in sys.argv) and not ( "--help" in sys.argv):
 			print "export PATH=$PATH:%s"%bin_path
 			print "or"
 			print 'alias pyzgoubi="PYTHONPATH=%s python %s/pyzgoubi"'%(lib_path, bin_path)
+			print 'alias pyzgoubii="PYTHONPATH=%s python -i %s/pyzgoubi"'%(lib_path, bin_path)
+			print 'alias pyzgoubip="PYTHONPATH=%s python -m cProfile -o prof.log %s/pyzgoubi"'%(lib_path, bin_path)
 	except NameError:
 		print "Could not find all paths in logfile"
 
