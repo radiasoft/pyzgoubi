@@ -375,7 +375,7 @@ class Line(object):
 			print "Do you want an xterm? (y=yes/n=no/s=stop asking)"
 			ans = raw_input()
 			if ans.startswith('y'):
-				os.system('xterm')
+				subprocess.Popen("xterm", shell=True, cwd=tmpdir).wait()
 			elif ans.startswith('s'):
 				self.no_more_xterm = True
 		
