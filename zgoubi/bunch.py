@@ -36,12 +36,12 @@ class Bunch(object):
 			self.coords = particles
 		else:
 			self.coords = numpy.zeros(nparticles, self.min_data_def)
+			self.coords['D'] = 1
 		self.mass = mass
 		self.charge = charge
 		self.rigidity = rigidity 
 		if ke != 0:
 			self.set_bunch_ke(ke)
-		self.coords['D'] = 1
 
 	def split_bunch(self, max_particles, n_slices):
 		"Split a bunch into n_slices smaller bunches, or more if they would have too many particles in."
