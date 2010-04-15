@@ -411,7 +411,7 @@ class Line(object):
 		result = new_line.run(xterm=0)
 		
 		# return the track bunch
-		return  result.get_bunch('bfai', end_label="trackbun")
+		return  result.get_bunch('bfai', end_label="trackbun", old_bunch=bunch)
 		
 	def track_bunch_mt(self, bunch, n_threads=4):
 		in_q = Queue.Queue()
@@ -1022,8 +1022,9 @@ class Results(object):
 			coords.append(this_coord)
 		return coords
 	
-	def get_bunch(self, file, end_label=None):
+	def get_bunch(self, file, end_label=None, old_bunch=None):
 		""""Get back a bunch object from the fai file. It is recommended that you put a MARKER before the last FAISCNL, and pass its label as end_label, so that only the bunch at the final position will be returned. All but the final lap is ignored automatically.
+		Optionally the an old_bunch can be passed to the function, its mass and charge will be copyed to the new bunch.
 		"""
 		all = self.get_all(file)
 
@@ -1041,7 +1042,10 @@ class Results(object):
 		#print last_lap[:10]['D-1']
 
 		# Create a new bunch and copy the values arcoss (with conversion to SI)
-		last_bunch = zgoubi.bunch.Bunch(nparticles=last_lap.size, rigidity=last_lap[0]['BORO']/1000 )
+		last_bunch = zgoubi.bunch.Bunch(nparticles=last_lap.size, rigidity=last_lap[0]['BORO']/1000)
+		if old_bunch != None:
+			last_bunch.mass = old_bunch.mass
+			last_bunch.charge = old_bunch.charge
 		particles = last_bunch.particles()
 #		print last_lap.dtype
 		particles['Y'] = last_lap['Y'] /100

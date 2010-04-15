@@ -31,7 +31,7 @@ class Bunch(object):
 	# might be interesting to have bunch hold more coordinates, but not yet implemented.
 	#fai_data_def = io.z251_fai_dtype
 
-	def __init__(self, nparticles=0, ke=0, rigidity=0, mass=0, charge=1, particles=None):
+	def __init__(self, nparticles=0, ke=None, rigidity=0, mass=0, charge=1, particles=None):
 		if particles != None:
 			self.coords = particles
 		else:
@@ -40,7 +40,7 @@ class Bunch(object):
 		self.mass = mass
 		self.charge = charge
 		self.rigidity = rigidity 
-		if ke != 0:
+		if ke != None:
 			self.set_bunch_ke(ke)
 
 	def split_bunch(self, max_particles, n_slices):
@@ -53,7 +53,13 @@ class Bunch(object):
 			            particles=pslice)
 
 
-		
+	def __str__(self):
+		out = "Bunch:\n"
+		out += "\t"+str(len(self)) + " paricles\n"
+		out += "\t"+str(self.get_bunch_ke()) + " eV\n"
+
+		return out
+
 
 
 	def set_bunch_ke(self, ke):
