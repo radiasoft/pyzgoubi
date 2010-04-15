@@ -261,15 +261,15 @@ class Line(object):
 		new_line.name = "-"+self.name
 		return new_line
 
-	def print_elements(self, prefix=""):
-		print self.name
+	def __str__(self, prefix=""):
+		"For printing a line"
+		out = self.name + "\n"
 		for element in self.element_list:
-			try: # for normal elemnts
-				print prefix, element._zgoubi_name, element.label1, element.label2
-				continue
-			except AttributeError:
-				pass
-			element.print_elements(prefix+"\t")
+			if isinstance(element, Line):
+				out += element.__str__(prefix+" ")
+			else:
+				out +=  "%s %s %s %s\n" % (prefix, element._zgoubi_name, element.label1, element.label2)
+		return out
 
 	def elements(self):
 		for element in self.element_list:
