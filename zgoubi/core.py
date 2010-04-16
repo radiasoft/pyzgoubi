@@ -393,7 +393,7 @@ class Line(object):
 		self.has_run = True	
 		return Results(line=self, rundir=tmpdir)
 	
-	def track_bunch(self, bunch):
+	def track_bunch(self, bunch, **kwargs):
 		"Track a bunch through a Line, and return the bunch. This function will uses the OBJET_bunch object, and so need needs a Line that does not already have a OBJET"
 		if self.full_line:
 			raise BadLineError("If line already has an OBJET use run()")
@@ -408,12 +408,12 @@ class Line(object):
 		new_line.add(END())
 
 		# run the line
-		result = new_line.run(xterm=0)
+		result = new_line.run(**kwargs)
 		
 		# return the track bunch
 		return  result.get_bunch('bfai', end_label="trackbun", old_bunch=bunch)
 		
-	def track_bunch_mt(self, bunch, n_threads=4):
+	def track_bunch_mt(self, bunch, n_threads=4, **kwargs):
 		in_q = Queue.Queue()
 		out_q = Queue.Queue()
 
@@ -421,8 +421,13 @@ class Line(object):
 			while True:
 				start_index, work_bunch = in_q.get()
 				print "Thread", name, "working"
-				done_bunch = work_line.track_bunch(work_bunch)
-				out_q.put((start_index, done_bunch.particles()))
+				try:
+					done_bunch = work_line.track_bunch(work_bunch, **kwargs)
+				except:
+					print "Exception in track_bunch() thread"
+					out_q.put((sys.exc_info()))
+				else:
+					out_q.put((start_index, done_bunch.particles()))
 				in_q.task_done()
 				print "Thread", name, "task done"
 
@@ -448,7 +453,18 @@ class Line(object):
 		final_bunch = zgoubi.bunch.Bunch(nparticles = len(bunch), rigidity=bunch.get_bunch_rigidity(), mass=bunch.mass, charge=bunch.charge)
 		for x in xrange(n_tasks):
 			print "collecting task", x
-			start_index, done_bunch = out_q.get()
+			result = out_q.get()
+			try:
+				start_index, done_bunch = result
+			except ValueError:
+				import traceback, time
+				time.sleep(2) # give the other threads a couple of seconds, to make output prettier
+				print "Exception retrieved by main thread"
+				print
+				traceback.print_exception(*result)
+				print
+				#reraise error message
+				raise result[0](result[1])
 			out_q.task_done()
 			final_bunch.particles()[start_index:start_index+len(done_bunch)] = done_bunch
 
