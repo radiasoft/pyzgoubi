@@ -57,6 +57,8 @@ import zgoubi.bunch
 
 from zgoubi.settings import zgoubi_settings
 
+sys.setcheckinterval(10000)
+
 zgoubi_module_path = os.path.dirname( os.path.realpath( __file__ ) )
 zgoubi_path = zgoubi_settings['zgoubi_path']
 
@@ -420,7 +422,7 @@ class Line(object):
 		def worker(in_q, out_q, work_line, name):
 			while True:
 				start_index, work_bunch = in_q.get()
-				print "Thread", name, "working"
+				#print "Thread", name, "working"
 				try:
 					done_bunch = work_line.track_bunch(work_bunch, **kwargs)
 				except:
@@ -429,30 +431,30 @@ class Line(object):
 				else:
 					out_q.put((start_index, done_bunch.particles()))
 				in_q.task_done()
-				print "Thread", name, "task done"
+				#print "Thread", name, "task done"
 
 		for x in xrange(n_threads):
 			t = threading.Thread(target=worker,
 			                     kwargs={'in_q':in_q, 'out_q':out_q, 'work_line':self, 'name':x})
 			t.setDaemon(True)
 			t.start()
-			print "Created thread", x
+			#print "Created thread", x
 		
 		start_index = 0
 		n_tasks = 0
-		print "Queuing work"
+		#print "Queuing work"
 		for item in bunch.split_bunch(max_particles=10000, n_slices=n_threads):
-			print "Queue task", n_tasks
+			#print "Queue task", n_tasks
 			in_q.put((start_index, item))
 			start_index += len(item)
 			n_tasks +=1
-		print "Work queued"
+		#print "Work queued"
 		#in_q.join()
 		#print "Work done"
 
 		final_bunch = zgoubi.bunch.Bunch(nparticles = len(bunch), rigidity=bunch.get_bunch_rigidity(), mass=bunch.mass, charge=bunch.charge)
 		for x in xrange(n_tasks):
-			print "collecting task", x
+			#print "collecting task", x
 			result = out_q.get()
 			try:
 				start_index, done_bunch = result
@@ -468,7 +470,7 @@ class Line(object):
 			out_q.task_done()
 			final_bunch.particles()[start_index:start_index+len(done_bunch)] = done_bunch
 
-		print "all done"
+		#print "all done"
 		return final_bunch
 
 
