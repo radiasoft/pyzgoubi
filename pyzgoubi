@@ -151,8 +151,21 @@ if __name__ == '__main__':
 	
 
 	for left_over in locals().values():
-		if "Line"  in str(type(left_over)).split("'")[1]:
+		if "Result"  in str(type(left_over)).split("'")[1]:
 			del(left_over)
+	
+
+	# uncomment to enable list leftover objects for memory debugging
+	#import gc
+	#gc.collect()
+	#print "colected"
+
+	#print "leftovers"
+	#for x in gc.get_objects():
+	#	if "zgoubi" in str(type(x)):
+	#		print type(x)
+	#		for y in gc.get_referrers(x):
+	#			print "\t", type(y)
 
 
 

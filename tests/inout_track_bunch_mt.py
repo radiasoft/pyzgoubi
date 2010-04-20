@@ -14,7 +14,7 @@ b_orig_4d = numpy.column_stack([b_orig.particles()[col] for col in 'YTZP'])
 line_seg = Line("lineseg")
 
 line_seg.add(PROTON())
-line_seg.add(QUADRUPO(XL=1, R_0=5, B_0=0.1, XPAS=(50,2000,50)))
+line_seg.add(QUADRUPO(XL=1, R_0=5, B_0=0.1, XPAS=(50,500,50)))
 
 
 import time
