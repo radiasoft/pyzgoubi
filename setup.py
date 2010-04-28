@@ -5,6 +5,19 @@ import sys
 import os
 from glob import glob
 
+# if sphinx is available add a build_doc option
+# if not, make a fake option to warn you
+try:
+	from sphinx.setup_command import BuildDoc
+except:
+	from distutils.cmd import Command
+	class BuildDoc(Command):
+		description = "Please install sphinx to use this"
+		user_options = []
+		def initialize_options(self):
+			print "sphinx is not installed"
+			exit()
+
 MAIN_VERSION = '0.4dev'
 
 if os.system("bzr version-info --format=python > zgoubi/version.py") == 0:
@@ -26,8 +39,9 @@ setup(name='pyzgoubi',
 	data_files=[('share/pyzgoubi/definitions',glob('defs/*')),
 	            ('share/pyzgoubi/examples',glob('examples/*')),
 	            ('share/pyzgoubi/test',glob('tests/*.py')),
-	            ('share/pyzgoubi/doc', glob('doc/*'))
-	            ]
+	          #  ('share/pyzgoubi/doc', glob('doc'))
+	            ],
+	cmdclass={'build_doc': BuildDoc},
 	)
 
 is_cygwin = False

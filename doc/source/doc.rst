@@ -545,6 +545,7 @@ The 'tol' parameter in find_closed_orbit() now is a measure of convergence rathe
 
 Tips
 ----
+
 Python hints
 """"""""""""
 If there is a '#' character on a line, everything after it is treated as a comment.
@@ -553,5 +554,27 @@ Python uses whitespace to delimit blocks (instead of braces '{' and '}' in C/C++
 
 Python identifiers (variable, function, object names etc) are case sensitive, they must start with a letter and only contain letters, numbers and underscores.
 
+
+Zgoubi hints
+""""""""""""
+
+Errors
+~~~~~~
+
+sfe: formatted io not allowed::
+
+	Zgoubi, version 5.0.0.
+	Job  started  on  05-Feb-09,  at  15:00:29 
+	Copying  zgoubi.dat  into  zgoubi.res,
+	numbering  and  labeling  elements...
+
+	acc                              Zgoubi Version 5.0.0.  
+
+	366/  367 REBELOTE                    sfe: formatted io not allowed
+	apparent state: unit 21 named zgoubi.res
+	lately writing sequential formatted external IO
+
+
+This may mean that you have tried to write output to both ascii and binary files, eg zgoubi.fai and b_zgoubi.fai
 
 

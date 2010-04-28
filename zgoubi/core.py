@@ -598,8 +598,8 @@ class Line(object):
 		"""Add some extra input files to the directory where zgoubi is run.
 		This is useful for field map files.
 		file_paths must be an iterable, for example a list
-		To add many files use a pattern eg:
-		l.add_input_files(pattern="maps/*")
+		To add many files use a pattern eg::
+			l.add_input_files(pattern="maps/*")
 
 		"""
 

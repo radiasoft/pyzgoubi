@@ -26,11 +26,12 @@ T_ = 1
 
 def coords_grid(min=[0, 0], max=[1, 1], step=[1, 1], type=float):
 	"""make a list of coordinate aranged in a grid in a generalised space
-	eg 
+	eg
 	coords_grid(min=[0,0],max=[1,1],step=[10,10])
+	
 	will give you 100 points in 2 dimensions between 0 and 1
-
 	"""
+	
 	assert(len(min)==len(max)==len(step))
 	#assert(len(min)==2)
 	dimention = len(min)
@@ -802,20 +803,21 @@ def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier = False, 
 
 def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_gamma_input = 1, ellipse_coords = 1, plot_data = False):
 	""" Check a list of emittances (emit_list, units Pi m rad) to see if tracking succeeds. Can be used to establish the dynamic aperture. If the elements in emit_list are increasing then will stop tracking once it finds the lowest emittance where a particle is lost. On the other hand, if the elements in emit_list are decreasing then will stop tracking once it reaches the first point where tracking succeeds without loss. 
-
-			Required input:
-				emit_list - List of emittances to check
-				closedorb_YTZP - Closed orbit coordinates as returned by find_closed_orbit
-				npass - Number of passes through lattice
-				D_mom - Momentum factor p/pref
-			Optional input
-				beta_gamma_input - If this is supplied then the emittances supplied in emit_list are assumed to be normalised and a conversion to geometrical emittance is made. Otherwise the emittances are assumed to be geometrical.
-				ellipse_coords - If greater than 1 will test uniformly distributed set of coordinates around around phase space 			ellipse. Otherwise will take single point where phase space cuts y (or z) axis.
-						Can also specify ellipse coords = [n,m] -- distribute n points around ellipse but only test point m of these. 
-				plot_data - If True, creates phase space plots at all emittances scanned in both transverse planes.
 	
-		If a particle is lost, returns index_lost in emit_list where the loss occurs. Otherwise index_lost remains 0.
-"""
+	Required input:
+		emit_list - List of emittances to check
+		closedorb_YTZP - Closed orbit coordinates as returned by find_closed_orbit
+		npass - Number of passes through lattice
+		D_mom - Momentum factor p/pref
+	Optional input
+		beta_gamma_input - If this is supplied then the emittances supplied in emit_list are assumed to be normalised and a conversion to geometrical emittance is made. Otherwise the emittances are assumed to be geometrical.
+		ellipse_coords - If greater than 1 will test uniformly distributed set of coordinates around around phase space
+		ellipse. Otherwise will take single point where phase space cuts y (or z) axis.
+		Can also specify ellipse coords = [n,m] -- distribute n points around ellipse but only test point m of these. 
+		plot_data - If True, creates phase space plots at all emittances scanned in both transverse planes.
+	
+	If a particle is lost, returns index_lost in emit_list where the loss occurs. Otherwise index_lost remains 0.
+	"""
 
 	import numpy
 	import os
@@ -997,22 +999,24 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 
 def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_gamma_input = 1, ncoords = 1):
 	"""Given some emittance in horizonal and vertical space
-
+	
 	If ncoords <= 1 return points where phase space ellipse crosses the y,y' and z,z' axis.
-
-	If ncoords > 1, will instead give a distribution of points (y,t) around the phase space ellipse uniform in angle theta where
-	    y = a*cos(theta)*cos(phi) - b*sin(theta)*sin(phi)
-	    t = a*cos(theta)*sin(phi) + b*sin(theta)*cos(phi)
+	
+	If ncoords > 1, will instead give a distribution of points (y,t) around the phase space ellipse uniform in angle theta where::
+		y = a*cos(theta)*cos(phi) - b*sin(theta)*sin(phi)
+		t = a*cos(theta)*sin(phi) + b*sin(theta)*cos(phi)
+	
 	where (a,b) are major and minor radii and phi is the tilt of the major radius w.r.t horizontal axis. A (z,p) distribution is 
 	similarly calculated.
-
+	
 	Can use these points, returned in coords_YTZP to start tracking at the desired emittance (assuming that the optical functions don't change with amplitude).
-
+	
 	Emittances in both the horizontal and vertical planes may be supplied. Twiss parameters beta and gamma in 
-	both places may be determined calling get_twiss_parameters beforehand i.e.
+	both places may be determined calling get_twiss_parameters beforehand i.e.::
 			twissparam = r.get_twiss_parameters()
 			betayz = [twissparam[0],twissparam[3]]
-			gammayz = [twissparam[2],twissparam[5]]"""
+			gammayz = [twissparam[2],twissparam[5]]
+	"""
 	import numpy
 	
 	coords_YTZP = []
@@ -1244,18 +1248,19 @@ def gaussian_cutoff(npoints, mean, sigma, sigma_cutoff, seed = None):
 
 def tune_diagram(tune_list, order = 3, xlim = [0, 1], ylim= [0, 1]):
 	"""Plot a list of tunes on a tune diagram with resonance line up to a given order.
-
-		Required input 
-			tune_list - format [[list of horizontal tunes],[list of vertical tunes]]
-
-		Optional
-			order - Integer denoting order up to which resonance lines are drawn. Default value 3 (third order).
-		    xlim = [lower_value, upper_value] - Limit horizontal axis
-		    ylim = [lower_value, upper_value] - Limit vertical axis  
-
-		At the moment, since the tune diagram covers the range [0,1] just fractional tunes can be shown.
-		The default value of order is 3. 
-		Written by Y. Giboudet """
+	
+	Required input 
+		tune_list - format [[list of horizontal tunes],[list of vertical tunes]]
+	
+	Optional
+		order - Integer denoting order up to which resonance lines are drawn. Default value 3 (third order).
+		xlim = [lower_value, upper_value] - Limit horizontal axis
+		ylim = [lower_value, upper_value] - Limit vertical axis  
+	
+	At the moment, since the tune diagram covers the range [0,1] just fractional tunes can be shown.
+	The default value of order is 3. 
+	Written by Y. Giboudet
+	"""
 
 	import pylab
 
