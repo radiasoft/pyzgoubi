@@ -1,10 +1,11 @@
+.. include:: include.txt
+
 ======================
 PyZgoubi Documentation
 ======================
 
 The latest version of PyZgoubi and this document can be found at http://www.hep.man.ac.uk/u/sam/pyzgoubi/
 
-.. contents::
 
 
 Introduction
@@ -49,7 +50,7 @@ Run it with::
 
 You should see the zgoubi data file, the output from zgoubi, the res file from zgoubi, and the coordinates at the 2 FAISCNL points displayed to the terminal.
 
-For more advance use it may be better store the Line with a name, this allows you to work with multiple Lines simultaneously. The following shows the same file, but with a named line::
+For more advance use it may be better store the |Line| with a name, this allows you to work with multiple |Lines| simultaneously. The following shows the same file, but with a named |Line|::
 
     myline = Line('line')
 
@@ -78,19 +79,19 @@ Generating zgoubi.dat files
 
 The simplest level of Pyzgoubi is to use it to generate a zgoubi.dat file. You can then run Zgoubi with the file to get your results.
 
-PyZgoubi works with Lines, which are made up of Elements. The Elements are mostly the same as those used in Zgoubi. Most Elements correspond to magnets and other beam line elements of a physical accelerator, e.g. DIPOLE, MUTIPOL and CAVITE. Some are used to define the beam e.g. OBJET2. Some are to control the execution of Zgoubi, e.g. FAISCNL, MATRIX and END. A number of these Elements can be added to a Line. This Line then has all the information needed to make a zgoubi.dat file. 
+PyZgoubi works with |Lines|, which are made up of Elements. The Elements are mostly the same as those used in Zgoubi. Most Elements correspond to magnets and other beam line elements of a physical accelerator, e.g. DIPOLE, MUTIPOL and CAVITE. Some are used to define the beam e.g. OBJET2. Some are to control the execution of Zgoubi, e.g. FAISCNL, MATRIX and END. A number of these Elements can be added to a |Line|. This |Line| then has all the information needed to make a zgoubi.dat file. 
 
-A Line can be created as follows::
+A |Line| can be created as follows::
 
     emma = Line('emma simulation')
 
-emma is the name used to refer to the line in the program. 'emma simulation' is the text that will be put at the start of the zgoubi.dat file.
+emma is the name used to refer to the |Line| in the program. 'emma simulation' is the text that will be put at the start of the zgoubi.dat file.
 
 To create an Element use::
 
     q1 = QUADRUPO('defoc', XL=20, R_0=2, B_0=2, XPAS=0.1)
 
-This can now be added to the Line ::
+This can now be added to the |Line| ::
 
     emma.add(q1)
 
@@ -102,7 +103,7 @@ however this means that there is no reference to the element that could be used 
 
     q1.set(B_0=3)
 
-The line can now be used to output a zgoubi.dat using the output() function::
+The |Line| can now be used to output a zgoubi.dat using the output() function::
 
     print emma.output()
 
@@ -168,7 +169,7 @@ This can be run with the command::
     pyzgoubi emma.py
 
 
-It will build a Line and print the zgoubi.dat input to the screen. The '.py' extension is not necessary, but will cause your text editor to use python syntax highlighting.
+It will build a |Line| and print the zgoubi.dat input to the screen. The '.py' extension is not necessary, but will cause your text editor to use python syntax highlighting.
 
 Particles / Particuls
 """""""""""""""""""""
@@ -337,10 +338,10 @@ Use this in combination with the Zgoubi manual.
 Running Zgoubi
 --------------
 
-Once a line has been created and had the needed elements added it can be run. PyZgoubi will take care of creating a temporary directory, creating the zgoubi.dat file and running Zgoubi. This is done to prevent zgoubi from overwriting any existing files. If you wish to keep any of the output files you must use the commands to copy these to where you want them.
+Once a |Line| has been created and had the needed elements added it can be run. PyZgoubi will take care of creating a temporary directory, creating the zgoubi.dat file and running Zgoubi. This is done to prevent zgoubi from overwriting any existing files. If you wish to keep any of the output files you must use the commands to copy these to where you want them.
 
 
-The following example shows how to run a line::
+The following example shows how to run a |Line|::
 
 
     #create line
@@ -357,34 +358,34 @@ The following example shows how to run a line::
     emma.save_res("emma.res")
     emma.save_plt("emma.plt")
 
-Note that you will need to make sure your line will actually create plt or fai files, otherwise you will receive a file not found error. See the Zgoubi manual for more information.
+Note that you will need to make sure your |Line| will actually create plt or fai files, otherwise you will receive a file not found error. See the Zgoubi manual for more information.
 
-The run command can take several options. If you want to inspect the directory where zgoubi is run, or to use zpop, then set xterm=True. If you want to change the directory that zgoubi is run in you can use the tmp_prefix option. It is best to make sure this is a local disk (i.e. not a network/remote disk). The default directory can be set in the zgoubi_settings.py file.::
+The |run| function can take several options. If you want to inspect the directory where zgoubi is run, or to use zpop, then set xterm=True. If you want to change the directory that zgoubi is run in you can use the tmp_prefix option. It is best to make sure this is a local disk (i.e. not a network/remote disk). The default directory can be set in the zgoubi_settings.py file.::
 
     emma.run(xterm=True)
     emma.run(tmp_prefix = '/var/tmp/sam/')
     emma.run(xterm=True, tmp_prefix = '/home/sam/tmp/')
 
-If you want to do analysis of the simulation you can use the Results object that is returned by the run() function.::
+If you want to do analysis of the simulation you can use the |Results| object that is returned by the |run| function.::
 
     res = emma.run()
 
-See the Results Object chapter for more info.
+See the |Results| Object chapter for more info.
 
-Each time a line is run a temporary director is created. These are normally automatically cleared up when PyZgoubi finishes (also the /tmp directory is usually emptied when a computer shuts down). However if you are making repeated calls to run(), then you may want to manually clear away these files. This can be done with the clean() function. This removes all the temporary directories the currently running PyZgoubi has made for the line. Don't clean the line until you have finished working with its output files.::
+Each time a |Line| is run a temporary director is created. These are normally automatically cleared up when PyZgoubi finishes (also the /tmp directory is usually emptied when a computer shuts down). However if you are making repeated calls to |run|, then you may want to manually clear away these files. This can be done with the |clean| function. Don't clean the |Results| until you have finished working with its output files.::
 
-    emma.run()
-    emma.clean()
+    res = emma.run()
+    res.clean()
 
 
 Results Object
 --------------
 
-When you run a line it creates a Results object, that can be used to get information about the paths of the particles.::
+When you run a |Line| it creates a |Results| object, that can be used to get information about the paths of the particles.::
 
     res = pamela.run()
 
-get_all() and get_track(), let you get lists of the particle coordinates. They each need to be told if they should read the plt (points within the magnetic elements) or fai (beam at FAISCNL element). get_all() returns a list of dictionaries, containing all the coordinates and information. get_track() returns a list of lists of just the requested coordinates.::
+|get_all| and |get_track|, let you get lists of the particle coordinates. They each need to be told if they should read the plt (points within the magnetic elements) or fai (beam at FAISCNL element). |get_all| returns a list of dictionaries, containing all the coordinates and information. |get_track| returns a list of lists of just the requested coordinates.::
 
     print res.get_all('plt')
     print res.get_all('fai')
@@ -396,11 +397,11 @@ Bunch Objects
 
 New in Pyzgoubi 0.4
 
-The Bunch object represents a bunch of particles. Each particle has coordinates D, Y, T, Z, P, S, tof, and X, and the whole bunch has the shared properties rigidity/kinetic energy, particle mass, particle charge. These are stored in m, rad, eV, s, and automatically converted to Zgoubi units by the associated  functions.
+The |Bunch| object represents a bunch of particles. Each particle has coordinates D, Y, T, Z, P, S, tof, and X, and the whole bunch has the shared properties rigidity/kinetic energy, particle mass, particle charge. These are stored in m, rad, eV, s, and automatically converted to Zgoubi units by the associated  functions.
 
 It can be used in 2 ways. Firstly with the OBJET_bunch element, which behaves similarly to the real OBJET elements. Secondly it can be used to drive Zgoubi in a more abstracted method.
 
-To use with OBJET_bunch, first create a bunch, then create an OBJET_bunch, then add it to a line::
+To use with OBJET_bunch, first create a bunch, then create an OBJET_bunch, then add it to a |Line|::
 
 	my_bunch = Bunch(nparticles=5, ke=1e6, mass=PROTON_MASS, charge=1)
 	my_bunch.particles()[0]['Y'] = 3
@@ -411,9 +412,9 @@ To use with OBJET_bunch, first create a bunch, then create an OBJET_bunch, then 
 	my_line.add(ob)
 	my_line.add( ... )
 
-This line can then be run as before.
+This |Line| can then be run as before.
 
-The second method is to create a line that has no OBJET, PARTICUL or END elements, only beamline elements. Then the Line.track_bunch() method can be called, which will return the tracked bunch::
+The second method is to create a |Line| that has no OBJET, PARTICUL or END elements, only beamline elements. Then the |Line.track_bunch| method can be called, which will return the tracked bunch::
 
 	my_line = Line("a line")
 	my_line.add( QUADRUPO( ... ) )
@@ -421,7 +422,7 @@ The second method is to create a line that has no OBJET, PARTICUL or END element
 	...
 	my_bunch2 = my_line.track_bunch(my_bunch)
 
-This allows tracking a bunch around multiple lattices. Suppose that you create 3 lines: injecttion_line, ring and extraction_line. You can then take a bunch through each in turn::
+This allows tracking a bunch around multiple lattices. Suppose that you create 3 |Lines|: injecttion_line, ring and extraction_line. You can then take a bunch through each in turn::
 
 	my_bunch = Bunch( ... )
 
@@ -432,13 +433,13 @@ This allows tracking a bunch around multiple lattices. Suppose that you create 3
 
 Note that this method does not allow you to access the Result object.
 
-If you have a multi-CPU or multi-core CPU, then you can swap track_bunch() for the multithreaded version track_bunch_mt(). The multithreaded version also has the advantage that it can track an arbitrarily large bunch (more than Zgoubi's max particles limit).
+If you have a multi-CPU or multi-core CPU, then you can swap |Line.track_bunch| for the multithreaded version |Line.track_bunch_mt|. The multithreaded version also has the advantage that it can track an arbitrarily large bunch (more than Zgoubi's max particles limit).
 
 
 Loops
 -----
 
-For making complex lines it can be useful to use python features such as loops, e.g. to put 5 identical FODO cells you could use ::
+For making complex |Lines| it can be useful to use python features such as loops, e.g. to put 5 identical FODO cells you could use ::
 
     line = Line("example")
 
@@ -471,7 +472,7 @@ There is a convenience function for using command line arguments. For example ne
 
     number_of_laps = int(get_cmd_param('laps', 10))
 
-Then when creating the line use::
+Then when creating the |Line| use::
 
     l.add(REBELOTE(NPASS=number_of_laps-1, KWRIT=1, K=99))
 
