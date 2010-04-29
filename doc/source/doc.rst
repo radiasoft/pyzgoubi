@@ -391,6 +391,50 @@ get_all() and get_track(), let you get lists of the particle coordinates. They e
     print res.get_track('fai', ['Y','T'])
 
 
+Bunch Objects
+-------------
+
+New in Pyzgoubi 0.4
+
+The Bunch object represents a bunch of particles. Each particle has coordinates D, Y, T, Z, P, S, tof, and X, and the whole bunch has the shared properties rigidity/kinetic energy, particle mass, particle charge. These are stored in m, rad, eV, s, and automatically converted to Zgoubi units by the associated  functions.
+
+It can be used in 2 ways. Firstly with the OBJET_bunch element, which behaves similarly to the real OBJET elements. Secondly it can be used to drive Zgoubi in a more abstracted method.
+
+To use with OBJET_bunch, first create a bunch, then create an OBJET_bunch, then add it to a line::
+
+	my_bunch = Bunch(nparticles=5, ke=1e6, mass=PROTON_MASS, charge=1)
+	my_bunch.particles()[0]['Y'] = 3
+	...
+
+ 	ob = OBJET_bunch(bunch=my_bunch)
+	my_line = Line("a line")
+	my_line.add(ob)
+	my_line.add( ... )
+
+This line can then be run as before.
+
+The second method is to create a line that has no OBJET, PARTICUL or END elements, only beamline elements. Then the Line.track_bunch() method can be called, which will return the tracked bunch::
+
+	my_line = Line("a line")
+	my_line.add( QUADRUPO( ... ) )
+	my_line.add( DRIFT( ... ) )
+	...
+	my_bunch2 = my_line.track_bunch(my_bunch)
+
+This allows tracking a bunch around multiple lattices. Suppose that you create 3 lines: injecttion_line, ring and extraction_line. You can then take a bunch through each in turn::
+
+	my_bunch = Bunch( ... )
+
+	my_bunch = injecttion_line.track_bunch(my_bunch)
+	for n in xrange(n_laps):
+		my_bunch = ring.track_bunch(my_bunch)
+	my_bunch = extraction_line.track_bunch(my_bunch)
+
+Note that this method does not allow you to access the Result object.
+
+If you have a multi-CPU or multi-core CPU, then you can swap track_bunch() for the multithreaded version track_bunch_mt(). The multithreaded version also has the advantage that it can track an arbitrarily large bunch (more than Zgoubi's max particles limit).
+
+
 Loops
 -----
 

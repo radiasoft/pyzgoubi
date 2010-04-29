@@ -426,6 +426,7 @@ class Line(object):
 		return done_bunch
 		
 	def track_bunch_mt(self, bunch, n_threads=4, **kwargs):
+		"This function should be used identically to the track_bunch function, apart from the addition of the n_threads argument. This will split the bunch into several slices and run them simultaneously. Set n_threads to the number of CPU cores that you have."
 		in_q = Queue.Queue()
 		out_q = Queue.Queue()
 
