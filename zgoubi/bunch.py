@@ -106,8 +106,8 @@ class Bunch(object):
 		min_BORO = self.rigidity * self.coords['D'].min()
 		return min_BORO
 
-	@classmethod
-	def gen_halo_x_xp_y_yp(cls, npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None,
+	@staticmethod
+	def gen_halo_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None,
 			               ke=None, rigidity=0, mass=0, charge=1):
 		"""Generate a halo bunch, i.e. an elipse in x-xp (Y-T) and in y-yp (Z-P)
 		example::
@@ -133,14 +133,14 @@ class Bunch(object):
 		coords[:, 2] = rz * numpy.cos(u2)
 		coords[:, 3] = rz * numpy.sin(u2)
 
-		matrix = cls._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
+		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
 		
 		for n, coord in enumerate(coords):
 			#	new_coord = numpy.dot(coord, matrix)
 			new_coord = numpy.dot(matrix, coord)
 			coords2[n] = new_coord 
 		
-		bunch =  numpy.zeros([npart], cls.min_data_def)
+		bunch =  numpy.zeros([npart], Bunch.min_data_def)
 		
 		bunch['Y'] = coords2[:, 0]
 		bunch['T'] = coords2[:, 1]
@@ -148,7 +148,6 @@ class Bunch(object):
 		bunch['P'] = coords2[:, 3]
 		bunch['D'] = 1
 		
-		#self.coords = bunch
 		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=bunch)
 
 	@staticmethod
