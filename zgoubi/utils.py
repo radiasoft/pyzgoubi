@@ -800,7 +800,7 @@ def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier = False, 
 
 	return yfouriertune, zfouriertune
 
-def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_gamma_input = 1, ellipse_coords = 1, plot_data = False):
+def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_gamma_input = 1, ellipse_coords = 1, twiss_parameters = [], plot_data = False):
 	""" Check a list of emittances (emit_list, units Pi m rad) to see if tracking succeeds. Can be used to establish the dynamic aperture. If the elements in emit_list are increasing then will stop tracking once it finds the lowest emittance where a particle is lost. On the other hand, if the elements in emit_list are decreasing then will stop tracking once it reaches the first point where tracking succeeds without loss. 
 
 			Required input:
@@ -812,6 +812,7 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 				beta_gamma_input - If this is supplied then the emittances supplied in emit_list are assumed to be normalised and a conversion to geometrical emittance is made. Otherwise the emittances are assumed to be geometrical.
 				ellipse_coords - If greater than 1 will test uniformly distributed set of coordinates around around phase space 			ellipse. Otherwise will take single point where phase space cuts y (or z) axis.
 						Can also specify ellipse coords = [n,m] -- distribute n points around ellipse but only test point m of these. 
+				twiss_parameters - Can supply twiss parameters in format [[alpha_y,beta_y,gamma_y],[alpha_z,beta_z,gamma_z]], i.e the output of r.get_twiss_parameters(). If not supplied an attempt will be made to calculate the twiss parameters in this function.
 				plot_data - If True, creates phase space plots at all emittances scanned in both transverse planes.
 	
 		If a particle is lost, returns index_lost in emit_list where the loss occurs. Otherwise index_lost remains 0.
@@ -853,25 +854,29 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 		coord_pick = ellipse_coords[1]
 		ellipse_coords = ellipse_coords[0]
 
-	#calculate optical parameters on closed orbit. This is required to convert emittances into a coordinate.
-	objet5 = zg.OBJET5()
-	line.replace(objet, objet5)
-	objet5.set(BORO=rigidity)
-	objet5.set(PY=1e-4, PT=1e-3, PZ=1e-4, PP=1e-3, PX=1e-3, PD=1e-3)
-	objet5.set(YR=closedorb_YTZP[0], TR=closedorb_YTZP[1], ZR=closedorb_YTZP[2], PR=closedorb_YTZP[3], DR=D_mom)
-	matrix = zg.MATRIX(IORD=1, IFOC=11)
-	line.replace(reb, matrix)
-	r = line.run(xterm = False)
-	twissparam = r.get_twiss_parameters()
-	#alphayz = [twissparam[1],twissparam[4]]
-	betayz = [twissparam[0], twissparam[3]]
-	gammayz = [twissparam[2], twissparam[5]]
-
-	#revert to objet2 mode with rebelote
-	line.replace(objet5, objet)
-	objet.clear()	# remove existing particles
-	objet.add(Y=closedorb_YTZP[0], T=closedorb_YTZP[1], Z=closedorb_YTZP[2], P=closedorb_YTZP[3], LET='A', D=D_mom)
-	line.replace(matrix, reb)
+	if twiss_parameters != []:
+		betayz = [twiss_parameters[0], twiss_parameters[3]]
+		gammayz = [twiss_parameters[2], twiss_parameters[5]]
+	else:
+		#calculate optical parameters on closed orbit. This is required to convert emittances into a coordinate.
+		objet5 = zg.OBJET5()
+		line.replace(objet, objet5)
+		objet5.set(BORO=rigidity)
+		objet5.set(PY=1e-4, PT=1e-3, PZ=1e-4, PP=1e-3, PX=1e-3, PD=1e-3)
+		objet5.set(YR=closedorb_YTZP[0], TR=closedorb_YTZP[1], ZR=closedorb_YTZP[2], PR=closedorb_YTZP[3], DR=D_mom)
+		matrix = zg.MATRIX(IORD=1, IFOC=11)
+		line.replace(reb, matrix)
+		r = line.run(xterm = False)
+		twissparam = r.get_twiss_parameters()
+		#alphayz = [twissparam[1],twissparam[4]]
+		betayz = [twissparam[0], twissparam[3]]
+		gammayz = [twissparam[2], twissparam[5]]
+	
+		#revert to objet2 mode with rebelote
+		line.replace(objet5, objet)
+		objet.clear()	# remove existing particles
+		objet.add(Y=closedorb_YTZP[0], T=closedorb_YTZP[1], Z=closedorb_YTZP[2], P=closedorb_YTZP[3], LET='A', D=D_mom)
+		line.replace(matrix, reb)
 
 
 	index_lost = None
@@ -967,8 +972,8 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 			P_data.append(numpy.transpose(YTZP_list[index])[3])
 
 
-		plot_data_xy_multi(Y_data, T_data, 'yt_phasespace', labels=["Horizontal phase space", "y [cm]", "y' [mrad]"], style=['k-', 'ro', 'b+', 'r+', 'g+', 'm+', 'y+'], xlim=[-32.5, -29.5], ylim=[-40, 40])
-		plot_data_xy_multi(Z_data, P_data, 'zp_phasespace', labels=["Vertical phase space", "z [cm]", "z' [mrad]"], style=['k-', 'ro', 'b+', 'r+', 'g+', 'm+', 'y+'], xlim=[-2.0, 2.0], ylim=[-30, 30])
+		plot_data_xy_multi(Y_data, T_data, 'yt_phasespace', labels=["Horizontal phase space", "y [cm]", "y' [mrad]"], style=['k-', 'ro', 'b+', 'r+', 'g+', 'm+', 'y+'])
+		plot_data_xy_multi(Z_data, P_data, 'zp_phasespace', labels=["Vertical phase space", "z [cm]", "z' [mrad]"], style=['k-', 'ro', 'b+', 'r+', 'g+', 'm+', 'y+'])
 
 		#y turn-by-turn, including initial point
 		y_turnbyturn = numpy.transpose(YTZP_list[index])[0]
