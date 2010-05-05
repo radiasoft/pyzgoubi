@@ -511,87 +511,87 @@ class Line(object):
 		#self.tmp_folders = [] # and blank list
 		
 	def res(self):
-		"return zgoubi.res as a string"
+		"return zgoubi.res as a string. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
 		fh = open(self.res_file)
 		return fh.read()
 		
 	def dat(self):
-		"return zgoubi.dat as a string"
+		"return zgoubi.dat as a string. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
 		fh = open(self.dat_file)
 		return fh.read()
 		
 	def plt(self):
-		"return zgoubi.plt as a string"
+		"return zgoubi.plt as a string. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
 		fh= open(self.plt_file)
 		return fh.read()
 	
 	def fai(self):
-		"return zgoubi.fai as a string"
+		"return zgoubi.fai as a string. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
 		fh= open(self.fai_file)
 		return fh.read()
 
 	def spn(self):
-		"return zgoubi.spn as a string"
+		"return zgoubi.spn as a string. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
 		fh= open(self.spn_file)
 		return fh.read()
 
 	def res_fh(self):
-		"return zgoubi.res file handle"
+		"return zgoubi.res file handle. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
 		fh = open(self.res_file)
 		return fh
 		
 	def dat_fh(self):
-		"return zgoubi.dat file handle"
+		"return zgoubi.dat file handle. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
 		fh = open(self.dat_file)
 		return fh
 		
 	def plt_fh(self):
-		"return zgoubi.plt file handle"
+		"return zgoubi.plt file handle. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
 		fh= open(self.plt_file)
 		return fh
 		
 	def fai_fh(self):
-		"return zgoubi.fai file handle"
+		"return zgoubi.fai file handle. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
 		fh= open(self.fai_file)
 		return fh
 
 	def spn_fh(self):
-		"return zgoubi.spn file handle"
+		"return zgoubi.spn file handle. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
 		fh= open(self.spn_file)
 		return fh
 
 	def save_res(self, path):
-		"save zgoubi.res to path"
+		"save zgoubi.res to path. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
 		shutil.copyfile(self.res_file, path)
 
 	def save_dat(self, path):
-		"save zgoubi.dat to path"
+		"save zgoubi.dat to path. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
 		shutil.copyfile(self.dat_file, path)
 		
 	def save_plt(self, path):
-		"save zgoubi.plt to path"
+		"save zgoubi.plt to path. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
 		shutil.copyfile(self.plt_file, path)
 		
 	def save_fai(self, path):
-		"save zgoubi.fai to path"
+		"save zgoubi.fai to path. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
 		shutil.copyfile(self.fai_file, path)
 
 	def save_spn(self, path):
-		"save zgoubi.spn to path"
+		"save zgoubi.spn to path. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
 		shutil.copyfile(self.spn_file, path)
 
@@ -688,33 +688,75 @@ class Results(object):
 		shutil.copyfile(spath, path)
 	
 	#generate specific functions
-	def res_fh(self): return self._get_fh("zgoubi.res")
-	def res(self): return self._get_str("zgoubi.res")
-	def save_res(self, path): return self._save_file("zgoubi.res", path)
+	def res_fh(self):
+		"return file handle for res file"
+		return self._get_fh("zgoubi.res")
+	def res(self):
+		"return res file as string"
+		return self._get_str("zgoubi.res")
+	def save_res(self, path):
+		"save res file to path"
+		return self._save_file("zgoubi.res", path)
 		
-	def plt_fh(self): return self._get_fh("zgoubi.plt")
-	def plt(self): return self._get_str("zgoubi.plt")
-	def save_plt(self, path): return self._save_file("zgoubi.plt", path)
+	def plt_fh(self):
+		"return file handle for plt file"
+		return self._get_fh("zgoubi.plt")
+	def plt(self):
+		"return plt file as string"
+		return self._get_str("zgoubi.plt")
+	def save_plt(self, path):
+		"save plt file to path"
+		return self._save_file("zgoubi.plt", path)
 		
-	def dat_fh(self): return self._get_fh("zgoubi.dat")
-	def dat(self): return self._get_str("zgoubi.dat")
-	def save_dat(self, path): return self._save_file("zgoubi.dat", path)
+	def dat_fh(self):
+		"return file handle for dat file"
+		return self._get_fh("zgoubi.dat")
+	def dat(self):
+		"return dat file as string"
+		return self._get_str("zgoubi.dat")
+	def save_dat(self, path):
+		"save dat file to path"
+		return self._save_file("zgoubi.dat", path)
 		
-	def fai_fh(self): return self._get_fh("zgoubi.fai")
-	def fai(self): return self._get_str("zgoubi.fai")
-	def save_fai(self, path): return self._save_file("zgoubi.fai", path)
+	def fai_fh(self):
+		"return file handle for fai file"
+		return self._get_fh("zgoubi.fai")
+	def fai(self):
+		"return fai file as string"
+		return self._get_str("zgoubi.fai")
+	def save_fai(self, path):
+		"save fai file to path"
+		return self._save_file("zgoubi.fai", path)
 
-	def spn_fh(self): return self._get_fh("zgoubi.spn")
-	def spn(self): return self._get_str("zgoubi.spn")
-	def save_spn(self, path): return self._save_file("zgoubi.spn", path)
+	def spn_fh(self):
+		"return file handle for spn file"
+		return self._get_fh("zgoubi.spn")
+	def spn(self):
+		"return spn file as string"
+		return self._get_str("zgoubi.spn")
+	def save_spn(self, path):
+		"save spn file to path"
+		return self._save_file("zgoubi.spn", path)
 		
-	def b_fai_fh(self): return self._get_fh("b_zgoubi.fai")
-	def b_fai(self): return self._get_str("b_zgoubi.fai")
-	def save_b_fai(self, path): return self._save_file("b_zgoubi.fai", path)
+	def b_fai_fh(self):
+		"return file handle for binary fai file"
+		return self._get_fh("b_zgoubi.fai")
+	def b_fai(self):
+		"return binary fai file as string"
+		return self._get_str("b_zgoubi.fai")
+	def save_b_fai(self, path):
+		"save binary fai file to path"
+		return self._save_file("b_zgoubi.fai", path)
 		
-	def b_plt_fh(self): return self._get_fh("b_zgoubi.plt")
-	def b_plt(self): return self._get_str("b_zgoubi.plt")
-	def save_b_plt(self, path): return self._save_file("b_zgoubi.plt", path)
+	def b_plt_fh(self):
+		"return file handle for binary plt file"
+		return self._get_fh("b_zgoubi.plt")
+	def b_plt(self):
+		"return binary plt file as string"
+		return self._get_str("b_zgoubi.plt")
+	def save_b_plt(self, path):
+		"save binary plt file to path"
+		return self._save_file("b_zgoubi.plt", path)
 
 	def _bad_float(self, text):
 		"""A wrapper around float to deal with zgoubi output numbers like

@@ -331,7 +331,6 @@ class Bunch(object):
 		#gamma_h = (widths[1] / 2)**2 / emittance_h
 		#gamma_v = (widths[3] / 2)**2 / emittance_v
 		# get T of particle with bigest Y
-		# FIXME, maybe can also look at T of particle with smallest Y, and average
 		y_p_max = Ts[Ys.argmax()]
 		y_p_min = Ts[Ys.argmin()]
 		alpha_h = (y_p_min - y_p_max) / 2 / sqrt(emittance_h / beta_h)
