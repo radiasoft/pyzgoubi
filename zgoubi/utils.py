@@ -952,18 +952,10 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 		coords_YTZP_full = [map(add, closedorb_YTZP, coords) for coords in coords_YTZP_full]
 		coords_YTZP_full.append(coords_YTZP_full[0])
 
-		#add many coordinates to draw phase space ellipse
-		Y_data = [numpy.transpose(coords_YTZP_full)[0]]
-		T_data = [numpy.transpose(coords_YTZP_full)[1]]
-		Z_data = [numpy.transpose(coords_YTZP_full)[2]]
-		P_data = [numpy.transpose(coords_YTZP_full)[3]]
-
-
-		#add points on phase space ellipse actually used to initialise scan above
-		Y_data.append([numpy.transpose(coords_YTZP_ini)[0]])
-		T_data.append([numpy.transpose(coords_YTZP_ini)[1]])
-		Z_data.append([numpy.transpose(coords_YTZP_ini)[2]])
-		P_data.append([numpy.transpose(coords_YTZP_ini)[3]])
+		Y_data = []
+		T_data = []
+		Z_data = []
+		P_data = []
     
 		for index in range(len(YTZP_list)):
 			Y_data.append(numpy.transpose(YTZP_list[index])[0])
@@ -971,30 +963,22 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 			Z_data.append(numpy.transpose(YTZP_list[index])[2])
 			P_data.append(numpy.transpose(YTZP_list[index])[3])
 
+		plot_data_xy_multi(Y_data, Z_data, 'yz_space', labels=["YZ coords", "y [cm]", "z [cm]"], style=['k+'])
+
+		#add points on phase space ellipse actually used to initialise scan above
+		Y_data.insert(0,numpy.transpose(coords_YTZP_ini)[0])
+		T_data.insert(0,numpy.transpose(coords_YTZP_ini)[1])
+		Z_data.insert(0,numpy.transpose(coords_YTZP_ini)[2])
+		P_data.insert(0,numpy.transpose(coords_YTZP_ini)[3])
+
+		#add many coordinates to draw phase space ellipse
+		Y_data.insert(0,numpy.transpose(coords_YTZP_full)[0])
+		T_data.insert(0,numpy.transpose(coords_YTZP_full)[1])
+		Z_data.insert(0,numpy.transpose(coords_YTZP_full)[2])
+		P_data.insert(0,numpy.transpose(coords_YTZP_full)[3])
 
 		plot_data_xy_multi(Y_data, T_data, 'yt_phasespace', labels=["Horizontal phase space", "y [cm]", "y' [mrad]"], style=['k-', 'ro', 'b+', 'r+', 'g+', 'm+', 'y+'])
 		plot_data_xy_multi(Z_data, P_data, 'zp_phasespace', labels=["Vertical phase space", "z [cm]", "z' [mrad]"], style=['k-', 'ro', 'b+', 'r+', 'g+', 'm+', 'y+'])
-
-		#y turn-by-turn, including initial point
-		y_turnbyturn = numpy.transpose(YTZP_list[index])[0]
-		y_turnbyturn = [y for y in y_turnbyturn]
-		y_turnbyturn.reverse()
-		y_turnbyturn.append(coords_YTZP_ini[0][0])
-		y_turnbyturn.reverse()
-		y_turnbyturn = [y-closedorb_YTZP[0] for y in y_turnbyturn]
-		yrange = [i+1 for i in range(len(y_turnbyturn))]
-		#z turn-by-turn, including initial point
-		z_turnbyturn = [z for z in numpy.transpose(YTZP_list[index])[2]]
-		z_turnbyturn.reverse()
-		z_turnbyturn.append(coords_YTZP_ini[0][2])
-		z_turnbyturn.reverse()
-		#z_turnbyturn = [z-closedorb_YTZP[2] for z in z_turnbyturn]
-		zrange = [i+1 for i in range(len(z_turnbyturn))]
-
-		#plot_data_xy_multi(yrange,y_turnbyturn,'y_turnbyturn', labels=["Y turn-by-turn","turn","y [cm]"],style = ['k+'],xlim = [0,len(yrange)+1])
-		#plot_data_xy_multi(zrange,z_turnbyturn,'z_turnbyturn', labels=["Z turn-by-turn","turn","z [cm]"],style = ['k+'],xlim = [0,len(zrange)+1])
-		plot_data_xy_multi(y_turnbyturn, z_turnbyturn, 'yz_space', labels=["YZ coords", "y [cm]", "z [cm]"], style=['k+'])
-	    
 
 	return [index_lost, coord_index], fourier_tune_emit
 
