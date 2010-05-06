@@ -7,6 +7,7 @@ import sys
 from glob import glob
 from zgoubi.constants import *
 from zgoubi.exceptions import *
+import itertools
 # use these to convert things to metres and tesla
 m = 1
 cm = 0.01
@@ -272,8 +273,81 @@ def show_file(file_path, mode):
 		command = 'xterm -e "less %s"'% file_path
 		system(command)
 
+def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, range_YTZP=None, count_YTZP=None):
+	"""Same as find_closed_orbit, but if init_YTZP is unstable, will generate a bunch or particles, with a spread of range_YTZP, and if any of those are stable will do a closed orbit search with that particle::
 
-def find_closed_orbit(line, init_YTZP=[0, 0, 0, 0], max_iterations=100, fai_label = None, tol = 1e-6, D=1):
+		init_YTZP=[5,0,0,0], range_YTZP=[10,0,0,0], count_YTZP[50,0,0,0]
+
+	will vary the Y coordinate from -5 to 15 cm in 50 steps::
+
+		range_YTZP=[10,5,0,0], count_YTZP=[10,10,0,0]
+
+	would create 100 particles in a grid.
+	
+	"""
+	if range_YTZP==None:
+		range_YTZP = [10,10,10,10]
+	if init_YTZP == None:
+		init_YTZP=[0, 0, 0, 0]
+	if count_YTZP == None:
+		count_YTZP=[10, 10, 10, 10]
+	
+	#first check center
+	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
+	if result != None:
+		return result
+
+	# if the init_YTZP is not stable, then send a bunch, and see if any of those are not lost
+	
+	for e in line.element_list:
+		if ("OBJET2" in str(type(e)).split("'")[1]):
+			objet = e
+			break
+	else:
+		raise ValueError, "Line has no OBJET2 element"
+	
+	for e in line.element_list:
+		if ("FAISCNL" or "FAISTORE" in str(type(e)).split("'")[1]):
+			break
+	else:
+		raise ValueError, "Line has no FAISCNL element"
+
+	current_YTZP = numpy.array(init_YTZP)
+	objet.clear()	# remove existing particles
+	
+	# generate bunch
+	ranges = []
+	for x in xrange(4):
+		if range_YTZP[x] == 0 or count_YTZP[0] <= 1:
+			ranges.append([0])
+		else:
+			ranges.append(numpy.linspace(-range_YTZP[x],range_YTZP[x],count_YTZP[x]))
+
+	for coord in itertools.product(*ranges):
+		objet.add(Y=current_YTZP[0]+coord[0], T=current_YTZP[1]+coord[1], Z=current_YTZP[2]+coord[2], P=current_YTZP[3]+coord[3], LET='A', D=D)
+
+	r = line.run(xterm=False)
+
+	if not r.run_success():
+		print "No stable orbit"
+		return None
+	else:
+		# should have a track, so can find a stable particle
+		track = r.get_all('fai')
+		final_lap_n = track['PASS'].max()
+		# select one particle which survived (IEX is positive), and made it to last lap
+		surviving_particles = track[ numpy.logical_and(track['PASS']==final_lap_n , track['IEX']>0)  ][0]
+		surviving_init_coord = [surviving_particles['Y'],surviving_particles['T'],surviving_particles['Z'],surviving_particles['P']]
+		
+		# use stable particle to find closed orbit
+		result = find_closed_orbit(line=line, init_YTZP=surviving_init_coord, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
+		return result
+	
+
+	
+
+
+def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1):
 	"""Find a closed orbit for the line. can optionally give a list of initial coordinates, init_YTZP, eg:
 	find_closed_orbit(line, init_YTZP=[1.2,2.1,0,0])
 	otherwise [0,0,0,0] are used.
@@ -283,6 +357,9 @@ def find_closed_orbit(line, init_YTZP=[0, 0, 0, 0], max_iterations=100, fai_labe
 	It is recommend to have a REBELOTE, with several laps. The area of the phase space ellipse is approximated from the coordinates from the FAISCNL (or MARKER with fai_label), and the center is used for the new coordinates. Once the relative variation between iterations is less that the tolerance, the function returns the closed orbit coordinates. If a coordinate is close to zero (less than the tolerance) then it is compared absolutely instead of relatively.
 	
 	"""
+	if init_YTZP == None:
+		init_YTZP=[0, 0, 0, 0]
+
 	#check line has an objet2
 	for e in line.element_list:
 		if ("OBJET2" in str(type(e)).split("'")[1]):
