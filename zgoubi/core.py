@@ -1506,7 +1506,8 @@ class Plotter(object):
 		points = [] # list of points we want to fit on canvas
 		
 		for e in self.elements.values():
-			points += e['box']
+			if e['type'] == "box":
+				points += e['box']
 
 		for t in self.tracks:
 			points += t['points']
@@ -1542,7 +1543,7 @@ class Plotter(object):
 
 			if (classtype=='DRIFT'):
 				section = {}
-				section['label'] = elem.label1
+				section['label'] = elem.label1.strip()
 				if section['label'] == "":
 					print classtype, "in line with no label"
 					section['label'] = str(count)
@@ -1582,24 +1583,29 @@ class Plotter(object):
 				width = 5* elem.R_0
 				if self.magnet_width.has_key(section['label']):
 					width = self.magnet_width[section['label']]
-				length = elem.XL
-				a = self.transform(section['label'],(0, width/2))
-				b = self.transform(section['label'],(length, width/2))
-				c = self.transform(section['label'],(length, -width/2))
-				d = self.transform(section['label'],(0, -width/2))
-				element['box'] = (a,b,c,d)
+					length = elem.XL
+					a = self.transform(section['label'],(0, width/2))
+					b = self.transform(section['label'],(length, width/2))
+					c = self.transform(section['label'],(length, -width/2))
+					d = self.transform(section['label'],(0, -width/2))
+					element['box'] = (a,b,c,d)
+					element['type'] = "box"
+				else:
+					element['type'] = "rec"
+					element['min_y'] = 0
+					element['max_y'] = 0
+					element['len'] = section['len']
 				self.elements[section['label']] = element
 
 	def transform(self, section, point):
 		"""transform a point relative to a section into global coords.
 
 		"""
-
 		x0, y0 = self.sections[section]['start']
 		ang = self.sections[section]['ang']
 		
 		x, y = point
-		if x == -1: # adjustment for FAI files
+		if x == None: # adjustment for FAI files
 			x = self.sections[section]['len']
 		
 		#if (cum_len):
@@ -1622,7 +1628,12 @@ class Plotter(object):
 		except IOError, e:
 			print "No PLT file for tracks:", e
 		try:
-			raw_track += results.get_track('fai', ['X','Y','element_label1','PASS','tof'])
+			raw_tr = results.get_track('fai', ['Y','Y','element_label1','PASS','tof'])
+			for t in raw_tr:
+				t[0] = None
+				t[4] *= 100000
+			raw_track += raw_tr
+
 		except IOError, e:
 			print "No FAI file for tracks:", e
 		if len(raw_track)==0:
@@ -1634,9 +1645,13 @@ class Plotter(object):
 		for thispass in passes: # deal with one lap at a time
 			track = []
 			for raw_p in [x for x in raw_track if x[3]==thispass]:
-				p = self.transform(raw_p[2], raw_p[0:2]) # transform to element coordinates
+				p = self.transform(raw_p[2].strip(), raw_p[0:2]) # transform to element coordinates
 				#print raw_p[2], self.sections[raw_p[2]], raw_p[0:2], p
 				track.append(p)
+				if self.elements.has_key(raw_p[2].strip()):
+					if self.elements[raw_p[2].strip()].has_key('min_y'):
+						self.elements[raw_p[2].strip()]['min_y'] = min(raw_p[1]*1.1, self.elements[raw_p[2].strip()]['min_y'])
+						self.elements[raw_p[2].strip()]['max_y'] = max(raw_p[1]*1.1, self.elements[raw_p[2].strip()]['max_y'])
 			self.tracks.append(dict(points=track, colour=colour))
 
 
@@ -1690,7 +1705,7 @@ class Plotter(object):
 			
 		ps_surf = cairo.PSSurface(fname, canv_width, canv_height)
 		if eps:  # needs a hot new version of cairo, so not implemented yet
-			pass #ps_surf.PSSurface_set_eps(True)
+			ps_surf.set_eps(True)
 		cr = cairo.Context(ps_surf)
 		self.draw(cr, canv_width, canv_height, line_width=1)
 
@@ -1736,15 +1751,25 @@ class Plotter(object):
 		cr.set_source_rgb(0.5,0.5,0.5)
 		# draw_elements
 		for name, e in self.elements.items():
-			cr.move_to(*e['box'][0])
-			cr.line_to(*e['box'][1])
-			cr.line_to(*e['box'][2])
-			cr.line_to(*e['box'][3])
-			cr.line_to(*e['box'][0])
+			if e['type'] == 'box':
+				corners = e['box']
+			elif e['type'] == 'rec':
+				a = self.transform(name,(0, e['max_y']))
+				b = self.transform(name,(e['len'], e['max_y']))
+				c = self.transform(name,(e['len'], e['min_y']))
+				d = self.transform(name,(0, e['min_y']))
+				corners = [a,b,c,d]	
+
+			cr.move_to(corners[0][0], corners[0][1])
+			for corner in corners[1:]:
+				cr.line_to(corner[0], corner[1])
+			cr.line_to(corners[0][0], corners[0][1])
+
+		
 			cr.stroke()
 			box_min_y = box_min_x = 10000
 			box_max_x = -10000
-			for p in e['box']:
+			for p in corners:
 				box_min_y = min(box_min_y, p[1])
 				box_min_x = min(box_min_x, p[0])
 				box_max_x = max(box_max_x, p[0])
