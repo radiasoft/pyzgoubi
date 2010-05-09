@@ -337,7 +337,7 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 		final_lap_n = track['PASS'].max()
 		# select one particle which survived (IEX is positive), and made it to last lap
 		surviving_particles = track[ numpy.logical_and(track['PASS']==final_lap_n , track['IEX']>0)  ][0]
-		surviving_init_coord = [surviving_particles['Y'],surviving_particles['T'],surviving_particles['Z'],surviving_particles['P']]
+		surviving_init_coord = [surviving_particles['Y0'],surviving_particles['T0'],surviving_particles['Z0'],surviving_particles['P0']]
 		
 		# use stable particle to find closed orbit
 		result = find_closed_orbit(line=line, init_YTZP=surviving_init_coord, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
