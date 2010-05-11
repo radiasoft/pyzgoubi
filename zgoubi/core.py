@@ -598,10 +598,13 @@ class Line(object):
 	def add_input_files(self, file_paths=[], pattern=None):
 		"""Add some extra input files to the directory where zgoubi is run.
 		This is useful for field map files.
-		file_paths must be an iterable, for example a list
+		file_paths must be an iterable, for example a list::
+			l.add_input_files(['map1', 'map2', 'map3'])
+
 		To add many files use a pattern eg::
 			l.add_input_files(pattern="maps/*")
 
+		Will use symlinks when avaliable (Linux/UNIX), falls back to copying otherwise.
 		"""
 
 		if pattern != None:

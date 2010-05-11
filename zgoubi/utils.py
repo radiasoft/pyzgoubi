@@ -8,6 +8,11 @@ from glob import glob
 from zgoubi.constants import *
 from zgoubi.exceptions import *
 import itertools
+import logging
+
+#logging.basicConfig(level=logging.DEBUG, format= "%(levelname)s %(filename)s:%(lineno)d - %(funcName)s(): %(message)s")
+logging.basicConfig(level=logging.WARNING, format= "%(levelname)s %(filename)s:%(lineno)d - %(funcName)s(): %(message)s")
+
 # use these to convert things to metres and tesla
 m = 1
 cm = 0.01
@@ -285,6 +290,7 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 	would create 100 particles in a grid.
 	
 	"""
+	logging.debug("enter function")
 	if range_YTZP==None:
 		range_YTZP = [10,10,10,10]
 	if init_YTZP == None:
@@ -294,6 +300,7 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 	
 	#first check center
 	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
+	logging.debug("At init coords: "+str(result))
 	if result != None:
 		return result
 
@@ -329,20 +336,27 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 	r = line.run(xterm=False)
 
 	if not r.run_success():
-		print "No stable orbit"
+		logging.debug("No stable orbit within range: "+str(range_YTZP))
 		return None
 	else:
 		# should have a track, so can find a stable particle
 		track = r.get_all('fai')
+		del r
 		final_lap_n = track['PASS'].max()
 		# select one particle which survived (IEX is positive), and made it to last lap
-		surviving_particles = track[ numpy.logical_and(track['PASS']==final_lap_n , track['IEX']>0)  ][0]
-		surviving_init_coord = [surviving_particles['Y0'],surviving_particles['T0'],surviving_particles['Z0'],surviving_particles['P0']]
+		surviving_particles = track[ numpy.logical_and(track['PASS']==final_lap_n , track['IEX']>0)  ]
+		logging.debug("%d particles survived"%len(surviving_particles))
+
+		for surviving_particle in surviving_particles:
+			surviving_init_coord = [surviving_particle['Y0'], surviving_particle['T0'], surviving_particle['Z0'], surviving_particle['P0']]
 		
-		# use stable particle to find closed orbit
-		result = find_closed_orbit(line=line, init_YTZP=surviving_init_coord, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
-		return result
-	
+			# use stable particle to find closed orbit
+			print surviving_init_coord
+			result = find_closed_orbit(line=line, init_YTZP=surviving_init_coord, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
+			if result != None:
+				return result
+		logging.warning("Despite finding surviving particles, none were stable")	
+		return None
 
 	
 
@@ -357,6 +371,7 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 	It is recommend to have a REBELOTE, with several laps. The area of the phase space ellipse is approximated from the coordinates from the FAISCNL (or MARKER with fai_label), and the center is used for the new coordinates. Once the relative variation between iterations is less that the tolerance, the function returns the closed orbit coordinates. If a coordinate is close to zero (less than the tolerance) then it is compared absolutely instead of relatively.
 	
 	"""
+	logging.debug("enter function")
 	if init_YTZP == None:
 		init_YTZP=[0, 0, 0, 0]
 
@@ -380,6 +395,7 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 	tracks = []
 	close_orbit_found = False
 	for iteration in xrange(max_iterations):
+		logging.debug("start iteration: "+str(iteration)+ " with coords "+str(current_YTZP))
 		coords.append(current_YTZP)
 		objet.clear()	# remove existing particles
 		objet.add(Y=current_YTZP[0], T=current_YTZP[1], Z=current_YTZP[2], P=current_YTZP[3], LET='A', D=D)
@@ -387,8 +403,12 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 		r = line.run(xterm=False)
 
 		if not r.run_success():
-			print "No stable orbit"
-			return None
+			if iteration==0:
+				logging.warning("Not a stable orbit")
+				return None
+			else:
+				logging.warning("Center of orbit from last iteration, not stable")
+				return None
 		else:
 			track = r.get_track('fai', ['Y', 'T', 'Z', 'P'])
 			
