@@ -1362,9 +1362,8 @@ class Results(object):
 		raise NoTrackError, "Could not find MATRIX output, maybe beam lost"
 
 	def get_twiss_parameters(self):
-		"""Returns a tuple (BETA_X,GAMMA_X,BETA_Y,GAMMA_Y) from the twiss parameter matrix.
+		"""Returns a tuple (beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z) from the twiss parameter matrix.
 		Needs a beam line is an OBJET type 5, and a MATRIX element.
-
 
 		"""
 		#has_object5 = False

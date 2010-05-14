@@ -116,6 +116,12 @@ class Bunch(object):
 
 		"""
 
+		if emit_y < 0 or emit_z < 0 or beta_y < 0 or beta_z < 0:
+			print "Emittance or beta can't be negative"
+			print "emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z"
+			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
+			raise ValueError
+
 		ry = sqrt(emit_y) 
 		rz = sqrt(emit_z) 
 
