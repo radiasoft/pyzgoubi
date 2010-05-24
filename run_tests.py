@@ -72,6 +72,8 @@ for line in install_res.communicate()[0].split('\n'):
 	if line.startswith('alias pyzgoubi='):
 		pyzgoubi_cmd = line.partition('=')[2]
 		pyzgoubi_cmd = pyzgoubi_cmd.strip('"')
+
+pyzgoubi_cmd += " --debug"
 		
 if install_res.returncode != 0:
 	print "ERROR: install failed"
