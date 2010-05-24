@@ -35,14 +35,19 @@ import Queue
 import subprocess
 import weakref
 
+import logging
+logging.basicConfig(level=logging.WARNING, format= "%(levelname)s %(filename)s:%(lineno)d - %(funcName)s(): %(message)s")
+zlog = logging.getLogger('PyZgoubi')
+
+
 try:
 	import numpy
 except ImportError:
-	print "could not import numpy, some functions will give errors about numpy not being defined"
+	zlog.warn("could not import numpy, some functions wont function")
 try:
 	from operator import itemgetter
 except ImportError:
-	print "please use python 2.5 or newer"
+	zlog.error("please use python 2.5 or newer")
 	sys.exit(1)
 try:
 	import cairo
@@ -57,6 +62,9 @@ import zgoubi.bunch
 
 
 from zgoubi.settings import zgoubi_settings
+
+# in python3 we will be able to use zlog.setLevel(zgoubi_settings['log_level']), can be changed in pyzgoubi too
+zlog.setLevel(logging._levelNames[zgoubi_settings['log_level']])
 
 sys.setcheckinterval(10000)
 
@@ -95,24 +103,24 @@ nl = '\n'
 #print "definitions at", definitions_paths
 #if needed recompile defs
 if not os.path.exists(compiled_defs_path):
-	print "no compiled defs. compiling"
+	zlog.debug("no compiled defs. compiling")
 	need_def_compile = True
 else:
 	need_def_compile = False
 	for f in definitions_paths:
 #		print "checking ", f
 		if os.path.exists(f) and os.path.getmtime(f) >= os.path.getmtime(compiled_defs_path):
-			print "need to recompile", f
+			zlog.debug("need to recompile"+ f)
 			need_def_compile = True
 	if not need_def_compile: # also need to recompile after a install or update
 		for f in pyzgoubi_egg_path:
 			if os.path.exists(f) and os.path.getmtime(f) >= os.path.getmtime(compiled_defs_path):
-				print "pyzgoubi first run, compiling defs"
+				zlog.debug("pyzgoubi first run, compiling defs")
 				need_def_compile = True
 				break
 if need_def_compile:
 	from zgoubi import makedefs
-	print "Compiling definitions"
+	zlog.debug("Compiling definitions")
 	makedefs.make_element_classes(definitions_paths, compiled_defs_path)
 
 
@@ -234,7 +242,7 @@ class zgoubi_element(object):
 try:
 	execfile(static_defs)
 except IOError:
-	print "Could not load static element definitions, maybe you are running pyzgoubi from the source directory"
+	zlog.error("Could not load static element definitions, maybe you are running pyzgoubi from the source directory")
 	sys.exit(1)
 execfile(compiled_defs_path)
 
@@ -339,6 +347,7 @@ class Line(object):
 		orig_cwd = os.getcwd()
 		tmpdir = tempfile.mkdtemp("zgoubi", prefix=tmp_prefix)
 		self.tmpdir = tmpdir
+		zlog.debug("running zgoubi in"+tmpdir)
 	
 		for file in self.input_files:
 			src = os.path.join(orig_cwd, file)
@@ -372,9 +381,8 @@ class Line(object):
 		exe_result = z_proc.wait()
 
 		if exe_result != 0:
-			print "zgoubi failed to run"
-			print "It returned:", exe_result
-			if exe_result == 32512: print "check that fortran runtime libraries are installed"
+			zlog.error("zgoubi failed to run\nIt returned:%s"%exe_result)
+			if exe_result == 32512: zlog.error("check that fortran runtime libraries are installed")
 
 		if (xterm and not self.no_more_xterm):
 			print "Do you want an xterm? (y=yes/n=no/s=stop asking)"
@@ -444,7 +452,7 @@ class Line(object):
 				try:
 					done_bunch = work_line.track_bunch(work_bunch, **kwargs)
 				except:
-					print "Exception in track_bunch() thread"
+					zlog.error("Exception in track_bunch() thread")
 					out_q.put((sys.exc_info()))
 				else:
 					out_q.put((start_index, done_bunch.particles()))
@@ -481,7 +489,7 @@ class Line(object):
 			except ValueError:
 				import traceback, time
 				time.sleep(2) # give the other threads a couple of seconds, to make output prettier
-				print "Exception retrieved by main thread"
+				zlog.error("Exception retrieved by main thread")
 				print
 				traceback.print_exception(*result)
 				print
@@ -498,7 +506,7 @@ class Line(object):
 		"clean up temp directories"
 		for result in self.results:
 			obj = result()
-			print "in Line.clean", obj
+			#print "in Line.clean", obj
 			if obj is not None:
 				obj.clean
 
@@ -773,7 +781,7 @@ class Results(object):
 			assert('-' in text[1:])
 			error = 'cant make float from "' + text + '". '
 			error += 'assuming it to be zero'
-			print error
+			zlog.warn(error)
 			return 0
 		
 		
@@ -1100,7 +1108,6 @@ class Results(object):
 				coords = numpy.zeros([all.size, len(coord_list)], dtype=(best_type))
 
 				for n,c in enumerate(coord_list):
-					print c
 					coords[:,n] = all[c]
 					if multi_list:
 						if multi_list[n]:
@@ -1346,16 +1353,12 @@ class Results(object):
 					try:
 						NU_Y = float(bits[2])
 					except ValueError:
-						print "could not get Y tune from:"
-						print line
-						print "setting NU_Y to -1"
+						zlog.error("could not get Y tune from:\n" + line +"setting NU_Y to -1")
 						NU_Y = -1 
 					try:
 						NU_Z = float(bits[5])
 					except ValueError:
-						print "could not make floats from line"
-						print line
-						print "setting NU_Z to -1"
+						zlog.error("could not get Z tune from:\n" + line +"setting NU_Z to -1")
 						NU_Z = -1 
 					print "Tune: ", (NU_Y, NU_Z)
 					return (NU_Y, NU_Z)

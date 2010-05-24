@@ -542,7 +542,7 @@ Where temporary files should be written, this is most likely /tmp/, but in some 
 The path to the zgoubi binary file. Note that this can also be set with the commandline option --zgoubi=/path/to/zgoubi.
 
 Debugging and Profiling
------------------------
+"""""""""""""""""""""""
 
 When installing PyZgoubi it will suggest adding some aliases to your .bashrc file. These are::
 
@@ -562,6 +562,21 @@ or start a python shell and run::
 	>>> p = pstats.Stats('prof.log')
 	>>> p.sort_stats('cumulative').print_stats()
 
+
+Logging levels
+""""""""""""""
+
+The verbosity of PyZgoubi can be adjusted. By default the log_level is set to 'warn', so only warnings and error messages are printed. One can raise the level to 'debug' which will also show debug messages. To do this for a single run use::
+
+	pyzgoubi --debug script
+	or
+	pyzgoubi --log_level=debug script
+
+or you can adjust the value in the settings.ini file::
+
+	log_level = debug
+
+Other levels can also be set, see http://docs.python.org/library/logging.html for more information.
 
 
 Upgrade Notes

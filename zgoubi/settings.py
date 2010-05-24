@@ -19,6 +19,7 @@ config.add_section('pyzgoubi')
 config.set('pyzgoubi', 'tmp_dir', '/tmp/')
 config.set('pyzgoubi', 'extra_defs_files', '')
 config.set('pyzgoubi', 'zgoubi_path', "zgoubi")
+config.set('pyzgoubi', 'log_level', "warn")
 
 
 
@@ -50,6 +51,7 @@ zgoubi_settings['extra_defs_files'] = [os.path.expanduser(x) for x in config.get
 if zgoubi_settings['extra_defs_files'] == ['']:
 	zgoubi_settings['extra_defs_files'] = []
 
+zgoubi_settings['log_level'] = config.get('pyzgoubi','log_level').upper()
 
 # create example defs file
 example_defs_path = os.path.join(config_dir, "user_elements.defs")

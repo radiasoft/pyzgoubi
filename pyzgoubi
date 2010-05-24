@@ -27,6 +27,7 @@ from zgoubi.core import *
 from zgoubi.constants import *
 from zgoubi.version import *
 from zgoubi.bunch import *
+import logging
 
 sys.path.append(os.getcwd())
 
@@ -105,7 +106,7 @@ def _show_usage():
 
 if __name__ == '__main__':
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "version", "zgoubi="])
+		opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "version", "zgoubi=", "debug", "log_level="])
 	except getopt.GetoptError, err:
 		print str(err)
 		_show_usage()
@@ -135,7 +136,11 @@ if __name__ == '__main__':
 				_show_help(None)
 			sys.exit(0)
 		if o in ['--zgoubi']:
-			 zgoubi_settings['zgoubi_path'] = a
+			zgoubi_settings['zgoubi_path'] = a
+		if o in ['--debug']:
+			zlog.setLevel(logging._levelNames['DEBUG'])
+		if o in ['--log_level']:
+			zlog.setLevel(logging._levelNames[a.upper()])
 	try:
 		input_file_name = args[0]
 	except IndexError:
