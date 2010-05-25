@@ -1,0 +1,11 @@
+.. |Line| replace:: :class:`Line <zgoubi.core.Line>`
+.. |Lines| replace:: :class:`Lines <zgoubi.core.Line>`
+.. |Line.track_bunch| replace:: :func:`Line.track_bunch <zgoubi.core.Line.track_bunch>`
+.. |Line.track_bunch_mt| replace:: :func:`Line.track_bunch_mt <zgoubi.core.Line.track_bunch_mt>`
+.. |run| replace:: :func:`run() <zgoubi.core.Line.run>`
+.. |clean| replace:: :func:`clean() <zgoubi.core.Results.clean>`
+.. |get_all| replace:: :func:`get_all() <zgoubi.core.Results.get_all>`
+.. |get_track| replace:: :func:`get_track() <zgoubi.core.Results.get_track>`
+.. |Results| replace:: :class:`Results <zgoubi.core.Results>`
+.. |Bunch| replace:: :class:`Bunch <zgoubi.bunch.Bunch>`
+

@@ -174,21 +174,25 @@ class Bunch(object):
 		return M
 
 
-	def read_YTZPSD(self, fname, ke, lim=None):
-		"Read in a bunch from a file. assumes columns are Y, T, Z, P, X, D (though D is ignored), separated by white space"
+	@staticmethod
+	def read_YTZPSD(fname, ke=None, rigidity=0, mass=0, charge=1):
+		"""Read in a bunch from a file. assumes columns are Y, T, Z, P, X, D, separated by white space::
+
+			my_bunch = Bunch.read_YTZPSD("mybunch.dat", ke=1e9, mass=ELECTRON_MASS, charge=-1)
+		
+		"""
 		dist = numpy.loadtxt(fname)
 		nparts = dist.size / 6
 		dist = dist.reshape(nparts, 6)
-		if lim:
-			dist = dist[:lim]
-		self.coords = numpy.zeros(nparts, self.min_data_def)
+		coords = numpy.zeros(nparts, Bunch.min_data_def)
 		#self.coords['KE'] = ke
-		self.coords['Y'] = dist[:, 0]
-		self.coords['T'] = dist[:, 1]
-		self.coords['Z'] = dist[:, 2]
-		self.coords['P'] = dist[:, 3]
-		self.coords['X'] = dist[:, 4]
-		self.coords['D'] = dist[:, 5]
+		coords['Y'] = dist[:, 0]
+		coords['T'] = dist[:, 1]
+		coords['Z'] = dist[:, 2]
+		coords['P'] = dist[:, 3]
+		coords['X'] = dist[:, 4]
+		coords['D'] = dist[:, 5]
+		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=coords)
 
 	def write_YTZPSD(self, fname, binary=False):
 		"Output a bunch, compatible with read_YTZPSD"
@@ -200,7 +204,7 @@ class Bunch(object):
 		fh = open(fname, "w")
 		if binary:
 			#header
-			for x in xrange(4):
+			for dummy in xrange(4):
 				io.write_fortran_record(fh, "a"*80)
 			#data
 			for p in self.coords:
@@ -215,7 +219,7 @@ class Bunch(object):
 			dist[:, 2] = self.coords['Z']
 			dist[:, 3] = self.coords['P']
 			dist[:, 4] = self.coords['S']
-			dist[:,5] = self.coords['D']
+			dist[:, 5] = self.coords['D']
 			#dist = dist.reshape(nparts * 2, 3)
 			fh.write("# bunch\n\n\n\n")
 			numpy.savetxt(fh, dist)
