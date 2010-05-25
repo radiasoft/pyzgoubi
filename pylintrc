@@ -9,3 +9,16 @@ max-module-lines=1000
 # String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
 # tab).
 indent-string='\t'
+
+
+[MESSAGES CONTROL]
+# numpy generates a lot of E1101
+# C0103 gets triggered by using all caps names for zgoubi elements, it also does not like short variable names, which are used quite a lot
+disable=E1101,C0103
+
+
+# run
+# pylint --include-ids=y  zgoubi
+# pylint --include-ids=y  pyzgoubi
+# for f in zgoubi/*.py; do pylint --include-ids=y $f | grep 'Your code has been rated '; done
+
