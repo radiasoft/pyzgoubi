@@ -29,9 +29,9 @@ T_ = 1
 
 
 def coords_grid(min_c=None, max_c=None, step=None, dtype=float):
-	"""make a list of coordinate aranged in a grid in a generalised space
-	eg
-	coords_grid(min_c=[0,0],max_c=[1,1],step=[10,10])
+	"""make a list of coordinate aranged in a grid in a generalised space eg::
+
+		coords_grid(min_c=[0,0],max_c=[1,1],step=[10,10])
 	
 	will give you 100 points in 2 dimensions between 0 and 1
 	"""

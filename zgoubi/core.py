@@ -259,9 +259,8 @@ except IOError:
 execfile(compiled_defs_path)
 
 class Line(object):
-	"""The Line object holds a series of elements, to represent an accelerator lattice.
+	"The Line object holds a series of elements, to represent an accelerator lattice."
 
-	"""
 	def __init__(self, name):
 		"Create a Line. The name parameter is passed to zgoubi."
 		self.element_list = []
@@ -626,11 +625,13 @@ class Line(object):
 		"""Add some extra input files to the directory where zgoubi is run.
 		This is useful for field map files.
 		file_paths must be an iterable, for example a list::
+
 			l.add_input_files(['map1', 'map2', 'map3'])
-
+		
 		To add many files use a pattern eg::
-			l.add_input_files(pattern="maps/*")
 
+			l.add_input_files(pattern="maps/*")
+		
 		Will use symlinks when avaliable (Linux/UNIX), falls back to copying otherwise.
 		"""
 

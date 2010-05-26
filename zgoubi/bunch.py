@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 """A bunch object to hold the coordinates for many particles
 
 Note that all values are in SI units, m, rad, eV, s
@@ -19,14 +18,14 @@ import struct
 class Bunch(object):
 	"""Object to store a bunch of particles efficiently using numpy.
 	All values are in SI units, m, rad, eV, s
-	Can be use to create a bunch of particles with all there coordinates set to zero (appart from the D coordinate which is set to 1)
-	::
+	Can be use to create a bunch of particles with all there coordinates set to zero (appart from the D coordinate which is set to 1)::
+	
 		my_bunch = Bunch(nparticles=100, ke=1e6, mass=PROTON_MASS, charge=1)
-
-	It can also be used to create a bunch from some existing coordinates stored in a numpy array
-	::
+	
+	It can also be used to create a bunch from some existing coordinates stored in a numpy array::
+	
 		 my_bunch = Bunch(ke=1e6, mass=PROTON_MASS, charge=1, particles=existing_coords)
-
+	
 	"""
 	min_data_def = [
 	('D', numpy.float64), # these coorspond to zgoubi D,Y,T,Z,P,S, but in SI units
@@ -112,6 +111,7 @@ class Bunch(object):
 		"""Generate a halo bunch, i.e. an elipse in x-xp (Y-T) and in y-yp (Z-P)
 		example::
 			my_bunch = Bunch.gen_halo_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
+		
 		creates a halo bunch called my_bunch with 1000 particles of the given parameters.
 
 		"""
@@ -177,7 +177,6 @@ class Bunch(object):
 	@staticmethod
 	def read_YTZPSD(fname, ke=None, rigidity=0, mass=0, charge=1):
 		"""Read in a bunch from a file. assumes columns are Y, T, Z, P, X, D, separated by white space::
-
 			my_bunch = Bunch.read_YTZPSD("mybunch.dat", ke=1e9, mass=ELECTRON_MASS, charge=-1)
 		
 		"""
