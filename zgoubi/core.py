@@ -18,6 +18,10 @@
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
 
+"""Contains the Line and Results objects. Also does all the Pyzgoubi setup needed, eg reading settings, generating definitions, and importing definitions.
+
+"""
+
 
 from __future__ import division
 from string import ascii_letters, digits
@@ -75,12 +79,12 @@ pyzgoubi_egg_path = glob(os.path.dirname(zgoubi_module_path) + "/pyzgoubi*egg-in
 
 if (not zgoubi_module_path.startswith("/")) and os.name == 'posix' :
 	# windows style paths, but os.name is 'posix', so need to mess with paths by hand
-	bits = zgoubi_module_path.split('\\')[:-3]+['share','pyzgoubi','definitions']
+	bits = zgoubi_module_path.split('\\')[:-3]+['share', 'pyzgoubi', 'definitions']
 	static_defs = '\\'.join(bits+['static_defs.py'])
 	simple_defs = '\\'.join(bits+['simple_elements.defs'])
 else:
-	static_defs = os.path.join(zgoubi_module_path,'..','..','..','..' ,"share","pyzgoubi","definitions", "static_defs.py")
-	simple_defs = os.path.join(zgoubi_module_path,'..','..','..','..' ,"share","pyzgoubi","definitions", "simple_elements.defs")
+	static_defs = os.path.join(zgoubi_module_path, '..', '..', '..', '..', "share", "pyzgoubi", "definitions", "static_defs.py")
+	simple_defs = os.path.join(zgoubi_module_path, '..', '..', '..', '..', "share", "pyzgoubi", "definitions", "simple_elements.defs")
 
 
 #definitions of elements
@@ -150,7 +154,7 @@ def read_n_lines(fh, n):
 	"reads n lines at a time"
 
 	lines = []
-	for x in xrange(n):
+	for dummy in xrange(n):
 		lines.append(fh.readline())
 	return lines
 
@@ -172,26 +176,32 @@ def trans_to_regex(fmt):
 	#print "fmt=", fmt
 	return re.compile(fmt)
 
-def scanf(str, fmt):
+def scanf(in_str, fmt):
 	"something like scanf, used to read the fai and plt files in Results.get_all()"
 	if (type(fmt) == type(re.compile(''))):
-		res = fmt.search(str)
+		res = fmt.search(in_str)
 	else:
-		res = trans_to_regex(fmt).search(str)
+		res = trans_to_regex(fmt).search(in_str)
 	if res == None:
 		return None
 	else:
 		return res.groups()
 
 # a base class for all the beam line objects
-
-
 class zgoubi_element(object):
+	"A base class for zgoubi elements"
 	def __init__(self):
 		pass
 	
 	def set(self, *dsettings, **settings):
+		"""Set a parameter value::
+			my_element.set(XL=5)
+
+		can also use a dictionary to set values::
+			s = {'XL':5, B_0=0.2}
+			my_element.set(s)
 		
+		"""
 		#try to merge the two dicts
 		try:
 			settings.update(dsettings[0])
@@ -204,7 +214,8 @@ class zgoubi_element(object):
 				self._params[key] = val
 			else:
 				raise ValueError,  "no such param: '" + str(key) + "' In element " + self._zgoubi_name
-	def get(self,key):
+	def get(self, key):
+		"Get a parameter"
 		return self._params[key]
 
 	def f2s(self, f):
@@ -237,6 +248,7 @@ class zgoubi_element(object):
 		return object.__getattribute__(self, name)
 
 	def list_params(self):
+		"Return a list of parameters"
 		return list(self._params)
 			
 try:
@@ -247,7 +259,11 @@ except IOError:
 execfile(compiled_defs_path)
 
 class Line(object):
+	"""The Line object holds a series of elements, to represent an accelerator lattice.
+
+	"""
 	def __init__(self, name):
+		"Create a Line. The name parameter is passed to zgoubi."
 		self.element_list = []
 		self.name = name
 		self.tmp_folders = [] # keep track of old tmp folders
@@ -285,6 +301,7 @@ class Line(object):
 		return out
 
 	def elements(self):
+		"Iterator for elements in line, including sub lines."
 		for element in self.element_list:
 			try:
 				# decend into sub lines
@@ -294,7 +311,7 @@ class Line(object):
 				yield element
 
 	def add(self, *elements):
-		"Add an elements to the line"
+		"Add an elements to the line. Can also be used to add one line into another."
 		for element in elements:
 			self.element_list.append(element)
 			try:
@@ -309,25 +326,25 @@ class Line(object):
 		use line.full_tracking(False) to disable tracking
 
 		"""
-		for e in self.elements():
-			#t = str(type(e)).split("'")[1] #get type, eg zgoubi22.QUADRUPO
+		for element in self.elements():
+			#t = str(type(element)).split("'")[1] #get type, eg zgoubi22.QUADRUPO
 			#print t
 
 			# if this gives "RuntimeError: maximum recursion depth exceeded"
 			#errors, then the object may not have a parameters dict.
 			try:
-				#print e.output()
+				#print element.output()
 				if enable == True:
-					e.set(IL=2)
+					element.set(IL=2)
 				elif enable == False:
-					e.set(IL=0)
-			#	print e.output()
+					element.set(IL=0)
+			#	print element.output()
 			except ValueError:
 				pass
 			
 	def remove_looping(self):
 		"removes any REBELOTE elements from the line"
-		self.element_list = [e for e in self.element_list if ("REBELOTE" not in str(type(e)).split("'")[1])]
+		self.element_list = [element for element in self.element_list if ("REBELOTE" not in str(type(element)).split("'")[1])]
 				
 		
 	def output(self):
@@ -349,9 +366,9 @@ class Line(object):
 		self.tmpdir = tmpdir
 		zlog.debug("running zgoubi in"+tmpdir)
 	
-		for file in self.input_files:
-			src = os.path.join(orig_cwd, file)
-			dst = os.path.join(tmpdir, os.path.basename(file))
+		for input_file in self.input_files:
+			src = os.path.join(orig_cwd, input_file)
+			dst = os.path.join(tmpdir, os.path.basename(input_file))
 			#print src, dst
 			# if possible make a symlink instead of copying (should work on linux/unix)
 			if os.path.exists(dst):
@@ -382,7 +399,8 @@ class Line(object):
 
 		if exe_result != 0:
 			zlog.error("zgoubi failed to run\nIt returned:%s"%exe_result)
-			if exe_result == 32512: zlog.error("check that fortran runtime libraries are installed")
+			if exe_result == 32512:
+				zlog.error("check that fortran runtime libraries are installed")
 
 		if (xterm and not self.no_more_xterm):
 			print "Do you want an xterm? (y=yes/n=no/s=stop asking)"
@@ -403,7 +421,7 @@ class Line(object):
 		
 		#os.chdir(orig_cwd)
 		
-		element_types =  [ str(type(e)).split("'")[1].rpartition(".")[2] for e in self.elements() ]
+		element_types =  [ str(type(element)).split("'")[1].rpartition(".")[2] for element in self.elements() ]
 		self.has_run = True	
 		result = Results(line=self, rundir=tmpdir, element_types=element_types)
 		self.results.append(weakref.ref(result))
@@ -439,6 +457,7 @@ class Line(object):
 		out_q = Queue.Queue()
 
 		def worker(in_q, out_q, work_line, name, stop_flag):
+			"A worker function. Gets run in threads"
 			while True:
 				try:
 					start_index, work_bunch = in_q.get(block=True, timeout=1)
@@ -460,10 +479,10 @@ class Line(object):
 				#print "Thread", name, "task done"
 
 		stop_flag = threading.Event()
-		for x in xrange(n_threads):
+		for thread_n in xrange(n_threads):
 			t = threading.Thread(target=worker,
 			                     kwargs={'in_q':in_q, 'out_q':out_q,
-			                     'work_line':self, 'name':x, 'stop_flag':stop_flag})
+			                     'work_line':self, 'name':thread_n, 'stop_flag':stop_flag})
 			t.setDaemon(True)
 			t.start()
 			#print "Created thread", x
@@ -475,7 +494,7 @@ class Line(object):
 			#print "Queue task", n_tasks
 			in_q.put((start_index, item))
 			start_index += len(item)
-			n_tasks +=1
+			n_tasks += 1
 		#print "Work queued"
 		#in_q.join()
 		#print "Work done"
@@ -508,7 +527,7 @@ class Line(object):
 			obj = result()
 			#print "in Line.clean", obj
 			if obj is not None:
-				obj.clean
+				obj.clean()
 
 		self.results = []
 		#for dir in self.tmp_folders:
@@ -533,19 +552,19 @@ class Line(object):
 	def plt(self):
 		"return zgoubi.plt as a string. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
-		fh= open(self.plt_file)
+		fh = open(self.plt_file)
 		return fh.read()
 	
 	def fai(self):
 		"return zgoubi.fai as a string. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
-		fh= open(self.fai_file)
+		fh = open(self.fai_file)
 		return fh.read()
 
 	def spn(self):
 		"return zgoubi.spn as a string. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
-		fh= open(self.spn_file)
+		fh = open(self.spn_file)
 		return fh.read()
 
 	def res_fh(self):
@@ -563,19 +582,19 @@ class Line(object):
 	def plt_fh(self):
 		"return zgoubi.plt file handle. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
-		fh= open(self.plt_file)
+		fh = open(self.plt_file)
 		return fh
 		
 	def fai_fh(self):
 		"return zgoubi.fai file handle. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
-		fh= open(self.fai_file)
+		fh = open(self.fai_file)
 		return fh
 
 	def spn_fh(self):
 		"return zgoubi.spn file handle. (It is better to use the equivalent method on the results object)"
 		if (not self.has_run): print "Line has not been run"
-		fh= open(self.spn_file)
+		fh = open(self.spn_file)
 		return fh
 
 	def save_res(self, path):
@@ -603,7 +622,7 @@ class Line(object):
 		if (not self.has_run): print "Line has not been run"
 		shutil.copyfile(self.spn_file, path)
 
-	def add_input_files(self, file_paths=[], pattern=None):
+	def add_input_files(self, file_paths=None, pattern=None):
 		"""Add some extra input files to the directory where zgoubi is run.
 		This is useful for field map files.
 		file_paths must be an iterable, for example a list::
@@ -614,6 +633,9 @@ class Line(object):
 
 		Will use symlinks when avaliable (Linux/UNIX), falls back to copying otherwise.
 		"""
+
+		if file_paths == None:
+			file_paths = []
 
 		if pattern != None:
 			globbed_files = glob.glob(pattern)
@@ -634,18 +656,19 @@ class Line(object):
 		index = indices[select_index]
 
 		self.element_list.pop(index)
-		self.element_list.insert(index,elementnew)
+		self.element_list.insert(index, elementnew)
 
 	def insert(self, index, *elements):
 		"Insert elements into the line before position given by index"
 		for element in elements:
-			self.element_list.insert(index,element)
+			self.element_list.insert(index, element)
 
-	def remove(self,index):
+	def remove(self, index):
 		"Remove element at index"
 		self.element_list.pop(index)
 
 	def find_elements(self, element):
+		"Returns all the positions of element in line"
 		indices = []
 		i = -1
 		try:
@@ -683,7 +706,7 @@ class Results(object):
 		"return f file handle"
 		path = os.path.join(self.rundir, f)
 		if not os.path.exists(path):
-			raise IOError, "No file: %s in %s"%(f, self.rundir)
+			raise IOError, "No file: %s in %s" % (f, self.rundir)
 		fh = open(path)
 		return fh
 		
@@ -691,11 +714,11 @@ class Results(object):
 		"return f as a string"
 		return self._get_fh(f).read()
 	
-	def _save_file(self,f, path):
+	def _save_file(self, f, path):
 		"save f to path"
 		spath = os.path.join(self.rundir, f)
 		if not os.path.exists(spath):
-			raise IOError, "No file: %s in %s"%(f, self.rundir)
+			raise IOError, "No file: %s in %s" % (f, self.rundir)
 		shutil.copyfile(spath, path)
 	
 	#generate specific functions
@@ -814,31 +837,31 @@ class Results(object):
 			fmt = '=icidddddddddddddddiiixxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxdi10s10s10sii'
 			chunk_part = chunk[0: struct.calcsize(fmt)]
 			bits = struct.unpack(fmt, chunk_part)
-			particle['LET']=bits[1]
-			particle['IEX']=bits[2]
-			particle['D0']=bits[3]
-			particle['Y0']=bits[4]
-			particle['T0']=bits[5]
-			particle['Z0']=bits[6]
-			particle['P0']=bits[7]
-			particle['X0']=bits[8]
-			particle['D']=bits[9]
-			particle['Y']=bits[11]
-			particle['T']=bits[12]
-			particle['Z']=bits[13]
-			particle['P']=bits[14]
-			particle['S']=bits[15]
-			particle['tof']=bits[16]
-			particle['KE']=bits[17]
-			particle['ID']=bits[18]
-			particle['IREP']=bits[19]
-			particle['SORT']=bits[20]
-			particle['BORO']=bits[21]
-			particle['PASS']=bits[22]
-			particle['element_type']=bits[23].strip()
-			particle['element_label1']=bits[24].strip()
-			particle['element_label2']=bits[25].strip()
-			particle['NOEL']=bits[26]
+			particle['LET'] = bits[1]
+			particle['IEX'] = bits[2]
+			particle['D0'] = bits[3]
+			particle['Y0'] = bits[4]
+			particle['T0'] = bits[5]
+			particle['Z0'] = bits[6]
+			particle['P0'] = bits[7]
+			particle['X0'] = bits[8]
+			particle['D'] = bits[9]
+			particle['Y'] = bits[11]
+			particle['T'] = bits[12]
+			particle['Z'] = bits[13]
+			particle['P'] = bits[14]
+			particle['S'] = bits[15]
+			particle['tof'] = bits[16]
+			particle['KE'] = bits[17]
+			particle['ID'] = bits[18]
+			particle['IREP'] = bits[19]
+			particle['SORT'] = bits[20]
+			particle['BORO'] = bits[21]
+			particle['PASS'] = bits[22]
+			particle['element_type'] = bits[23].strip()
+			particle['element_label1'] = bits[24].strip()
+			particle['element_label2'] = bits[25].strip()
+			particle['NOEL'] = bits[26]
 
 			plt_data.append(particle)
 		return plt_data
@@ -880,7 +903,7 @@ class Results(object):
 				raise ValueError, "get_all() expects '.plt', '.fai' or '.spn' extension"
 			
 
-		header = list(read_n_lines(fh,4))
+		header = list(read_n_lines(fh, 4))
 		#print "header", header
 		#Versions of Zgoubi up to 236 had just '...' in lines 3 and 4 of the fai file 
 		test_version = header[2][0:3]
@@ -967,14 +990,14 @@ class Results(object):
 						p['P'] = self._bad_float(l2[1])
 						p['S'] = self._bad_float(l2[2])
 						p['tof'] = self._bad_float(l2[3]) # time of flight
-						if file=='plt': # a strange bug prehaps. anyways this makes it so that you get microseconds
+						if file == 'plt': # a strange bug prehaps. anyways this makes it so that you get microseconds
 							p['tof'] = p['tof'] / 1e5
-						if file=='fai':
+						if file == 'fai':
 							p['KE'] = self._bad_float(l2[4]) # Kinetic energy
 					
 					#line 3
 					# see 20080501 in lab book
-					if (file=='plt'):
+					if (file == 'plt'):
 						l3 = scanf(lines[3], l3_re_plt)
 						p['KART'] = int(l3[0])
 						p['ID'] = l3[1]
@@ -983,7 +1006,7 @@ class Results(object):
 						p['X'] = float(l3[4])
 						p['By'] = float(l3[6])
 						p['Bz'] = float(l3[7])
-					elif (file=='fai'):
+					elif (file =='fai'):
 						l3 = scanf(lines[3], l3_re)
 						p['ID'] = l3[0]
 						p['IREP'] = l3[1]
@@ -994,14 +1017,14 @@ class Results(object):
 					#	particle['X'] = 0 
 
 					#line4
-					if (file=='plt'):
+					if (file =='plt'):
 						l4 = scanf(lines[4], l4_re_plt)
 						p['BORO'] = float(l4[3])
 						p['PASS'] = int(l4[4])
 						p['element_type'] = l4[5].strip()
 						p['element_label1'] = l4[6].strip()
 						p['element_label2'] = l4[7].strip()
-					elif (file=='fai'):
+					elif (file =='fai'):
 						l4 = scanf(lines[4], l4_re)
 						p['BORO'] = float(l4[0])
 						p['PASS'] = int(l4[1])
@@ -1034,7 +1057,7 @@ class Results(object):
 					p['P'] = self._bad_float(l0[12])
 					p['S'] = self._bad_float(l0[13])
 					p['tof'] = self._bad_float(l0[14]) # time of flight in microseconds
-					if file=='fai':
+					if file == 'fai':
 						p['KE'] = self._bad_float(l0[15]) # Kinetic energy
 						p['E'] = self._bad_float(l0[16]) # Total energy
 						p['ID'] = int(l0[17])
@@ -1051,7 +1074,7 @@ class Results(object):
 						p['element_label1']  = l0_stringpart[1].strip('\'')
 						p['element_label2']  = l0_stringpart[2].strip('\'')
 						p['LET'] = l0_stringpart[3].strip('\'')
-					elif file=='plt':
+					elif file == 'plt':
 						p['beta'] = self._bad_float(l0[15]) # Relativistic beta
 						p['DS'] = self._bad_float(l0[16]) # Relativistic beta
 						p['ID'] = int(l0[18])
@@ -1107,18 +1130,18 @@ class Results(object):
 				# all cols numeric, so give a fast numpy array
 				coords = numpy.zeros([all.size, len(coord_list)], dtype=(best_type))
 
-				for n,c in enumerate(coord_list):
-					coords[:,n] = all[c]
+				for n, c in enumerate(coord_list):
+					coords[:, n] = all[c]
 					if multi_list:
 						if multi_list[n]:
-							coords[:,n] *= multi_list[n]
+							coords[:, n] *= multi_list[n]
 				return coords
 
 
 		coords = []
 		for p in all:
 			this_coord = []
-			for n,c in enumerate(coord_list):
+			for n, c in enumerate(coord_list):
 				if (multi_list == None):
 					this_coord.append(p[c])
 				elif (multi_list[n] == None):
@@ -1192,7 +1215,8 @@ class Results(object):
 		else:
 			raise ValueError, "get_all() expects name to be 'plt' or 'fai'"
 
-		header = list(read_n_lines(fh,4))
+		#ignore header lines
+		dummy = list(read_n_lines(fh, 4))
 		particle_ids = set()
 		for lines in yield_n_lines(fh, 5):
 			if (len(lines) == 5): # dont go through this if we have just few dangling lines on the end of the file
@@ -1218,14 +1242,13 @@ class Results(object):
 			except NoTrackError:
 				print "No Track"
 				return True
-			v=verbose # to save typing
 			in_b = True
 			if (track_min <= min_bound):
-				if(v): print track_min, "<=", min_bound, "hit lower bound, in element", element_label
+				if(verbose): print track_min, "<=", min_bound, "hit lower bound, in element", element_label
 				in_b = False
 				
 			if (track_max >= max_bound):
-				if(v): print track_max, ">=", max_bound, "hit upper bound, in element", element_label
+				if(verbose): print track_max, ">=", max_bound, "hit upper bound, in element", element_label
 				in_b = False
 
 		return in_b
@@ -1248,7 +1271,7 @@ class Results(object):
 		else:
 			raise ValueError, "get_all() expects name to be 'plt' or 'fai'"
 
-		header = list(read_n_lines(fh,4))
+		header = list(read_n_lines(fh, 4))
 		
 		crashes = numpy.zeros(len(particle_ids), dtype=int)
 		not_crashes = numpy.zeros(len(particle_ids), dtype=int)
@@ -1263,9 +1286,9 @@ class Results(object):
 			particle = {}
 			#for line in lines:
 			#	bits.append(line.split()) # split them by whitespace
-			bits[1]= lines[1].split()
-			bits[3]= lines[3].split()
-			bits[4]= lines[4].split()
+			bits[1] = lines[1].split()
+			bits[3] = lines[3].split()
+			bits[4] = lines[4].split()
 			
 			particle['ID'] = bits[3][1]
 			particle['Y'] = float(bits[1][1])
@@ -1300,12 +1323,12 @@ class Results(object):
 				particle['element_label1'] = bits[4][first_non_numeric + 1]
 			
 			has_crashed = False
-			for k,v in min_bounds.items():
+			for k, v in min_bounds.items():
 				if (particle['element_label1'] == k or particle['element_label2'] == k):
 					if (particle['Y'] <= v):
 						#crash
 						has_crashed = True
-			for k,v in max_bounds.items():
+			for k, v in max_bounds.items():
 				if (particle['element_label1'] == k or particle['element_label2'] == k):
 					if (particle['Y'] >= v):
 						#crash
@@ -1497,12 +1520,13 @@ class Plotter(object):
 		self.width = 100 # physical size of canvas in cm
 		self.height = 100 
 		#self.last_added_elem = None
-		self.pretty_names={}
+		self.pretty_names = {}
 		self.magnet_width = {}
 		self._scan_line()
 		#self.save_pdf('test.pdf')
 	
 	def _calc_physial_size(self):
+		"finds a bounding box"
 		self.min_x = 1e6
 		self.min_y = 1e6
 		self.max_x = -1e6
@@ -1517,7 +1541,7 @@ class Plotter(object):
 		for t in self.tracks:
 			points += t['points']
 
-		for x,y in points:
+		for x, y in points:
 			self.min_x = min(self.min_x, x)
 			self.max_x = max(self.max_x, x)
 			self.min_y = min(self.min_y, y)
@@ -1538,7 +1562,7 @@ class Plotter(object):
 		"""
 		count = 0
 		angle = 0
-		position = [0,0]
+		position = [0, 0]
 		self.elements = {}
 		for elem in self.line.elements():
 			classtype =  str(type(elem))
@@ -1593,7 +1617,7 @@ class Plotter(object):
 					b = self.transform(section['label'],(length, width/2))
 					c = self.transform(section['label'],(length, -width/2))
 					d = self.transform(section['label'],(0, -width/2))
-					element['box'] = (a,b,c,d)
+					element['box'] = (a, b, c, d)
 					element['type'] = "box"
 				else:
 					element['type'] = "rec"
@@ -1629,11 +1653,11 @@ class Plotter(object):
 		"""
 		raw_track = []
 		try:
-			raw_track += results.get_track('plt', ['X','Y','element_label1','PASS','tof'])
+			raw_track += results.get_track('plt', ['X', 'Y', 'element_label1', 'PASS', 'tof'])
 		except IOError, e:
 			print "No PLT file for tracks:", e
 		try:
-			raw_tr = results.get_track('fai', ['Y','Y','element_label1','PASS','tof'])
+			raw_tr = results.get_track('fai', ['Y', 'Y', 'element_label1', 'PASS', 'tof'])
 			for t in raw_tr:
 				t[0] = None
 				t[4] *= 100000
@@ -1641,7 +1665,7 @@ class Plotter(object):
 
 		except IOError, e:
 			print "No FAI file for tracks:", e
-		if len(raw_track)==0:
+		if len(raw_track) == 0:
 			raise NoTrackError, "No tracks to plot"
 		#for t in raw_track:
 		#	print t
@@ -1649,7 +1673,7 @@ class Plotter(object):
 		passes = set([x[3] for x in raw_track])
 		for thispass in passes: # deal with one lap at a time
 			track = []
-			for raw_p in [x for x in raw_track if x[3]==thispass]:
+			for raw_p in [x for x in raw_track if x[3] == thispass]:
 				p = self.transform(raw_p[2].strip(), raw_p[0:2]) # transform to element coordinates
 				#print raw_p[2], self.sections[raw_p[2]], raw_p[0:2], p
 				track.append(p)
@@ -1690,7 +1714,7 @@ class Plotter(object):
 			canv_width = 800
 			canv_height = canv_width/self.aspect
 			
-		img_surf = cairo.ImageSurface(cairo.FORMAT_RGB24,int(canv_width), int(canv_height))
+		img_surf = cairo.ImageSurface(cairo.FORMAT_RGB24, int(canv_width), int(canv_height))
 		cr = cairo.Context(img_surf)
 		self.draw(cr, canv_width, canv_height, line_width=1)
 		img_surf.write_to_png(fname)
@@ -1735,9 +1759,9 @@ class Plotter(object):
 		cr.scale(scale_fac, -scale_fac)
 
 		#cr.translate(0,-self.height/2)	
-		cr.translate(-self.min_x,-self.max_y)	
+		cr.translate(-self.min_x, -self.max_y)	
 
-		cr.set_source_rgb(1,1,1)
+		cr.set_source_rgb(1, 1, 1)
 		cr.rectangle(0, -self.height/2, self.width, self.height)
 		cr.fill()
 		
@@ -1745,7 +1769,7 @@ class Plotter(object):
 		cr.set_line_width(max(cr.device_to_user_distance(line_width, line_width)))
 
 
-		cr.set_source_rgb(0.5,0.5,0.5)
+		cr.set_source_rgb(0.5, 0.5, 0.5)
 		#draw line sections
 		for name, l in self.sections.items():
 			cr.move_to(*l['start'])
@@ -1753,7 +1777,7 @@ class Plotter(object):
 			
 		cr.stroke()
 		
-		cr.set_source_rgb(0.5,0.5,0.5)
+		cr.set_source_rgb(0.5, 0.5, 0.5)
 		# draw_elements
 		for name, e in self.elements.items():
 			if e['type'] == 'box':
@@ -1763,7 +1787,7 @@ class Plotter(object):
 				b = self.transform(name,(e['len'], e['max_y']))
 				c = self.transform(name,(e['len'], e['min_y']))
 				d = self.transform(name,(0, e['min_y']))
-				corners = [a,b,c,d]	
+				corners = [a, b, c, d]	
 
 			cr.move_to(corners[0][0], corners[0][1])
 			for corner in corners[1:]:
@@ -1786,10 +1810,10 @@ class Plotter(object):
 			cr.identity_matrix()
 			cr.show_text(pname)
 			cr.scale(scale_fac, -scale_fac)
-			cr.translate(-self.min_x,-self.max_y)	
+			cr.translate(-self.min_x, -self.max_y)	
 
 		#draw tracks
-		cr.set_source_rgb(0,0,0)
+		cr.set_source_rgb(0, 0, 0)
 		for track in self.tracks:
 			if track['colour'] != None:
 				cr.set_source_rgb(*track['colour'])
@@ -1804,14 +1828,14 @@ class Plotter(object):
 		scale_end = 100
 		x_bearing, y_bearing, extent_width, extent_height = cr.text_extents('1')[:4]
 		scale_pos = self.min_y + 2.1 + extent_height*2/scale_fac
-		cr.set_source_rgb(0,0,0)
+		cr.set_source_rgb(0, 0, 0)
 		cr.move_to(scale_start, scale_pos)
 		cr.line_to(scale_end, scale_pos)
 		cr.stroke()
 		for x in xrange(11):
 			x_pos = (scale_end - scale_start)/10*x + scale_start
 			cr.move_to(x_pos, scale_pos)
-			cr.line_to(x_pos,scale_pos-1)
+			cr.line_to(x_pos, scale_pos-1)
 			cr.stroke()
 			if (x%5 ==0):
 				x_bearing, y_bearing, extent_width, extent_height = cr.text_extents(str((scale_end - scale_start)/10*x/100))[:4]
@@ -1819,7 +1843,7 @@ class Plotter(object):
 				cr.identity_matrix()
 				cr.show_text(str((scale_end - scale_start)/10*x/100))
 				cr.scale(scale_fac, -scale_fac)
-				cr.translate(-self.min_x,-self.max_y)
+				cr.translate(-self.min_x, -self.max_y)
 
 			if (x ==0):
 				x_bearing, y_bearing, extent_width, extent_height = cr.text_extents(str((scale_end - scale_start)/10*x))[:4]
@@ -1827,7 +1851,7 @@ class Plotter(object):
 				cr.identity_matrix()
 				cr.show_text("m")
 				cr.scale(scale_fac, -scale_fac)
-				cr.translate(-self.min_x,-self.max_y)
+				cr.translate(-self.min_x, -self.max_y)
 
 
 

@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+"""Some physical constants.
+
+"""
 from __future__ import division
 
 ELECTRON_MASS = 0.51099892e6 #eV
