@@ -4,6 +4,7 @@ from __future__ import division
 from math import *
 import numpy
 import sys
+import os
 from glob import glob
 from zgoubi.constants import *
 from zgoubi.exceptions import *
@@ -27,19 +28,26 @@ kgauss_ = 10
 T_ = 1
 
 
-def coords_grid(min=[0, 0], max=[1, 1], step=[1, 1], type=float):
+def coords_grid(min_c=None, max_c=None, step=None, dtype=float):
 	"""make a list of coordinate aranged in a grid in a generalised space
 	eg
-	coords_grid(min=[0,0],max=[1,1],step=[10,10])
+	coords_grid(min_c=[0,0],max_c=[1,1],step=[10,10])
 	
 	will give you 100 points in 2 dimensions between 0 and 1
 	"""
-	
-	assert(len(min)==len(max)==len(step))
-	#assert(len(min)==2)
-	dimention = len(min)
 
-	stride = [(max[x]-min[x])/step[x] for x in xrange(dimention)]
+	if min_c == None:
+		min_c = [0, 0]
+	if max_c == None:
+		max_c = [1, 1]
+	if step == None:
+		step = [1, 1]
+	
+	assert(len(min_c)==len(max_c)==len(step))
+	#assert(len(min)==2)
+	dimention = len(min_c)
+
+	stride = [(max_c[x]-min_c[x])/step[x] for x in xrange(dimention)]
 
 	indexes = numpy.zeros(step)
 
@@ -52,7 +60,7 @@ def coords_grid(min=[0, 0], max=[1, 1], step=[1, 1], type=float):
 			this_coord.append(stride[x] * ind[x] + min[x])
 		coords.append(this_coord)
 
-	return numpy.array(coords, dtype=type)
+	return numpy.array(coords, dtype=dtype)
 
 
 def search_pattern(step, range, start=0):
@@ -72,7 +80,6 @@ def search_pattern(step, range, start=0):
 def get_cmd_param(key, default=None):
 	"get things formated like key=value from the commandline. returns the requested value"
 	#print sys.argv
-	params = {}
 	for item in sys.argv:
 		if '=' in item:
 			k, e, v = item.partition('=')
@@ -92,7 +99,6 @@ def get_cmd_param_bool(key, default=None):
 	case insensitve
 	"""
 	#print sys.argv
-	params = {}
 	for item in sys.argv:
 		if '=' in item:
 			k, e, v = item.partition('=')
@@ -268,14 +274,12 @@ def show_file(file_path, mode):
 			print line,
 
 	elif mode == "less":
-		from os import system
 		command = "less %s"% file_path
-		system(command)
+		os.system(command)
 	
 	elif mode == "win":
-		from os import system
 		command = 'xterm -e "less %s"'% file_path
-		system(command)
+		os.system(command)
 
 def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, range_YTZP=None, count_YTZP=None):
 	"""Same as find_closed_orbit, but if init_YTZP is unstable, will generate a bunch or particles, with a spread of range_YTZP, and if any of those are stable will do a closed orbit search with that particle::
@@ -289,12 +293,12 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 	would create 100 particles in a grid.
 	
 	"""
-	if range_YTZP==None:
-		range_YTZP = [10,10,10,10]
+	if range_YTZP == None:
+		range_YTZP = [10, 10, 10, 10]
 	if init_YTZP == None:
-		init_YTZP=[0, 0, 0, 0]
+		init_YTZP = [0, 0, 0, 0]
 	if count_YTZP == None:
-		count_YTZP=[10, 10, 10, 10]
+		count_YTZP = [10, 10, 10, 10]
 	
 	#first check center
 	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
@@ -325,7 +329,7 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 		if range_YTZP[x] == 0 or count_YTZP[0] <= 1:
 			ranges.append([0])
 		else:
-			ranges.append(numpy.linspace(-range_YTZP[x],range_YTZP[x],count_YTZP[x]))
+			ranges.append(numpy.linspace(-range_YTZP[x], range_YTZP[x], count_YTZP[x]))
 
 	for coord in itertools.product(*ranges):
 		objet.add(Y=current_YTZP[0]+coord[0], T=current_YTZP[1]+coord[1], Z=current_YTZP[2]+coord[2], P=current_YTZP[3]+coord[3], LET='A', D=D)
@@ -341,7 +345,7 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 		del r
 		final_lap_n = track['PASS'].max()
 		# select one particle which survived (IEX is positive), and made it to last lap
-		surviving_particles = track[ numpy.logical_and(track['PASS']==final_lap_n , track['IEX']>0)  ]
+		surviving_particles = track[ numpy.logical_and(track['PASS'] == final_lap_n , track['IEX']>0)  ]
 		zlog.debug("%d particles survived"%len(surviving_particles))
 
 		for surviving_particle in surviving_particles:
@@ -369,7 +373,7 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 	"""
 	zlog.debug("enter function")
 	if init_YTZP == None:
-		init_YTZP=[0, 0, 0, 0]
+		init_YTZP = [0, 0, 0, 0]
 
 	#check line has an objet2
 	for e in line.element_list:
@@ -399,7 +403,7 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 		r = line.run(xterm=False)
 
 		if not r.run_success():
-			if iteration==0:
+			if iteration == 0:
 				zlog.warning("Not a stable orbit")
 				return None
 			else:
@@ -474,7 +478,7 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 		return None
 
 
-def get_twiss_profiles(line, file_result, input_twiss_parameters=[0, 0, 0, 0, 0, 0]):
+def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 	""" Calculates the twiss parameters at all points written to zgoubi.plt. 11 particle trajectories are used to calculate the
 	transfer matrix, just as is done in zgoubi. The code mirrors that found in mat1.f, mksa.f. The twiss parameters are first
 	calculated at the end of the cell using either input_twiss_parameters (format [beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z]) 
@@ -488,6 +492,9 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=[0, 0, 0, 0, 0,
 	Requires an OBJET type 5, and a MATRIX element.
 
 	Note - This calculation uses trajectories as measured in the local coordinate system of the magnet."""
+
+	if input_twiss_parameters == None:
+		input_twiss_parameters = [0, 0, 0, 0, 0, 0]
 
 	has_object5 = False
 	has_matrix = False
@@ -814,13 +821,16 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=[0, 0, 0, 0, 0,
 	return twiss_profiles
 
 
-def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier = False, coords = []):
+def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier=False, coords=None):
 	"""Calculate tune using FFT. nfourierturns determines the number of passes through the lattice.
        Can supply set of horizontal and vertical coordinates in coords = [ycoords,zcoords], otherwise
          routine will calculate coordinates
 
        Set plot_fourier= True to show Fourier spectrum. Default is False
 	"""
+	if coords == None:
+		coords = []
+
 	#check line has an objet2
 	for e in line.element_list:
 		if ("OBJET2" in str(type(e)).split("'")[1]):
@@ -912,8 +922,6 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 	If a particle is lost, returns index_lost in emit_list where the loss occurs. Otherwise index_lost remains 0.
 	"""
 
-	import numpy
-	import os
 	import zgoubi.core as zg
 
 	#create objet so initial phase settings can be set
@@ -1110,7 +1118,6 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 			betayz = [twissparam[0],twissparam[3]]
 			gammayz = [twissparam[2],twissparam[5]]
 	"""
-	import numpy
 	
 	coords_YTZP = []
 
@@ -1173,14 +1180,14 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 	return coords_YTZP
 
 
-def find_indices(list, list_element):
+def find_indices(a_list, list_element):
 	""" Find all occurences of list_element in list. Return the indices.
 	"""
 	indices = []
 	i = -1
 	try:
 		while 1:
-			i = list.index(list_element, i+1)
+			i = a_list.index(list_element, i+1)
 			indices.append(i)
 	except ValueError:
 		pass
@@ -1258,9 +1265,9 @@ def get_enclosing_circle(ellipse_data):
 
 	""" 
 
-	import ellipse
+	import zgoubi.ellipse
 
-	bc = ellipse.BestCircle()
+	bc = zgoubi.ellipse.BestCircle()
 
 	for edata in ellipse_data:
 		a = edata[0]
@@ -1274,7 +1281,7 @@ def get_enclosing_circle(ellipse_data):
 	return centre, radius
 
 
-def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_dist = [], seed = None):
+def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_dist=None, seed = None):
 	""" Misalign the set of elements identified by element_indices. The misalignment is Gaussian
 	with sigma, sigma_cutoff and mean among the input parameters. If sigma = 0.0, the misalignment is constant 
 	and given by mean
@@ -1286,6 +1293,8 @@ def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_
 	element_indices can be determined using line.find_elements(element_name)
 
 	mean and sigma should be input in meters """
+	if misalign_dist == None:
+		misalign_dist = []
 
 	import random
 	import zgoubi.core as zg
@@ -1339,7 +1348,7 @@ def gaussian_cutoff(npoints, mean, sigma, sigma_cutoff, seed = None):
 	return dist
 
 
-def tune_diagram(tune_list, order = 3, xlim = [0, 1], ylim= [0, 1]):
+def tune_diagram(tune_list, order=3, xlim=None, ylim=None):
 	"""Plot a list of tunes on a tune diagram with resonance line up to a given order.
 	
 	Required input 
@@ -1354,6 +1363,10 @@ def tune_diagram(tune_list, order = 3, xlim = [0, 1], ylim= [0, 1]):
 	The default value of order is 3. 
 	Written by Y. Giboudet
 	"""
+	if xlim == None:
+		xlim = [0, 1]
+	if ylim == None:
+		ylim = [0, 1]
 
 	import pylab
 
@@ -1434,15 +1447,18 @@ def tune_diagram(tune_list, order = 3, xlim = [0, 1], ylim= [0, 1]):
 
 
  
-def plot_data_xy(data, filename, labels=["", "", ""], style='b-', xlim=[0, 0], ylim=[0, 0]):
+def plot_data_xy(data, filename, labels=None, style='b-', xlim=None, ylim=None):
+	if labels == None:
+		labels = ["", "", ""]
+
 	import pylab
 	data_a = numpy.array(data)
 	pylab.hold(False)
 	pylab.plot(data_a[:, 0], data_a[:, 1], style)
 	pylab.title(labels[0])
-	if xlim != [0, 0]:
+	if xlim != None:
 		pylab.xlim( (xlim[0], xlim[1]) )
-	if ylim != [0, 0]:
+	if ylim != None:
 		pylab.ylim( (ylim[0], ylim[1]) )
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])
@@ -1451,8 +1467,7 @@ def plot_data_xy(data, filename, labels=["", "", ""], style='b-', xlim=[0, 0], y
 	pylab.cla()
 
 
-def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["", "", ""], style='', legend=' ', legend_location='best', xlim = [0, 0], ylim = [0, 0]):
-	import pylab
+def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style='', legend=' ', legend_location='best', xlim=None, ylim=None):
 	""" Plots multiple sets of data where the X and Y coordinates are each specified in a list of lists. Should also
 	    work if a single set of X, Y data is specified or if one X is supplied with multiple Y data points (as long 
 	    the dimensions of Y equals that of X in all cases). 
@@ -1469,19 +1484,21 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["", "", ""], 
 		legend_location - Default of location of legend box is 'best', otherwise can select 'upper right' or numerical code for position. See matplotlib documentation. 
 		xlim = [lower_value, upper_value] - Limit horizontal axis
 		ylim = [lower_value, upper_value] - Limit vertical axis  """
-                                                                  
+	import pylab
 
+	if labels == None:
+		labels = ["", "", ""]
 	#check if data is a single list or a list of lists
 	single_x_data = False
 	single_y_data = False
 
 	try:
-		l = len(data_x_list[0])
+		dummy = len(data_x_list[0])
 	except TypeError:
 		single_x_data = True
 
 	try:
-		l = len(data_y_list[0])
+		dummy = len(data_y_list[0])
 	except TypeError:
 		single_y_data = True
 
@@ -1506,9 +1523,9 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["", "", ""], 
 				pylab.plot(data_x_list[index], data_y, style[index%len(style)], label= legend[index%len(legend)])
 
 	pylab.title(labels[0])
-	if xlim != [0, 0]:
+	if xlim != None:
 		pylab.xlim( (xlim[0], xlim[1]) )
-	if ylim != [0, 0]:
+	if ylim != None:
 		pylab.ylim( (ylim[0], ylim[1]) )
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])
