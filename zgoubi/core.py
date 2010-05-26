@@ -85,6 +85,8 @@ if (not zgoubi_module_path.startswith("/")) and os.name == 'posix' :
 else:
 	static_defs = os.path.join(zgoubi_module_path, '..', '..', '..', '..', "share", "pyzgoubi", "definitions", "static_defs.py")
 	simple_defs = os.path.join(zgoubi_module_path, '..', '..', '..', '..', "share", "pyzgoubi", "definitions", "simple_elements.defs")
+	static_defs = os.path.normpath(static_defs)
+	simple_defs = os.path.normpath(simple_defs)
 
 
 #definitions of elements
@@ -112,7 +114,8 @@ if not os.path.exists(compiled_defs_path):
 else:
 	need_def_compile = False
 	for f in definitions_paths:
-#		print "checking ", f
+		if not os.path.exists(f):
+			zlog.error("Definitions file: "+f+" does not exist")
 		if os.path.exists(f) and os.path.getmtime(f) >= os.path.getmtime(compiled_defs_path):
 			zlog.debug("need to recompile"+ f)
 			need_def_compile = True
