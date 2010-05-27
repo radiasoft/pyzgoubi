@@ -78,6 +78,7 @@ zgoubi_path = zgoubi_settings['zgoubi_path']
 
 pyzgoubi_egg_path = glob(os.path.dirname(zgoubi_module_path) + "/pyzgoubi*egg-info")
 
+
 if (not zgoubi_module_path.startswith("/")) and os.name == 'posix' :
 	# windows style paths, but os.name is 'posix', so need to mess with paths by hand
 	bits = zgoubi_module_path.split('\\')[:-3]+['share', 'pyzgoubi', 'definitions']
@@ -116,7 +117,9 @@ else:
 	need_def_compile = False
 	for f in definitions_paths:
 		if not os.path.exists(f):
+			path_info = " zgoubi_module_path: %s\nzgoubi_path: %s\npyzgoubi_egg_path: %s" %(zgoubi_module_path, zgoubi_path, pyzgoubi_egg_path)
 			zlog.error("Definitions file: "+f+" does not exist")
+			zlog.error(path_info)
 		if os.path.exists(f) and os.path.getmtime(f) >= os.path.getmtime(compiled_defs_path):
 			zlog.debug("need to recompile"+ f)
 			need_def_compile = True
@@ -257,10 +260,21 @@ class zgoubi_element(object):
 			
 try:
 	execfile(static_defs)
+	execfile(compiled_defs_path)
 except IOError:
 	zlog.error("Could not load static element definitions, maybe you are running pyzgoubi from the source directory")
+	path_info = " zgoubi_module_path: %s\nzgoubi_path: %s\npyzgoubi_egg_path: %s" %(zgoubi_module_path, zgoubi_path, pyzgoubi_egg_path)
+	zlog.error(path_info)
 	sys.exit(1)
-execfile(compiled_defs_path)
+
+try:
+	test_element = BEND()
+except NameError:
+	zlog.error("Elements did not load correctly")
+	path_info = " zgoubi_module_path: %s\nzgoubi_path: %s\npyzgoubi_egg_path: %s" %(zgoubi_module_path, zgoubi_path, pyzgoubi_egg_path)
+	zlog.error(path_info)
+	sys.exit(1)
+
 
 class Line(object):
 	"The Line object holds a series of elements, to represent an accelerator lattice."
