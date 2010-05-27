@@ -54,7 +54,7 @@ ob.set(BORO=-rigidity)
 ob.add(Y=0, T=0, D=1)
 
 print emma.output()
-emma.run(xterm = True)
-print emma.res()
-emma.clean()
+res = emma.run(xterm = True)
+print res.res()
+res.clean()
 

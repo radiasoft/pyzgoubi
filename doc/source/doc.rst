@@ -352,11 +352,11 @@ The following example shows how to run a |Line|::
     ...
 
     #run line
-    emma.run()
+    emma_res = emma.run()
 
     #save output
-    emma.save_res("emma.res")
-    emma.save_plt("emma.plt")
+    emma_res.save_res("emma.res")
+    emma_res.save_plt("emma.plt")
 
 Note that you will need to make sure your |Line| will actually create plt or fai files, otherwise you will receive a file not found error. See the Zgoubi manual for more information.
 
@@ -599,9 +599,11 @@ When using the new fai/plt files labels are stored as a fixed length string, and
 	labels1 = ['foc     ', 'defoc   ']
 	labels2 = [x.strip() for x in labels1]
 
+The 'tol' parameter in find_closed_orbit() now is a measure of convergence rather than area. This should give better results over a wide range of scales. However, a large 'tol' is needed to give the same degree of accuracy. If you previously had tol=1e-10, then it may no longer converge, but if you change it to tol=1e-6 you will get a similar result to before.
+
 Some obsolete functions have been removed: Results.plt_to_csv(), Results.get_all_old(), Line.split_line()
 
-The 'tol' parameter in find_closed_orbit() now is a measure of convergence rather than area. This should give better results over a wide range of scales. However, a large 'tol' is needed to give the same degree of accuracy. If you previously had tol=1e-10, then it may no longer converge, but if you change it to tol=1e-6 you will get a similar result to before.
+Some obsolete functions have been marked as deprecated, and will give warnings when used. These will likely be removed in a future version of PyZgoubi, unless you let me know that they are worth keeping. Some of these functions are old and undocumented, and I suspect no one uses them. Some have just move, like the functions for directly accessing and saving res and fai files (moved from Line to Results). If you do not care about modifying you're code to prepare for a future version then pass the argument ``-W ignore::DeprecationWarning`` to python.
 
 Tips
 ----

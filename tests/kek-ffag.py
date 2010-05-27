@@ -98,9 +98,9 @@ ob.set(BORO=rigidity)
 ob.add(Y=517, T=0, D=1)
 
 print ffagex.output()
-ffagex.run(xterm = False)
-print ffagex.res()
-ffagex.clean()
+res = ffagex.run(xterm = False)
+print res.res()
+res.clean()
 
 #must give reasonable initial guess at closed orbit
 #co1 = find_closed_orbit(ffagex, init_YTZP=[479.7,0,0,0], D=0.52, tol=1e-10)
