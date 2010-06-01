@@ -223,8 +223,8 @@ class Bunch(object):
 		if seed != None:
 			numpy.random.seed(seed)
 
-		ry = sqrt(emit_y) * numpy.random.normal(0,0.5,[npart])
-		rz = sqrt(emit_z) * numpy.random.normal(0,0.5,[npart]) 
+		ry = sqrt(emit_y) * numpy.random.normal(0, 0.5, [npart])
+		rz = sqrt(emit_z) * numpy.random.normal(0, 0.5, [npart]) 
 
 		u1 = numpy.random.random_sample([npart]) * pi * 2
 		u2 = numpy.random.random_sample([npart]) * pi * 2

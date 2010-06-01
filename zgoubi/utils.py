@@ -1,15 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+"Various useful functions and utilities"
+
 from __future__ import division
 from math import *
 import numpy
 import sys
 import os
+import warnings
 from glob import glob
 from zgoubi.constants import *
 from zgoubi.exceptions import *
 import itertools
-from zgoubi.core import zlog
+from zgoubi.core import zlog, dep_warn
 
 # use these to convert things to metres and tesla
 m = 1
@@ -64,6 +68,8 @@ def coords_grid(min_c=None, max_c=None, step=None, dtype=float):
 
 
 def search_pattern(step, range, start=0):
+	# this has been in the code since pre-sourceforge, i dont think it is used, and i dont think it works right if start!=0
+	warnings.warn("utils.search_pattern()"+dep_warn, DeprecationWarning)
 	current = start
 	while True:
 		yield current
@@ -133,7 +139,11 @@ def readArray(filename, skipchar = '#', dtype=float):
 	#          >>> y = data[:,1]        # second column
 	from http://www.scipy.org/Cookbook/InputOutput
 
+	Note: please switch to using numpy functions: numpy.savetxt(), numpy.loadtxt() or numpy.genfromtxt()
+
 	"""
+
+	warnings.warn("utils.readArray()"+dep_warn, DeprecationWarning)
 
 	myfile = open(filename, "r")
 	contents = myfile.readlines()

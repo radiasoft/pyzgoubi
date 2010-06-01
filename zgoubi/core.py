@@ -117,7 +117,7 @@ else:
 	need_def_compile = False
 	for f in definitions_paths:
 		if not os.path.exists(f):
-			path_info = " zgoubi_module_path: %s\nzgoubi_path: %s\npyzgoubi_egg_path: %s" %(zgoubi_module_path, zgoubi_path, pyzgoubi_egg_path)
+			path_info = " zgoubi_module_path: %s\nzgoubi_path: %s\npyzgoubi_egg_path: %s" % (zgoubi_module_path, zgoubi_path, pyzgoubi_egg_path)
 			zlog.error("Definitions file: "+f+" does not exist")
 			zlog.error(path_info)
 		if os.path.exists(f) and os.path.getmtime(f) >= os.path.getmtime(compiled_defs_path):
@@ -263,7 +263,7 @@ try:
 	execfile(compiled_defs_path)
 except IOError:
 	zlog.error("Could not load static element definitions, maybe you are running pyzgoubi from the source directory")
-	path_info = " zgoubi_module_path: %s\nzgoubi_path: %s\npyzgoubi_egg_path: %s" %(zgoubi_module_path, zgoubi_path, pyzgoubi_egg_path)
+	path_info = " zgoubi_module_path: %s\nzgoubi_path: %s\npyzgoubi_egg_path: %s" % (zgoubi_module_path, zgoubi_path, pyzgoubi_egg_path)
 	zlog.error(path_info)
 	sys.exit(1)
 
@@ -271,7 +271,7 @@ try:
 	test_element = BEND()
 except NameError:
 	zlog.error("Elements did not load correctly")
-	path_info = " zgoubi_module_path: %s\nzgoubi_path: %s\npyzgoubi_egg_path: %s" %(zgoubi_module_path, zgoubi_path, pyzgoubi_egg_path)
+	path_info = " zgoubi_module_path: %s\nzgoubi_path: %s\npyzgoubi_egg_path: %s" % (zgoubi_module_path, zgoubi_path, pyzgoubi_egg_path)
 	zlog.error(path_info)
 	sys.exit(1)
 
@@ -657,7 +657,11 @@ class Line(object):
 	def add_input_files(self, file_paths=None, pattern=None):
 		"""Add some extra input files to the directory where zgoubi is run.
 		This is useful for field map files.
-		file_paths must be an iterable, for example a list::
+		file_paths can be a string::
+
+			l.add_input_files('map')
+		
+		an iterable, for example a list::
 
 			l.add_input_files(['map1', 'map2', 'map3'])
 		
@@ -671,8 +675,11 @@ class Line(object):
 		if file_paths == None:
 			file_paths = []
 
+		if hasattr(file_paths, "lower"):
+			file_paths = [file_paths]
+
 		if pattern != None:
-			globbed_files = glob.glob(pattern)
+			globbed_files = glob(pattern)
 			file_paths += globbed_files
 		self.input_files += file_paths
 		

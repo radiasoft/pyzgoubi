@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"Read settings from ~/.pyzgoubi"
 from __future__ import division
 
 import ConfigParser
