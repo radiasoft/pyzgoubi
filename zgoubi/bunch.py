@@ -130,6 +130,82 @@ class Bunch(object):
 		
 		self.coords = bunch
 
+	def gen_gaussian(self, npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, mom_spread=0, bunch_length=0, disp=0, disp_prime=0, seed=None):
+		"""Generate a Gaussian bunch in transverse and longitudinal phase space
+		emit_y, emit_z : horizontal and vertical plane geometric emittance (1 sigma)
+		beta_y, beta_z : horizontal and vertical betatron function
+		alpha_y, alpha_z : horizontal and vertical alpha
+		mom_spead : sigma of momentum spread (percentage) 
+		bunch_length : sigma of bunch length (metres)
+		disp, disp_prime : dispersion and dispersion prime (D') in horizontal plane """
+
+
+		if seed != None:
+			numpy.random.seed(seed)
+
+		#generate momentum distribution
+                if mom_spread > 0.0:
+                        mom_dist = numpy.random.normal(1.0, mom_spread/100, npart)
+		if bunch_length > 0.0:
+			s_dist = numpy.random.normal(0.0, bunch_length, npart)
+
+		print "s_dist ",s_dist
+		#generate bunch length
+
+		#generate Gaussian in each YTZP coordinate separately
+		#ry = numpy.random.normal(0,sqrt(emit_y),npart)
+		#rt = numpy.random.normal(0,sqrt(emit_y),npart)
+		#rz = numpy.random.normal(0,sqrt(emit_z),npart)
+		#rp = numpy.random.normal(0,sqrt(emit_z),npart)
+
+		#use numpy.random.multivariate_normal. 
+		#set off-diagonal terms in covariance matrix to zero so that Y is uncorrelated with T (and Z with P)
+		cov_yt = [[emit_y,0],[0,emit_y]]
+		ryrt = numpy.random.multivariate_normal((0,0),cov_yt,(1,npart))[0]
+		cov_zp = [[emit_z,0],[0,emit_z]]
+		rzrp = numpy.random.multivariate_normal((0,0),cov_zp,(1,npart))[0]
+
+		coords = numpy.zeros([npart, 6], numpy.float64)
+		coords2 = numpy.zeros([npart, 6], numpy.float64)
+
+		#Add dispersion term to horizontal coord
+		if disp != 0.0:
+			ryrt[:,0] = [y+disp*(dp-1) for y,dp in zip(ryrt[:,0],mom_dist)] 
+
+		#Add dispersion prime term to horizontal angle
+		if disp_prime != 0.0:
+			ryrt[:,1] = [t+disp_prime*(dp-1) for t,dp in zip(ryrt[:,1],mom_dist)] 
+
+		coords[:, 0] = ryrt[:,0]
+		coords[:, 1] = ryrt[:,1]
+		coords[:, 2] = rzrp[:,0]
+		coords[:, 3] = rzrp[:,1]
+
+		matrix = self._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
+		
+		for n, coord in enumerate(coords):
+			#	new_coord = numpy.dot(coord, matrix)
+			new_coord = numpy.dot(matrix, coord)
+			coords2[n] = new_coord 
+		
+		bunch =  numpy.zeros([npart], self.min_data_def)
+		
+		bunch['Y'] = coords2[:, 0]
+		bunch['T'] = coords2[:, 1]
+		bunch['Z'] = coords2[:, 2]
+		bunch['P'] = coords2[:, 3]
+		if mom_spread > 0.0:
+			bunch['D'] = mom_dist
+		else:
+			bunch['D'] = 1
+
+		if bunch_length > 0.0:
+			bunch['S'] = s_dist
+		else:
+			bunch['S'] = 0.0
+		
+		self.coords = bunch
+
 	def _twiss_matrix(self, beta_y, beta_z, alpha_y, alpha_z):
 		"Create a matrix that will convert a spherical distribution in to one with the correct twiss values"
 		B = numpy.eye(6)
