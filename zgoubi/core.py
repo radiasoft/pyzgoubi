@@ -74,19 +74,37 @@ zlog.setLevel(logging._levelNames[zgoubi_settings['log_level']])
 sys.setcheckinterval(10000)
 
 zgoubi_module_path = os.path.dirname( os.path.realpath( __file__ ) )
+# something like
+# $PREFIX/lib/python2.6/site-packages/zgoubi
+# $PREFIX\Lib\site-packages\zgoubi
+
 zgoubi_path = zgoubi_settings['zgoubi_path']
 
 pyzgoubi_egg_path = glob(os.path.dirname(zgoubi_module_path) + "/pyzgoubi*egg-info")
 
-
+# from zgoubi_module_path, need to find
+# $PREFIX/share/pyzgoubi/definitions/simple_elements.defs
+# $PREFIX\share\pyzgoubi\definitions\simple_elements.defs
 if (not zgoubi_module_path.startswith("/")) and os.name == 'posix' :
 	# windows style paths, but os.name is 'posix', so need to mess with paths by hand
 	bits = zgoubi_module_path.split('\\')[:-3]+['share', 'pyzgoubi', 'definitions']
 	static_defs = '\\'.join(bits+['static_defs.py'])
 	simple_defs = '\\'.join(bits+['simple_elements.defs'])
 else:
-	static_defs = os.path.join(zgoubi_module_path, '..', '..', '..', '..', "share", "pyzgoubi", "definitions", "static_defs.py")
-	simple_defs = os.path.join(zgoubi_module_path, '..', '..', '..', '..', "share", "pyzgoubi", "definitions", "simple_elements.defs")
+	if os.path.basename(os.path.normpath(os.path.join(zgoubi_module_path, '..', '..', '..',))).lower() == "lib":
+		static_defs = os.path.join(zgoubi_module_path, '..', '..', '..', '..', "share", "pyzgoubi", "definitions", "static_defs.py")
+		simple_defs = os.path.join(zgoubi_module_path, '..', '..', '..', '..', "share", "pyzgoubi", "definitions", "simple_elements.defs")
+	elif os.path.basename(os.path.normpath(os.path.join(zgoubi_module_path, '..', '..',))).lower() == "lib":
+		static_defs = os.path.join(zgoubi_module_path, '..', '..', '..', "share", "pyzgoubi", "definitions", "static_defs.py")
+		simple_defs = os.path.join(zgoubi_module_path, '..', '..', '..', "share", "pyzgoubi", "definitions", "simple_elements.defs")
+	else:
+		path_info = " zgoubi_module_path: %s\nzgoubi_path: %s\npyzgoubi_egg_path: %s" % (zgoubi_module_path, zgoubi_path, pyzgoubi_egg_path)
+		zlog.error("Could not find 'lib' directory from zgoubi_module_path")
+		zlog.error(path_info)
+		zlog.error("There is probably a problem with you installation")
+		static_defs = simple_defs = ""
+
+
 	static_defs = os.path.normpath(static_defs)
 	simple_defs = os.path.normpath(simple_defs)
 
@@ -265,7 +283,6 @@ except IOError:
 	zlog.error("Could not load static element definitions, maybe you are running pyzgoubi from the source directory")
 	path_info = " zgoubi_module_path: %s\nzgoubi_path: %s\npyzgoubi_egg_path: %s" % (zgoubi_module_path, zgoubi_path, pyzgoubi_egg_path)
 	zlog.error(path_info)
-	sys.exit(1)
 
 try:
 	test_element = BEND()
@@ -273,7 +290,6 @@ except NameError:
 	zlog.error("Elements did not load correctly")
 	path_info = " zgoubi_module_path: %s\nzgoubi_path: %s\npyzgoubi_egg_path: %s" % (zgoubi_module_path, zgoubi_path, pyzgoubi_egg_path)
 	zlog.error(path_info)
-	sys.exit(1)
 
 
 class Line(object):
