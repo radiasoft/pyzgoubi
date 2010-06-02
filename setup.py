@@ -18,9 +18,15 @@ except:
 			print "sphinx is not installed"
 			exit()
 
+# sphinx gets upset if this dir does not exist
+try:
+	os.mkdir("doc/build")
+except OSError:
+	pass
+
 MAIN_VERSION = '0.4dev'
 
-if os.system("bzr version-info --format=python > zgoubi/version.py") == 0:
+if os.path.exists(".bzr") and os.system("bzr version-info --format=python > zgoubi/version.py") == 0:
 	# run from a bzr repo, can use version info
 	print "updated zgoubi/version.py"
 	vfile = open("zgoubi/version.py","a")
@@ -42,6 +48,8 @@ setup(name='pyzgoubi',
 	          #  ('share/pyzgoubi/doc', glob('doc'))
 	            ],
 	cmdclass={'build_doc': BuildDoc},
+	author="Sam Tygier",
+	author_email="sam.tygier@hep.manchester.ac.uk",
 	)
 
 is_cygwin = False
