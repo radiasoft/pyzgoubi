@@ -1,3 +1,37 @@
+Changes from 0.3.1 -> 0.4.0
+Wed Jun  2 18:09:23 BST 2010
+
+This is intended to be the stable version that can be used for the EMMA online model.
+
+New Features:
+* --zgoubi option, to choose a zgoubi binary for pyzgoubi and run_tests.py
+* More tests
+* New CHANGREF, CAVITE option 7, CHAMBR, SPNTRK
+* get_twiss_profiles() can now work with fai files as well as plt
+* Read new style zgoubi output
+* Introduce bunch object (see docs), and Results.get_bunch()
+* scaling_to_poly()
+* Direct tracking of a bunch, Line.track_bunch() (see docs) 
+* Multithreaded bunch tracking, Line.track_bunch_mt() (see docs)
+* find_closed_orbit_range() like find_closed_orbit() but can has search for a stable orbit over range.
+* Improve documentation
+
+Internal:
+* Use getopts for commandline parsing
+* Move some functions to using numpy arrays
+* Improve errors using logging library
+* Move all the cleaning from Line to Results
+* Use sphinx to build docs
+
+Fixes:
+* Lots of code cleanup (pylint is a handy tool)
+* Removed some old code, and deprecated some more. 
+* Paths on windows (hopefully)
+
+For full changes see http://pyzgoubi.bzr.sf.net/bzr/ or run:
+bzr log --include-merges -r tag:pyzgoubi-0.3.1..tag:pyzgoubi-0.4.0
+
+
 Changes from 0.3.0 -> 0.3.1
 Mon Jan 11 12:57:56 GMT 2010
 New Features
