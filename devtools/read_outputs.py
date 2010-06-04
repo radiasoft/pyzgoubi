@@ -3,7 +3,7 @@
 
 from zgoubi import io
 
-#io.store_def_all() ; exit()
+io.store_def_all() ; exit()
 
 af =  io.read_file("ascii.fai")
 #print af

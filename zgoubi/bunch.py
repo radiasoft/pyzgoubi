@@ -37,8 +37,6 @@ class Bunch(object):
 	('tof', numpy.float64), # these are for accumulating 
 	('X', numpy.float64),
 	]
-	# might be interesting to have bunch hold more coordinates, but not yet implemented.
-	#fai_data_def = io.z251_fai_dtype
 
 	def __init__(self, nparticles=0, ke=None, rigidity=0, mass=0, charge=1, particles=None):
 		"""Bunch constructor.
