@@ -243,7 +243,7 @@ class Bunch(object):
 			coords[n] = numpy.dot(matrix, coord)
 		
 		bunch =  numpy.zeros([npart], Bunch.min_data_def)
-		
+
 		bunch['Y'] = coords[:, 0]
 		bunch['T'] = coords[:, 1]
 		bunch['Z'] = coords[:, 2]
@@ -253,7 +253,7 @@ class Bunch(object):
 		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=bunch)
 
 	@staticmethod
-	def gen_gaussian(self, npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, mom_spread=0, bunch_length=0, disp=0, disp_prime=0, seed=None):
+	def gen_gauss_x_xp_y_yp_s_dp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, mom_spread=0, bunch_length=0, disp=0, disp_prime=0, seed=None, ke=None, rigidity=0, mass=0, charge=1):
 		"""Generate a Gaussian bunch in transverse and longitudinal phase space
 		emit_y, emit_z : horizontal and vertical plane geometric emittance (1 sigma)
 		beta_y, beta_z : horizontal and vertical betatron function
@@ -263,23 +263,23 @@ class Bunch(object):
 		disp, disp_prime : dispersion and dispersion prime (D') in horizontal plane """
 
 
+		if emit_y < 0 or emit_z < 0 or beta_y < 0 or beta_z < 0:
+			print "Emittance or beta can't be negative"
+			print "emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z"
+			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
+			raise ValueError
+
+
 		if seed != None:
 			numpy.random.seed(seed)
 
 		#generate momentum distribution
                 if mom_spread > 0.0:
                         mom_dist = numpy.random.normal(1.0, mom_spread/100, npart)
+		#generate longitudinal coordinate distribution (bunch length)
 		if bunch_length > 0.0:
 			s_dist = numpy.random.normal(0.0, bunch_length, npart)
 
-		print "s_dist ",s_dist
-		#generate bunch length
-
-		#generate Gaussian in each YTZP coordinate separately
-		#ry = numpy.random.normal(0,sqrt(emit_y),npart)
-		#rt = numpy.random.normal(0,sqrt(emit_y),npart)
-		#rz = numpy.random.normal(0,sqrt(emit_z),npart)
-		#rp = numpy.random.normal(0,sqrt(emit_z),npart)
 
 		#use numpy.random.multivariate_normal. 
 		#set off-diagonal terms in covariance matrix to zero so that Y is uncorrelated with T (and Z with P)
@@ -289,15 +289,7 @@ class Bunch(object):
 		rzrp = numpy.random.multivariate_normal((0,0),cov_zp,(1,npart))[0]
 
 		coords = numpy.zeros([npart, 6], numpy.float64)
-		coords2 = numpy.zeros([npart, 6], numpy.float64)
-
-		#Add dispersion term to horizontal coord
-		if disp != 0.0:
-			ryrt[:,0] = [y+disp*(dp-1) for y,dp in zip(ryrt[:,0],mom_dist)] 
-
-		#Add dispersion prime term to horizontal angle
-		if disp_prime != 0.0:
-			ryrt[:,1] = [t+disp_prime*(dp-1) for t,dp in zip(ryrt[:,1],mom_dist)] 
+		#coords2 = numpy.zeros([npart, 6], numpy.float64)
 
 		coords[:, 0] = ryrt[:,0]
 		coords[:, 1] = ryrt[:,1]
@@ -305,18 +297,25 @@ class Bunch(object):
 		coords[:, 3] = rzrp[:,1]
 
 		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
-		
+
 		for n, coord in enumerate(coords):
 			#	new_coord = numpy.dot(coord, matrix)
-			new_coord = numpy.dot(matrix, coord)
-			coords2[n] = new_coord 
+			coords[n] = numpy.dot(matrix, coord)
+
+		#Add dispersion term to horizontal coord
+		if disp != 0.0:
+			coords[:, 0] = [y+disp*(dp-1) for y,dp in zip(coords[:, 0],mom_dist)] 
+
+		#Add dispersion prime term to horizontal angle
+		if disp_prime != 0.0:
+			coords[:, 1] = [t+disp_prime*(dp-1) for t,dp in zip(coords[:, 1],mom_dist)] 
 		
-		bunch =  numpy.zeros([npart], self.min_data_def)
+		bunch =  numpy.zeros([npart], Bunch.min_data_def)
 		
-		bunch['Y'] = coords2[:, 0]
-		bunch['T'] = coords2[:, 1]
-		bunch['Z'] = coords2[:, 2]
-		bunch['P'] = coords2[:, 3]
+		bunch['Y'] = coords[:, 0]
+		bunch['T'] = coords[:, 1]
+		bunch['Z'] = coords[:, 2]
+		bunch['P'] = coords[:, 3]
 		if mom_spread > 0.0:
 			bunch['D'] = mom_dist
 		else:
