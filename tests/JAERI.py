@@ -56,7 +56,7 @@ arc4.add(qf1,d3,qd3,d3,qf3)
 quarter_ring = Line('quarter_ring')
 quarter_ring.add(d3,qf3,-arc4,arc1,arc2,arc3,qf1,d3,qd3)
 
-quarter_ring.print_elements()
+print quarter_ring
 
 
 twissline = Line('twissline')

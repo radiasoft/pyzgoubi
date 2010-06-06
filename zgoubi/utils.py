@@ -1,12 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+"Various useful functions and utilities"
+
 from __future__ import division
 from math import *
 import numpy
 import sys
+import os
+import warnings
 from glob import glob
 from zgoubi.constants import *
 from zgoubi.exceptions import *
+import itertools
+from zgoubi.core import zlog, dep_warn
+
 # use these to convert things to metres and tesla
 m = 1
 cm = 0.01
@@ -24,18 +32,26 @@ kgauss_ = 10
 T_ = 1
 
 
-def coords_grid(min=[0, 0], max=[1, 1], step=[1, 1], type=float):
-	"""make a list of coordinate aranged in a grid in a generalised space
-	eg 
-	coords_grid(min=[0,0],max=[1,1],step=[10,10])
+def coords_grid(min_c=None, max_c=None, step=None, dtype=float):
+	"""make a list of coordinate aranged in a grid in a generalised space eg::
+
+		coords_grid(min_c=[0,0],max_c=[1,1],step=[10,10])
+	
 	will give you 100 points in 2 dimensions between 0 and 1
-
 	"""
-	assert(len(min)==len(max)==len(step))
-	#assert(len(min)==2)
-	dimention = len(min)
 
-	stride = [(max[x]-min[x])/step[x] for x in xrange(dimention)]
+	if min_c == None:
+		min_c = [0, 0]
+	if max_c == None:
+		max_c = [1, 1]
+	if step == None:
+		step = [1, 1]
+	
+	assert(len(min_c)==len(max_c)==len(step))
+	#assert(len(min)==2)
+	dimention = len(min_c)
+
+	stride = [(max_c[x]-min_c[x])/step[x] for x in xrange(dimention)]
 
 	indexes = numpy.zeros(step)
 
@@ -48,10 +64,12 @@ def coords_grid(min=[0, 0], max=[1, 1], step=[1, 1], type=float):
 			this_coord.append(stride[x] * ind[x] + min[x])
 		coords.append(this_coord)
 
-	return numpy.array(coords, dtype=type)
+	return numpy.array(coords, dtype=dtype)
 
 
 def search_pattern(step, range, start=0):
+	# this has been in the code since pre-sourceforge, i dont think it is used, and i dont think it works right if start!=0
+	warnings.warn("utils.search_pattern()"+dep_warn, DeprecationWarning)
 	current = start
 	while True:
 		yield current
@@ -68,7 +86,6 @@ def search_pattern(step, range, start=0):
 def get_cmd_param(key, default=None):
 	"get things formated like key=value from the commandline. returns the requested value"
 	#print sys.argv
-	params = {}
 	for item in sys.argv:
 		if '=' in item:
 			k, e, v = item.partition('=')
@@ -76,8 +93,8 @@ def get_cmd_param(key, default=None):
 				return v
 	if default != None:
 		return default
-	print key, "not given on the command line"
-	print "please run with "+ str(key) +"=x as an argument"
+	message = "'" + str(key) + "' not given on the command line\nplease run with "+ str(key) +"=x as an argument"
+	zlog.error(message)
 	raise ValueError
 
 
@@ -88,7 +105,6 @@ def get_cmd_param_bool(key, default=None):
 	case insensitve
 	"""
 	#print sys.argv
-	params = {}
 	for item in sys.argv:
 		if '=' in item:
 			k, e, v = item.partition('=')
@@ -97,15 +113,17 @@ def get_cmd_param_bool(key, default=None):
 					return True
 				if v.lower() in ['no', 'off', 'false', '0', 'non']:
 					return False
+				zlog.error("Value for "+str(key)+" must be a bool (True or False)")
+				raise ValueError
 				
 	if default != None:
 		if type(default) == type(True):
 			return default
 		else:
-			print "default must be a bool (True or False)"
+			zlog.error("default must be a bool (True or False)")
 			raise ValueError
-	print key, "not given on the command line"
-	print "please run with "+ str(key) +"=x as an argument"
+	message = "'" + str(key) + "' not given on the command line\nplease run with "+ str(key) +"=x as an argument"
+	zlog.error(message)
 	raise ValueError
 
 
@@ -121,7 +139,11 @@ def readArray(filename, skipchar = '#', dtype=float):
 	#          >>> y = data[:,1]        # second column
 	from http://www.scipy.org/Cookbook/InputOutput
 
+	Note: please switch to using numpy functions: numpy.savetxt(), numpy.loadtxt() or numpy.genfromtxt()
+
 	"""
+
+	warnings.warn("utils.readArray()"+dep_warn, DeprecationWarning)
 
 	myfile = open(filename, "r")
 	contents = myfile.readlines()
@@ -262,17 +284,94 @@ def show_file(file_path, mode):
 			print line,
 
 	elif mode == "less":
-		from os import system
 		command = "less %s"% file_path
-		system(command)
+		os.system(command)
 	
 	elif mode == "win":
-		from os import system
 		command = 'xterm -e "less %s"'% file_path
-		system(command)
+		os.system(command)
+
+def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, range_YTZP=None, count_YTZP=None):
+	"""Same as find_closed_orbit, but if init_YTZP is unstable, will generate a bunch or particles, with a spread of range_YTZP, and if any of those are stable will do a closed orbit search with that particle::
+
+		init_YTZP=[5,0,0,0], range_YTZP=[10,0,0,0], count_YTZP[50,0,0,0]
+
+	will vary the Y coordinate from -5 to 15 cm in 50 steps::
+
+		range_YTZP=[10,5,0,0], count_YTZP=[10,10,0,0]
+
+	would create 100 particles in a grid.
+	
+	"""
+	if range_YTZP == None:
+		range_YTZP = [10, 10, 10, 10]
+	if init_YTZP == None:
+		init_YTZP = [0, 0, 0, 0]
+	if count_YTZP == None:
+		count_YTZP = [10, 10, 10, 10]
+	
+	#first check center
+	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
+	if result != None:
+		return result
+
+	# if the init_YTZP is not stable, then send a bunch, and see if any of those are not lost
+	
+	for e in line.element_list:
+		if ("OBJET2" in str(type(e)).split("'")[1]):
+			objet = e
+			break
+	else:
+		raise ValueError, "Line has no OBJET2 element"
+	
+	for e in line.element_list:
+		if ("FAISCNL" or "FAISTORE" in str(type(e)).split("'")[1]):
+			break
+	else:
+		raise ValueError, "Line has no FAISCNL element"
+
+	current_YTZP = numpy.array(init_YTZP)
+	objet.clear()	# remove existing particles
+	
+	# generate bunch
+	ranges = []
+	for x in xrange(4):
+		if range_YTZP[x] == 0 or count_YTZP[0] <= 1:
+			ranges.append([0])
+		else:
+			ranges.append(numpy.linspace(-range_YTZP[x], range_YTZP[x], count_YTZP[x]))
+
+	for coord in itertools.product(*ranges):
+		objet.add(Y=current_YTZP[0]+coord[0], T=current_YTZP[1]+coord[1], Z=current_YTZP[2]+coord[2], P=current_YTZP[3]+coord[3], LET='A', D=D)
+
+	r = line.run(xterm=False)
+
+	if not r.run_success():
+		zlog.debug("No stable orbit within range: "+str(range_YTZP))
+		return None
+	else:
+		# should have a track, so can find a stable particle
+		track = r.get_all('fai')
+		del r
+		final_lap_n = track['PASS'].max()
+		# select one particle which survived (IEX is positive), and made it to last lap
+		surviving_particles = track[ numpy.logical_and(track['PASS'] == final_lap_n , track['IEX']>0)  ]
+		zlog.debug("%d particles survived"%len(surviving_particles))
+
+		for surviving_particle in surviving_particles:
+			surviving_init_coord = [surviving_particle['Y0'], surviving_particle['T0'], surviving_particle['Z0'], surviving_particle['P0']]
+		
+			# use stable particle to find closed orbit
+			result = find_closed_orbit(line=line, init_YTZP=surviving_init_coord, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
+			if result != None:
+				return result
+		zlog.warning("Despite finding surviving particles, none were stable")	
+		return None
+
+	
 
 
-def find_closed_orbit(line, init_YTZP=[0, 0, 0, 0], max_iterations=100, fai_label = None, tol = 1e-6, D=1):
+def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1):
 	"""Find a closed orbit for the line. can optionally give a list of initial coordinates, init_YTZP, eg:
 	find_closed_orbit(line, init_YTZP=[1.2,2.1,0,0])
 	otherwise [0,0,0,0] are used.
@@ -282,6 +381,10 @@ def find_closed_orbit(line, init_YTZP=[0, 0, 0, 0], max_iterations=100, fai_labe
 	It is recommend to have a REBELOTE, with several laps. The area of the phase space ellipse is approximated from the coordinates from the FAISCNL (or MARKER with fai_label), and the center is used for the new coordinates. Once the relative variation between iterations is less that the tolerance, the function returns the closed orbit coordinates. If a coordinate is close to zero (less than the tolerance) then it is compared absolutely instead of relatively.
 	
 	"""
+	zlog.debug("enter function")
+	if init_YTZP == None:
+		init_YTZP = [0, 0, 0, 0]
+
 	#check line has an objet2
 	for e in line.element_list:
 		if ("OBJET2" in str(type(e)).split("'")[1]):
@@ -302,6 +405,7 @@ def find_closed_orbit(line, init_YTZP=[0, 0, 0, 0], max_iterations=100, fai_labe
 	tracks = []
 	close_orbit_found = False
 	for iteration in xrange(max_iterations):
+		zlog.debug("start iteration: "+str(iteration)+ " with coords "+str(current_YTZP))
 		coords.append(current_YTZP)
 		objet.clear()	# remove existing particles
 		objet.add(Y=current_YTZP[0], T=current_YTZP[1], Z=current_YTZP[2], P=current_YTZP[3], LET='A', D=D)
@@ -309,8 +413,12 @@ def find_closed_orbit(line, init_YTZP=[0, 0, 0, 0], max_iterations=100, fai_labe
 		r = line.run(xterm=False)
 
 		if not r.run_success():
-			print "No stable orbit"
-			return None
+			if iteration == 0:
+				zlog.warning("Not a stable orbit")
+				return None
+			else:
+				zlog.warning("Center of orbit from last iteration, not stable")
+				return None
 		else:
 			track = r.get_track('fai', ['Y', 'T', 'Z', 'P'])
 			
@@ -321,7 +429,7 @@ def find_closed_orbit(line, init_YTZP=[0, 0, 0, 0], max_iterations=100, fai_labe
 					label = [lab.rstrip() for lab in label]
 
 					if len(find_indices(label, fai_label)) != 1:
-						print "number of instances of label ", fai_label, " not equal 1"
+						zlog.error("number of instances of label "+ str(fai_label) + " not equal 1")
 						return
 
 					fai_index = find_indices(label, fai_label)[0]
@@ -376,11 +484,11 @@ def find_closed_orbit(line, init_YTZP=[0, 0, 0, 0], max_iterations=100, fai_labe
 		print "Y=%s, T=%s, Z=%s, P=%s" % tuple(current_YTZP)
 		return current_YTZP
 	else:
-		print "Iterations did not converge, no closed orbit found"
+		zlog.warn("Iterations did not converge, no closed orbit found")
 		return None
 
 
-def get_twiss_profiles(line, file_result, input_twiss_parameters=[0, 0, 0, 0, 0, 0]):
+def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 	""" Calculates the twiss parameters at all points written to zgoubi.plt. 11 particle trajectories are used to calculate the
 	transfer matrix, just as is done in zgoubi. The code mirrors that found in mat1.f, mksa.f. The twiss parameters are first
 	calculated at the end of the cell using either input_twiss_parameters (format [beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z]) 
@@ -394,6 +502,9 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=[0, 0, 0, 0, 0,
 	Requires an OBJET type 5, and a MATRIX element.
 
 	Note - This calculation uses trajectories as measured in the local coordinate system of the magnet."""
+
+	if input_twiss_parameters == None:
+		input_twiss_parameters = [0, 0, 0, 0, 0, 0]
 
 	has_object5 = False
 	has_matrix = False
@@ -720,13 +831,16 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=[0, 0, 0, 0, 0,
 	return twiss_profiles
 
 
-def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier = False, coords = []):
+def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier=False, coords=None):
 	"""Calculate tune using FFT. nfourierturns determines the number of passes through the lattice.
        Can supply set of horizontal and vertical coordinates in coords = [ycoords,zcoords], otherwise
          routine will calculate coordinates
 
        Set plot_fourier= True to show Fourier spectrum. Default is False
 	"""
+	if coords == None:
+		coords = []
+
 	#check line has an objet2
 	for e in line.element_list:
 		if ("OBJET2" in str(type(e)).split("'")[1]):
@@ -803,23 +917,29 @@ def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier = False, 
 def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_gamma_input = 1, ellipse_coords = 1, twiss_parameters = [], plot_data = False):
 	""" Check a list of emittances (emit_list, units Pi m rad) to see if tracking succeeds. Can be used to establish the dynamic aperture. If the elements in emit_list are increasing then will stop tracking once it finds the lowest emittance where a particle is lost. On the other hand, if the elements in emit_list are decreasing then will stop tracking once it reaches the first point where tracking succeeds without loss. 
 
-			Required input:
-				emit_list - List of emittances to check
-				closedorb_YTZP - Closed orbit coordinates as returned by find_closed_orbit
-				npass - Number of passes through lattice
-				D_mom - Momentum factor p/pref
-			Optional input
-				beta_gamma_input - If this is supplied then the emittances supplied in emit_list are assumed to be normalised and a conversion to geometrical emittance is made. Otherwise the emittances are assumed to be geometrical.
-				ellipse_coords - If greater than 1 will test uniformly distributed set of coordinates around around phase space 			ellipse. Otherwise will take single point where phase space cuts y (or z) axis.
-						Can also specify ellipse coords = [n,m] -- distribute n points around ellipse but only test point m of these. 
-				twiss_parameters - Can supply twiss parameters in format [[alpha_y,beta_y,gamma_y],[alpha_z,beta_z,gamma_z]], i.e the output of r.get_twiss_parameters(). If not supplied an attempt will be made to calculate the twiss parameters in this function.
-				plot_data - If True, creates phase space plots at all emittances scanned in both transverse planes.
-	
-		If a particle is lost, returns index_lost in emit_list where the loss occurs. Otherwise index_lost remains 0.
-"""
+	Required input:
+		emit_list - List of emittances to check
 
-	import numpy
-	import os
+		closedorb_YTZP - Closed orbit coordinates as returned by find_closed_orbit
+
+		npass - Number of passes through lattice
+
+		D_mom - Momentum factor p/pref
+
+	Optional input
+		beta_gamma_input - If this is supplied then the emittances supplied in emit_list are assumed to be normalised and a conversion t         o geometrical emittance is made. Otherwise the emittances are assumed to be geometrical.
+
+		ellipse_coords - If greater than 1 will test uniformly distributed set of coordinates around around phase space
+		ellipse. Otherwise will take single point where phase space cuts y (or z) axis.
+		Can also specify ellipse coords = [n,m] -- distribute n points around ellipse but only test point m of these.
+
+                twiss_parameters - Can supply twiss parameters in format [[alpha_y,beta_y,gamma_y],[alpha_z,beta_z,gamma_z]], i.e the output of r.get_twiss_parameters(). If not supplied an attempt will be made to calculate the twiss parameters in this function.
+
+		plot_data - If True, creates phase space plots at all emittances scanned in both transverse planes.
+	
+	If a particle is lost, returns index_lost in emit_list where the loss occurs. Otherwise index_lost remains 0.
+	"""
+
 	import zgoubi.core as zg
 
 	#create objet so initial phase settings can be set
@@ -986,23 +1106,24 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 
 def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_gamma_input = 1, ncoords = 1):
 	"""Given some emittance in horizonal and vertical space
-
+	
 	If ncoords <= 1 return points where phase space ellipse crosses the y,y' and z,z' axis.
-
-	If ncoords > 1, will instead give a distribution of points (y,t) around the phase space ellipse uniform in angle theta where
-	    y = a*cos(theta)*cos(phi) - b*sin(theta)*sin(phi)
-	    t = a*cos(theta)*sin(phi) + b*sin(theta)*cos(phi)
+	
+	If ncoords > 1, will instead give a distribution of points (y,t) around the phase space ellipse uniform in angle theta where::
+		y = a*cos(theta)*cos(phi) - b*sin(theta)*sin(phi)
+		t = a*cos(theta)*sin(phi) + b*sin(theta)*cos(phi)
+	
 	where (a,b) are major and minor radii and phi is the tilt of the major radius w.r.t horizontal axis. A (z,p) distribution is 
 	similarly calculated.
-
+	
 	Can use these points, returned in coords_YTZP to start tracking at the desired emittance (assuming that the optical functions don't change with amplitude).
-
+	
 	Emittances in both the horizontal and vertical planes may be supplied. Twiss parameters beta and gamma in 
-	both places may be determined calling get_twiss_parameters beforehand i.e.
+	both places may be determined calling get_twiss_parameters beforehand i.e.::
 			twissparam = r.get_twiss_parameters()
 			betayz = [twissparam[0],twissparam[3]]
-			gammayz = [twissparam[2],twissparam[5]]"""
-	import numpy
+			gammayz = [twissparam[2],twissparam[5]]
+	"""
 	
 	coords_YTZP = []
 
@@ -1065,14 +1186,14 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 	return coords_YTZP
 
 
-def find_indices(list, list_element):
+def find_indices(a_list, list_element):
 	""" Find all occurences of list_element in list. Return the indices.
 	"""
 	indices = []
 	i = -1
 	try:
 		while 1:
-			i = list.index(list_element, i+1)
+			i = a_list.index(list_element, i+1)
 			indices.append(i)
 	except ValueError:
 		pass
@@ -1150,9 +1271,9 @@ def get_enclosing_circle(ellipse_data):
 
 	""" 
 
-	import ellipse
+	import zgoubi.ellipse
 
-	bc = ellipse.BestCircle()
+	bc = zgoubi.ellipse.BestCircle()
 
 	for edata in ellipse_data:
 		a = edata[0]
@@ -1166,7 +1287,7 @@ def get_enclosing_circle(ellipse_data):
 	return centre, radius
 
 
-def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_dist = [], seed = None):
+def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_dist=None, seed = None):
 	""" Misalign the set of elements identified by element_indices. The misalignment is Gaussian
 	with sigma, sigma_cutoff and mean among the input parameters. If sigma = 0.0, the misalignment is constant 
 	and given by mean
@@ -1178,6 +1299,8 @@ def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_
 	element_indices can be determined using line.find_elements(element_name)
 
 	mean and sigma should be input in meters """
+	if misalign_dist == None:
+		misalign_dist = []
 
 	import random
 	import zgoubi.core as zg
@@ -1231,20 +1354,25 @@ def gaussian_cutoff(npoints, mean, sigma, sigma_cutoff, seed = None):
 	return dist
 
 
-def tune_diagram(tune_list, order = 3, xlim = [0, 1], ylim= [0, 1]):
+def tune_diagram(tune_list, order=3, xlim=None, ylim=None):
 	"""Plot a list of tunes on a tune diagram with resonance line up to a given order.
-
-		Required input 
-			tune_list - format [[list of horizontal tunes],[list of vertical tunes]]
-
-		Optional
-			order - Integer denoting order up to which resonance lines are drawn. Default value 3 (third order).
-		    xlim = [lower_value, upper_value] - Limit horizontal axis
-		    ylim = [lower_value, upper_value] - Limit vertical axis  
-
-		At the moment, since the tune diagram covers the range [0,1] just fractional tunes can be shown.
-		The default value of order is 3. 
-		Written by Y. Giboudet """
+	
+	Required input 
+		tune_list - format [[list of horizontal tunes],[list of vertical tunes]]
+	
+	Optional
+		order - Integer denoting order up to which resonance lines are drawn. Default value 3 (third order).
+		xlim = [lower_value, upper_value] - Limit horizontal axis
+		ylim = [lower_value, upper_value] - Limit vertical axis  
+	
+	At the moment, since the tune diagram covers the range [0,1] just fractional tunes can be shown.
+	The default value of order is 3. 
+	Written by Y. Giboudet
+	"""
+	if xlim == None:
+		xlim = [0, 1]
+	if ylim == None:
+		ylim = [0, 1]
 
 	import pylab
 
@@ -1325,15 +1453,18 @@ def tune_diagram(tune_list, order = 3, xlim = [0, 1], ylim= [0, 1]):
 
 
  
-def plot_data_xy(data, filename, labels=["", "", ""], style='b-', xlim=[0, 0], ylim=[0, 0]):
+def plot_data_xy(data, filename, labels=None, style='b-', xlim=None, ylim=None):
+	if labels == None:
+		labels = ["", "", ""]
+
 	import pylab
 	data_a = numpy.array(data)
 	pylab.hold(False)
 	pylab.plot(data_a[:, 0], data_a[:, 1], style)
 	pylab.title(labels[0])
-	if xlim != [0, 0]:
+	if xlim != None:
 		pylab.xlim( (xlim[0], xlim[1]) )
-	if ylim != [0, 0]:
+	if ylim != None:
 		pylab.ylim( (ylim[0], ylim[1]) )
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])
@@ -1342,8 +1473,7 @@ def plot_data_xy(data, filename, labels=["", "", ""], style='b-', xlim=[0, 0], y
 	pylab.cla()
 
 
-def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["", "", ""], style='', legend=' ', legend_location='best', xlim = [0, 0], ylim = [0, 0]):
-	import pylab
+def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style='', legend=' ', legend_location='best', xlim=None, ylim=None):
 	""" Plots multiple sets of data where the X and Y coordinates are each specified in a list of lists. Should also
 	    work if a single set of X, Y data is specified or if one X is supplied with multiple Y data points (as long 
 	    the dimensions of Y equals that of X in all cases). 
@@ -1360,19 +1490,21 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["", "", ""], 
 		legend_location - Default of location of legend box is 'best', otherwise can select 'upper right' or numerical code for position. See matplotlib documentation. 
 		xlim = [lower_value, upper_value] - Limit horizontal axis
 		ylim = [lower_value, upper_value] - Limit vertical axis  """
-                                                                  
+	import pylab
 
+	if labels == None:
+		labels = ["", "", ""]
 	#check if data is a single list or a list of lists
 	single_x_data = False
 	single_y_data = False
 
 	try:
-		l = len(data_x_list[0])
+		dummy = len(data_x_list[0])
 	except TypeError:
 		single_x_data = True
 
 	try:
-		l = len(data_y_list[0])
+		dummy = len(data_y_list[0])
 	except TypeError:
 		single_y_data = True
 
@@ -1397,9 +1529,9 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=["", "", ""], 
 				pylab.plot(data_x_list[index], data_y, style[index%len(style)], label= legend[index%len(legend)])
 
 	pylab.title(labels[0])
-	if xlim != [0, 0]:
+	if xlim != None:
 		pylab.xlim( (xlim[0], xlim[1]) )
-	if ylim != [0, 0]:
+	if ylim != None:
 		pylab.ylim( (ylim[0], ylim[1]) )
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])

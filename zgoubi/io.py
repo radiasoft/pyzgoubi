@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"Module to handle reading and writing of Zgoubi files"
 
 import numpy
 import csv
@@ -9,7 +10,7 @@ import struct
 from zgoubi.exceptions import OldFormatError
 
 # translate some of the column names for compatibility with old pyzgoubi
-col_name_trans ={
+col_name_trans = {
 "KEX":"IEX",
 "Do-1":"D0-1",
 "Yo":"Y0",
@@ -210,7 +211,7 @@ def read_file(fname):
 
 	
 	if file_def["file_mode"] == "ascii":
-		header = [fh.readline().strip() for x in xrange(4)]
+		dummy = [fh.readline().strip() for dummy in xrange(4)]
 		file_data = [] 
 		# acsii files a space separated, but the quote around the stings are similar to in a csv file
 		# so use csv module to split the line into elements

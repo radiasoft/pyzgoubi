@@ -17,6 +17,13 @@
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
 
+"""PyZgoubi is an interface to zgoubi. This script can be used to run a pyzgoubi script ::
+
+	pyzgoubi my_script.py
+
+More infomation please see the README file or the pyzgoubi website
+
+"""
 
 from __future__ import division
 from math import *
@@ -27,24 +34,33 @@ from zgoubi.core import *
 from zgoubi.constants import *
 from zgoubi.version import *
 from zgoubi.bunch import *
+import logging
 
 sys.path.append(os.getcwd())
 
 # create a set of functions that work on default_line and default_results objects
 # these will make it simpler to run simple simulations
 
+default_line = None
+default_result = None
+
 def make_line(*a, **k):
+	"Wrapper to create a zgoubi Line, and store it in a global variable"
 	global default_line
 	default_line = Line(*a, **k)
 
 def run(*a, **k):
+	"Wrapper to run a zgoubi Line, and store the result in a global variable"
 	global default_line, default_result
+	if default_line == None:
+		zlog.error("Use make_line to create a line before using run()")
+		raise ValueError
 	default_result = default_line.run(*a, **k)
 	return default_result
 
 # most of these functions can be built from a template
 
-function_template="""def %(func_name)s(*a, **k):
+function_template = """def %(func_name)s(*a, **k):
 	global default_%(class_name)s
 	return default_%(class_name)s.%(func_name)s(*a, **k)
 """
@@ -52,21 +68,22 @@ function_template="""def %(func_name)s(*a, **k):
 line_funcs = ['add', 'output', 'full_tracking', 'remove_looping', 'add_input_files', 'replace']
 
 for func_name in line_funcs:
-	code = function_template%dict(func_name=func_name, class_name='line')
+	code = function_template % dict(func_name=func_name, class_name='line')
 	exec(code)
 
 # templatable functions for the res class
 
 # this pattern builds all the file access functions by pattern
-res_funcs = [a%b for a in ['%s_fh', '%s', 'save_%s'] for b in ['res', 'fai', 'dat', 'plt', 'b_fai']]
+res_funcs = [a % b for a in ['%s_fh', '%s', 'save_%s'] for b in ['res', 'fai', 'dat', 'plt', 'b_fai']]
 
 res_funcs += ['get_all', 'get_track', 'get_tune', 'get_twiss_parameters', 'run_success']
 
 for func_name in res_funcs:
-	code = function_template%dict(func_name=func_name, class_name='result')
+	code = function_template % dict(func_name=func_name, class_name='result')
 	exec(code)
 
 def _show_help(help_arg):
+	"Show some help"
 	if help_arg == None:
 		print "For documentation see http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/"
 		sys.exit(0)
@@ -74,10 +91,10 @@ def _show_help(help_arg):
 		print "available elements"
 		elements = []
 
-		for k,v in globals().items():
+		for k, v in globals().items():
 			try:
 				if issubclass(v, zgoubi_element):
-					if not k in ['zgoubi_element','zgoubi_particul']:
+					if not k in ['zgoubi_element', 'zgoubi_particul']:
 						elements.append(k)
 			except TypeError:
 				pass
@@ -86,18 +103,20 @@ def _show_help(help_arg):
 		sys.exit(0)
 
 	try:
-		help_elem = globals()[help_arg.upper()]
+		# check if there is such an element
+		dummy = globals()[help_arg.upper()]
 	except KeyError:
-		print "There is no help for %s"%sys.argv[2]
+		print "There is no help for %s" % sys.argv[2]
 		sys.exit(1)
 
 	print help_arg.upper()
-	help_elem_inst = eval("%s()"%help_arg.upper())
-	print "zgoubi name:",help_elem_inst._zgoubi_name
+	help_elem_inst = eval("%s()" % help_arg.upper())
+	print "zgoubi name:", help_elem_inst._zgoubi_name
 	print "Parameters:"
 	print '\n'.join(help_elem_inst.list_params())
 
 def _show_usage():
+	"Show some usage instructions"
 	print "Usage:"
 	print sys.argv[0], "input_file_name"
 	print sys.argv[0], "--help"
@@ -105,7 +124,7 @@ def _show_usage():
 
 if __name__ == '__main__':
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "version", "zgoubi="])
+		opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "version", "zgoubi=", "debug", "log_level="])
 	except getopt.GetoptError, err:
 		print str(err)
 		_show_usage()
@@ -117,7 +136,7 @@ if __name__ == '__main__':
 
 	for o, a in opts:
 		if o in ['--version']:
-			print "Pyzgoubi version: %s"%MAIN_VERSION
+			print "Pyzgoubi version: %s" % MAIN_VERSION
 			try:
 				print 'Bzr: %(branch_nick)s rev %(revno)d' % version_info
 			except NameError:
@@ -135,7 +154,11 @@ if __name__ == '__main__':
 				_show_help(None)
 			sys.exit(0)
 		if o in ['--zgoubi']:
-			 zgoubi_settings['zgoubi_path'] = a
+			zgoubi_settings['zgoubi_path'] = a
+		if o in ['--debug']:
+			zlog.setLevel(logging._levelNames['DEBUG'])
+		if o in ['--log_level']:
+			zlog.setLevel(logging._levelNames[a.upper()])
 	try:
 		input_file_name = args[0]
 	except IndexError:
@@ -151,8 +174,21 @@ if __name__ == '__main__':
 	
 
 	for left_over in locals().values():
-		if "Line"  in str(type(left_over)).split("'")[1]:
+		if "Result"  in str(type(left_over)).split("'")[1]:
 			del(left_over)
+	
+
+	# uncomment to enable list leftover objects for memory debugging
+	#import gc
+	#gc.collect()
+	#print "colected"
+
+	#print "leftovers"
+	#for x in gc.get_objects():
+	#	if "zgoubi" in str(type(x)):
+	#		print type(x)
+	#		for y in gc.get_referrers(x):
+	#			print "\t", type(y)
 
 
 

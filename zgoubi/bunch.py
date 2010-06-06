@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+"""A bunch object to hold the coordinates for many particles
 
-"A bunch object to hold the coordinates for many particles"
+Note that all values are in SI units, m, rad, eV, s
+"""
 
 from __future__ import division
 from math import *
@@ -16,7 +18,14 @@ import struct
 class Bunch(object):
 	"""Object to store a bunch of particles efficiently using numpy.
 	All values are in SI units, m, rad, eV, s
-
+	Can be use to create a bunch of particles with all there coordinates set to zero (appart from the D coordinate which is set to 1)::
+	
+		my_bunch = Bunch(nparticles=100, ke=1e6, mass=PROTON_MASS, charge=1)
+	
+	It can also be used to create a bunch from some existing coordinates stored in a numpy array::
+	
+		 my_bunch = Bunch(ke=1e6, mass=PROTON_MASS, charge=1, particles=existing_coords)
+	
 	"""
 	min_data_def = [
 	('D', numpy.float64), # these coorspond to zgoubi D,Y,T,Z,P,S, but in SI units
@@ -31,17 +40,20 @@ class Bunch(object):
 	# might be interesting to have bunch hold more coordinates, but not yet implemented.
 	#fai_data_def = io.z251_fai_dtype
 
-	def __init__(self, nparticles=0, ke=0, rigidity=0, mass=0, charge=1, particles=None):
+	def __init__(self, nparticles=0, ke=None, rigidity=0, mass=0, charge=1, particles=None):
+		"""Bunch constructor.
+
+		"""
 		if particles != None:
 			self.coords = particles
 		else:
 			self.coords = numpy.zeros(nparticles, self.min_data_def)
+			self.coords['D'] = 1
 		self.mass = mass
 		self.charge = charge
 		self.rigidity = rigidity 
-		if ke != 0:
+		if ke != None:
 			self.set_bunch_ke(ke)
-		self.coords['D'] = 1
 
 	def split_bunch(self, max_particles, n_slices):
 		"Split a bunch into n_slices smaller bunches, or more if they would have too many particles in."
@@ -52,9 +64,12 @@ class Bunch(object):
 			yield Bunch(rigidity=self.get_bunch_rigidity(), mass=self.mass, charge=self.charge,
 			            particles=pslice)
 
+	def __str__(self):
+		out = "Bunch:\n"
+		out += "\t"+str(len(self)) + " paricles\n"
+		out += "\t"+str(self.get_bunch_ke()) + " eV\n"
 
-		
-
+		return out
 
 	def set_bunch_ke(self, ke):
 		"Set bunch kinetic energy"
@@ -90,10 +105,23 @@ class Bunch(object):
 		min_BORO = self.rigidity * self.coords['D'].min()
 		return min_BORO
 
-	def gen_halo_x_xp_y_yp(self, npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None):
-		"Generate a halo bunch, i.e. an elipse in x-xp (Y-T) and in y-yp (Z-P)"
+	@staticmethod
+	def gen_halo_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None,
+			               ke=None, rigidity=0, mass=0, charge=1):
+		"""Generate a halo bunch, i.e. an elipse outline in x-xp (Y-T) and in y-yp (Z-P). S and D are set to 0 and 1 respectively.
+		example::
+			my_bunch = Bunch.gen_halo_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
+		
+		creates a halo bunch called my_bunch with 1000 particles of the given parameters.
 
-		#r = numpy.random.random_sample([npart])
+		"""
+
+		if emit_y < 0 or emit_z < 0 or beta_y < 0 or beta_z < 0:
+			print "Emittance or beta can't be negative"
+			print "emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z"
+			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
+			raise ValueError
+
 		ry = sqrt(emit_y) 
 		rz = sqrt(emit_z) 
 
@@ -102,34 +130,129 @@ class Bunch(object):
 
 		u1 = numpy.random.random_sample([npart]) * pi * 2
 		u2 = numpy.random.random_sample([npart]) * pi * 2
-		#u3 = numpy.random.random_sample([npart]) * pi * 2
-		#u4 = numpy.random.random_sample([npart]) * pi * 2
 
 		coords = numpy.zeros([npart, 6], numpy.float64)
-		coords2 = numpy.zeros([npart, 6], numpy.float64)
 
 		coords[:, 0] = ry * numpy.cos(u1)
 		coords[:, 1] = ry * numpy.sin(u1)
 		coords[:, 2] = rz * numpy.cos(u2)
 		coords[:, 3] = rz * numpy.sin(u2)
 
-		matrix = self._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
+		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
 		
 		for n, coord in enumerate(coords):
 			#	new_coord = numpy.dot(coord, matrix)
-			new_coord = numpy.dot(matrix, coord)
-			coords2[n] = new_coord 
+			coords[n] = numpy.dot(matrix, coord)
 		
-		bunch =  numpy.zeros([npart], self.min_data_def)
+		bunch =  numpy.zeros([npart], Bunch.min_data_def)
 		
-		bunch['Y'] = coords2[:, 0]
-		bunch['T'] = coords2[:, 1]
-		bunch['Z'] = coords2[:, 2]
-		bunch['P'] = coords2[:, 3]
+		bunch['Y'] = coords[:, 0]
+		bunch['T'] = coords[:, 1]
+		bunch['Z'] = coords[:, 2]
+		bunch['P'] = coords[:, 3]
 		bunch['D'] = 1
 		
-		self.coords = bunch
+		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=bunch)
 
+	@staticmethod
+	def gen_kv_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None,
+			               ke=None, rigidity=0, mass=0, charge=1):
+		"""Generate a uniform (KV) bunch, i.e. a filled elipse in x-xp (Y-T) and in y-yp (Z-P). S and D are set to 0 and 1 respectively.
+		example::
+			my_bunch = Bunch.gen_kv_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
+		
+		creates a KV bunch called my_bunch with 1000 particles of the given parameters.
+
+		"""
+
+		if emit_y < 0 or emit_z < 0 or beta_y < 0 or beta_z < 0:
+			print "Emittance or beta can't be negative"
+			print "emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z"
+			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
+			raise ValueError
+
+		if seed != None:
+			numpy.random.seed(seed)
+
+		ry = sqrt(emit_y) * numpy.random.random_sample([npart])
+		rz = sqrt(emit_z) * numpy.random.random_sample([npart]) 
+
+		u1 = numpy.random.random_sample([npart]) * pi * 2
+		u2 = numpy.random.random_sample([npart]) * pi * 2
+
+		coords = numpy.zeros([npart, 6], numpy.float64)
+
+		coords[:, 0] = ry * numpy.cos(u1)
+		coords[:, 1] = ry * numpy.sin(u1)
+		coords[:, 2] = rz * numpy.cos(u2)
+		coords[:, 3] = rz * numpy.sin(u2)
+
+		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
+		
+		for n, coord in enumerate(coords):
+			#	new_coord = numpy.dot(coord, matrix)
+			coords[n] = numpy.dot(matrix, coord)
+		
+		bunch =  numpy.zeros([npart], Bunch.min_data_def)
+		
+		bunch['Y'] = coords[:, 0]
+		bunch['T'] = coords[:, 1]
+		bunch['Z'] = coords[:, 2]
+		bunch['P'] = coords[:, 3]
+		bunch['D'] = 1
+		
+		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=bunch)
+
+	@staticmethod
+	def gen_gauss_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None,
+			               ke=None, rigidity=0, mass=0, charge=1):
+		"""Generate a Gaussian bunch in x-xp (Y-T) and in y-yp (Z-P). S and D are set to 0 and 1 respectively.
+		example::
+			my_bunch = Bunch.gen_kv_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
+		
+		creates a Gaussian bunch called my_bunch with 1000 particles of the given parameters.
+
+		"""
+
+		if emit_y < 0 or emit_z < 0 or beta_y < 0 or beta_z < 0:
+			print "Emittance or beta can't be negative"
+			print "emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z"
+			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
+			raise ValueError
+
+		if seed != None:
+			numpy.random.seed(seed)
+
+		ry = sqrt(emit_y) * numpy.random.normal(0, 0.5, [npart])
+		rz = sqrt(emit_z) * numpy.random.normal(0, 0.5, [npart]) 
+
+		u1 = numpy.random.random_sample([npart]) * pi * 2
+		u2 = numpy.random.random_sample([npart]) * pi * 2
+
+		coords = numpy.zeros([npart, 6], numpy.float64)
+
+		coords[:, 0] = ry * numpy.cos(u1)
+		coords[:, 1] = ry * numpy.sin(u1)
+		coords[:, 2] = rz * numpy.cos(u2)
+		coords[:, 3] = rz * numpy.sin(u2)
+
+		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
+		
+		for n, coord in enumerate(coords):
+			#	new_coord = numpy.dot(coord, matrix)
+			coords[n] = numpy.dot(matrix, coord)
+		
+		bunch =  numpy.zeros([npart], Bunch.min_data_def)
+		
+		bunch['Y'] = coords[:, 0]
+		bunch['T'] = coords[:, 1]
+		bunch['Z'] = coords[:, 2]
+		bunch['P'] = coords[:, 3]
+		bunch['D'] = 1
+	
+		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=bunch)
+
+	@staticmethod
 	def gen_gaussian(self, npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, mom_spread=0, bunch_length=0, disp=0, disp_prime=0, seed=None):
 		"""Generate a Gaussian bunch in transverse and longitudinal phase space
 		emit_y, emit_z : horizontal and vertical plane geometric emittance (1 sigma)
@@ -181,7 +304,7 @@ class Bunch(object):
 		coords[:, 2] = rzrp[:,0]
 		coords[:, 3] = rzrp[:,1]
 
-		matrix = self._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
+		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
 		
 		for n, coord in enumerate(coords):
 			#	new_coord = numpy.dot(coord, matrix)
@@ -204,9 +327,10 @@ class Bunch(object):
 		else:
 			bunch['S'] = 0.0
 		
-		self.coords = bunch
+		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=bunch)
 
-	def _twiss_matrix(self, beta_y, beta_z, alpha_y, alpha_z):
+	@staticmethod
+	def _twiss_matrix(beta_y, beta_z, alpha_y, alpha_z):
 		"Create a matrix that will convert a spherical distribution in to one with the correct twiss values"
 		B = numpy.eye(6)
 		B[0, 0] = sqrt(beta_y)
@@ -223,21 +347,24 @@ class Bunch(object):
 		return M
 
 
-	def read_YTZPSD(self, fname, ke, lim=None):
-		"Read in a bunch from a file. assumes columns are Y, T, Z, P, X, D (though D is ignored), separated by white space"
+	@staticmethod
+	def read_YTZPSD(fname, ke=None, rigidity=0, mass=0, charge=1):
+		"""Read in a bunch from a file. assumes columns are Y, T, Z, P, X, D, separated by white space::
+			my_bunch = Bunch.read_YTZPSD("mybunch.dat", ke=1e9, mass=ELECTRON_MASS, charge=-1)
+		
+		"""
 		dist = numpy.loadtxt(fname)
 		nparts = dist.size / 6
 		dist = dist.reshape(nparts, 6)
-		if lim:
-			dist = dist[:lim]
-		self.coords = numpy.zeros(nparts, self.min_data_def)
+		coords = numpy.zeros(nparts, Bunch.min_data_def)
 		#self.coords['KE'] = ke
-		self.coords['Y'] = dist[:, 0]
-		self.coords['T'] = dist[:, 1]
-		self.coords['Z'] = dist[:, 2]
-		self.coords['P'] = dist[:, 3]
-		self.coords['X'] = dist[:, 4]
-		self.coords['D'] = dist[:, 5]
+		coords['Y'] = dist[:, 0]
+		coords['T'] = dist[:, 1]
+		coords['Z'] = dist[:, 2]
+		coords['P'] = dist[:, 3]
+		coords['X'] = dist[:, 4]
+		coords['D'] = dist[:, 5]
+		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=coords)
 
 	def write_YTZPSD(self, fname, binary=False):
 		"Output a bunch, compatible with read_YTZPSD"
@@ -249,7 +376,7 @@ class Bunch(object):
 		fh = open(fname, "w")
 		if binary:
 			#header
-			for x in xrange(4):
+			for dummy in xrange(4):
 				io.write_fortran_record(fh, "a"*80)
 			#data
 			for p in self.coords:
@@ -264,7 +391,7 @@ class Bunch(object):
 			dist[:, 2] = self.coords['Z']
 			dist[:, 3] = self.coords['P']
 			dist[:, 4] = self.coords['S']
-			dist[:,5] = self.coords['D']
+			dist[:, 5] = self.coords['D']
 			#dist = dist.reshape(nparts * 2, 3)
 			fh.write("# bunch\n\n\n\n")
 			numpy.savetxt(fh, dist)
@@ -295,11 +422,23 @@ class Bunch(object):
 		"Returns length of bunch. Use len(my_bunch)"
 		return len(self.coords)
 
-	def plot(self, fname=None, lims=None):
-		"Plot a bunch, if no file name give plot is displayed on screen."
+	def plot(self, fname=None, lims=None, add_bunch=None):
+		"Plot a bunch, if no file name give plot is displayed on screen. lims can be used to force axis limits eg [lY,lT,lZ,lP,lX,lD] would plot limit plot from -lY to +lY in Y, etc. Additional bunches can be passed, as add_bunch, to overlay onto the same plot."
+		
+		bunches = [self]
+		if add_bunch != None:
+			try:
+				# if add_bunch is iterable, append all is memebers
+				for a_bunch in add_bunch:
+					bunches.append(a_bunch)
+			except TypeError:
+				# otherwise just append it
+				bunches.append(add_bunch)
+
 		pylab.subplot(2, 2, 1)
 		pylab.grid()
-		pylab.plot(self.coords['Y'], self.coords['Z'], ',')
+		for abunch in bunches:
+			pylab.plot(abunch.coords['Y'], abunch.coords['Z'], ',')
 		if lims != None:
 			pylab.xlim(-lims[0], lims[0])
 			pylab.ylim(-lims[2], lims[2])
@@ -309,7 +448,8 @@ class Bunch(object):
 		
 		pylab.subplot(2, 2, 2)
 		pylab.grid()
-		pylab.plot(self.coords['Y'], self.coords['T'], ',')
+		for abunch in bunches:
+			pylab.plot(abunch.coords['Y'], abunch.coords['T'], ',')
 		if lims != None:
 			pylab.xlim(-lims[0], lims[0])
 			pylab.ylim(-lims[1], lims[1])
@@ -318,7 +458,8 @@ class Bunch(object):
 
 		pylab.subplot(2, 2, 3)
 		pylab.grid()
-		pylab.plot(self.coords['Z'], self.coords['P'], ',')
+		for abunch in bunches:
+			pylab.plot(abunch.coords['Z'], abunch.coords['P'], ',')
 		if lims != None:
 			pylab.xlim(-lims[2], lims[2])
 			pylab.ylim(-lims[3], lims[3])
@@ -327,7 +468,8 @@ class Bunch(object):
 
 		pylab.subplot(2, 2, 4)
 		pylab.grid()
-		pylab.plot(self.coords['X'], self.coords['D'], ',')
+		for abunch in bunches:
+			pylab.plot(abunch.coords['X'], abunch.coords['D'], ',')
 		if False:# lims != None:
 			pylab.xlim(-lims[4], lims[4])
 			pylab.ylim(-lims[5], lims[5])
@@ -340,7 +482,7 @@ class Bunch(object):
 			pylab.clf()
 	
 	def get_emmitance(self):
-		"return emittance h and v in m rad"
+		"return emittance h and v in m rad. Uses the bunch full width, so should only be used for a hard edge distribution"
 		centers = self.get_centers()
 		Ys = self.coords['Y'] - centers[0] # work relative to center
 		Ts = self.coords['T'] - centers[1]
@@ -386,7 +528,6 @@ class Bunch(object):
 		#gamma_h = (widths[1] / 2)**2 / emittance_h
 		#gamma_v = (widths[3] / 2)**2 / emittance_v
 		# get T of particle with bigest Y
-		# FIXME, maybe can also look at T of particle with smallest Y, and average
 		y_p_max = Ts[Ys.argmax()]
 		y_p_min = Ts[Ys.argmin()]
 		alpha_h = (y_p_min - y_p_max) / 2 / sqrt(emittance_h / beta_h)

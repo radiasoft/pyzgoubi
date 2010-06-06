@@ -6,8 +6,7 @@ mass = PROTON_MASS
 energy = 1e6
 
 
-b_orig = Bunch(ke=energy, mass=mass, charge=1)
-b_orig.gen_halo_x_xp_y_yp(1e2, 1e-3, 1e-3, 4,5,1e-3, 2e-2)
+b_orig = Bunch.gen_halo_x_xp_y_yp(1e2, 1e-3, 1e-3, 4,5,1e-3, 2e-2, ke=energy, mass=mass, charge=1)
 
 b_orig_4d = numpy.column_stack([b_orig.particles()[col] for col in 'YTZP'])
 
