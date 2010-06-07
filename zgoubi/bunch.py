@@ -221,23 +221,18 @@ class Bunch(object):
 		if seed != None:
 			numpy.random.seed(seed)
 
-		ry = sqrt(emit_y) * numpy.random.normal(0, 0.5, [npart])
-		rz = sqrt(emit_z) * numpy.random.normal(0, 0.5, [npart]) 
-
-		u1 = numpy.random.random_sample([npart]) * pi * 2
-		u2 = numpy.random.random_sample([npart]) * pi * 2
 
 		coords = numpy.zeros([npart, 6], numpy.float64)
+		coords[:, 0:4] = numpy.random.normal(0, 0.5, [npart, 4])
+		coords[:, 0] *= sqrt(emit_y)
+		coords[:, 1] *= sqrt(emit_y)
+		coords[:, 2] *= sqrt(emit_z)
+		coords[:, 3] *= sqrt(emit_z)
 
-		coords[:, 0] = ry * numpy.cos(u1)
-		coords[:, 1] = ry * numpy.sin(u1)
-		coords[:, 2] = rz * numpy.cos(u2)
-		coords[:, 3] = rz * numpy.sin(u2)
 
 		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
 		
 		for n, coord in enumerate(coords):
-			#	new_coord = numpy.dot(coord, matrix)
 			coords[n] = numpy.dot(matrix, coord)
 		
 		bunch =  numpy.zeros([npart], Bunch.min_data_def)
