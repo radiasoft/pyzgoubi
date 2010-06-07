@@ -41,10 +41,10 @@ res = run(xterm=False)
 print res.res()
 
 if binary:
-	fai_data =  res.get_track('bfai', ['Y','T','Z','P']) / [100, 1000, 100, 1000]
+	fai_data =  numpy.array(res.get_track('bfai', ['Y','T','Z','P'])) / [100, 1000, 100, 1000]
 	print type(fai_data)
 else:
-	fai_data =  res.get_track('fai', ['Y','T','Z','P']) / [100, 1000, 100, 1000]
+	fai_data =  numpy.array(res.get_track('fai', ['Y','T','Z','P'])) / [100, 1000, 100, 1000]
 
 
 

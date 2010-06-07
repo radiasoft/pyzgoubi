@@ -8,8 +8,7 @@ for binary in [True, False]:
 	energy = 1e6
 
 
-	b_orig = Bunch()
-	b_orig.gen_halo_x_xp_y_yp(1e4, 1e-3, 1e-3, 4,5,1e-3, 2e-2, seed=4)
+	b_orig = Bunch.gen_halo_x_xp_y_yp(1e2, 1e-3, 1e-3, 4,5,1e-3, 2e-2, seed=4)
 
 	b_orig_4d = numpy.column_stack([b_orig.particles()[col] for col in 'YTZP'])
 

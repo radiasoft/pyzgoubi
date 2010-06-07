@@ -24,7 +24,7 @@ try:
 except OSError:
 	pass
 
-MAIN_VERSION = '0.4dev'
+MAIN_VERSION = '0.4.0'
 
 if os.path.exists(".bzr") and os.system("bzr version-info --format=python > zgoubi/version.py") == 0:
 	# run from a bzr repo, can use version info

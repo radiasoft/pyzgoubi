@@ -29,17 +29,6 @@ if os.path.exists(config_path):
 else:
 	config.write(open(config_path, 'w'))
 
-# check zgoubi binary
-import subprocess
-try:
-	a = subprocess.Popen([os.path.expanduser(config.get('pyzgoubi', 'zgoubi_path'))], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-except OSError:
-	print "can't zgoubi binary", config.get('pyzgoubi', 'zgoubi_path')
-	print "please modify the 'zgoubi_path' entry in", config_path, "to the full path of zgoubi"
-	print "or add the direcory containing zgoubi to the $PATH"
-	import sys
-	sys.exit(1)
-
 
 zgoubi_settings = {}
 zgoubi_settings['tmp_dir'] = os.path.expanduser(config.get('pyzgoubi', 'tmp_dir'))
