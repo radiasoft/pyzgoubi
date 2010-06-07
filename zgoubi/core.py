@@ -484,10 +484,12 @@ class Line(object):
 		result.clean()
 		return done_bunch
 		
-	def track_bunch_mt(self, bunch, n_threads=4, **kwargs):
-		"This function should be used identically to the track_bunch function, apart from the addition of the n_threads argument. This will split the bunch into several slices and run them simultaneously. Set n_threads to the number of CPU cores that you have."
+	def track_bunch_mt(self, bunch, n_threads=4, max_particles=None, **kwargs):
+		"This function should be used identically to the track_bunch function, apart from the addition of the n_threads argument. This will split the bunch into several slices and run them simultaneously. Set n_threads to the number of CPU cores that you have. max_particle can be set to limit how many particles are sent at a time."
 		in_q = Queue.Queue()
 		out_q = Queue.Queue()
+		if max_particles == None:
+			max_particles = 1e3
 
 		def worker(in_q, out_q, work_line, name, stop_flag):
 			"A worker function. Gets run in threads"
@@ -523,7 +525,7 @@ class Line(object):
 		start_index = 0
 		n_tasks = 0
 		#print "Queuing work"
-		for item in bunch.split_bunch(max_particles=10000, n_slices=n_threads):
+		for item in bunch.split_bunch(max_particles=max_particles, n_slices=n_threads):
 			#print "Queue task", n_tasks
 			in_q.put((start_index, item))
 			start_index += len(item)
