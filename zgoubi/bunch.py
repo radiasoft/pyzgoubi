@@ -295,20 +295,15 @@ class Bunch(object):
 		coords[:, 1] = ryrt[:,1]
 		coords[:, 2] = rzrp[:,0]
 		coords[:, 3] = rzrp[:,1]
+		if mom_spread > 0.0:
+			#Last column of coords is delta_p.
+			coords[:, 5] = mom_dist-1
 
-		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
+		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z, disp, disp_prime)
 
 		for n, coord in enumerate(coords):
 			#	new_coord = numpy.dot(coord, matrix)
 			coords[n] = numpy.dot(matrix, coord)
-
-		#Add dispersion term to horizontal coord
-		if disp != 0.0:
-			coords[:, 0] = [y+disp*(dp-1) for y,dp in zip(coords[:, 0],mom_dist)] 
-
-		#Add dispersion prime term to horizontal angle
-		if disp_prime != 0.0:
-			coords[:, 1] = [t+disp_prime*(dp-1) for t,dp in zip(coords[:, 1],mom_dist)] 
 		
 		bunch =  numpy.zeros([npart], Bunch.min_data_def)
 		
@@ -329,7 +324,7 @@ class Bunch(object):
 		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=bunch)
 
 	@staticmethod
-	def _twiss_matrix(beta_y, beta_z, alpha_y, alpha_z):
+	def _twiss_matrix(beta_y, beta_z, alpha_y, alpha_z, disp=0, disp_prime=0):
 		"Create a matrix that will convert a spherical distribution in to one with the correct twiss values"
 		B = numpy.eye(6)
 		B[0, 0] = sqrt(beta_y)
@@ -343,6 +338,11 @@ class Bunch(object):
 
 		#M = numpy.dot(A, B)
 		M = numpy.dot(B, A)
+
+		#add dispersion and dispersion_prime terms
+		M[0,5] = disp
+		M[1,5] = disp_prime
+
 		return M
 
 
