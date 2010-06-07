@@ -91,10 +91,10 @@ if (not zgoubi_module_path.startswith("/")) and os.name == 'posix' :
 	static_defs = '\\'.join(bits+['static_defs.py'])
 	simple_defs = '\\'.join(bits+['simple_elements.defs'])
 else:
-	if os.path.basename(os.path.normpath(os.path.join(zgoubi_module_path, '..', '..', '..',))).lower() == "lib":
+	if os.path.basename(os.path.normpath(os.path.join(zgoubi_module_path, '..', '..', '..',))).lower().startswith("lib"):
 		static_defs = os.path.join(zgoubi_module_path, '..', '..', '..', '..', "share", "pyzgoubi", "definitions", "static_defs.py")
 		simple_defs = os.path.join(zgoubi_module_path, '..', '..', '..', '..', "share", "pyzgoubi", "definitions", "simple_elements.defs")
-	elif os.path.basename(os.path.normpath(os.path.join(zgoubi_module_path, '..', '..',))).lower() == "lib":
+	elif os.path.basename(os.path.normpath(os.path.join(zgoubi_module_path, '..', '..',))).lower().startswith("lib"):
 		static_defs = os.path.join(zgoubi_module_path, '..', '..', '..', "share", "pyzgoubi", "definitions", "static_defs.py")
 		simple_defs = os.path.join(zgoubi_module_path, '..', '..', '..', "share", "pyzgoubi", "definitions", "simple_elements.defs")
 	else:
