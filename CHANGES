@@ -15,6 +15,7 @@ New Features:
 * Multithreaded bunch tracking, Line.track_bunch_mt() (see docs)
 * find_closed_orbit_range() like find_closed_orbit() but can has search for a stable orbit over range.
 * Improve documentation
+* --debug option to show more info when running
 
 Internal:
 * Use getopts for commandline parsing
