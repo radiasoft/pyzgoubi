@@ -1407,15 +1407,6 @@ class Results(object):
 
 
 		"""
-		#has_object5 = False
-		#has_matrix = False
-		#for e in self.line.elements():
-		#	t = str(type(e)).split("'")[1].rpartition(".")[2]
-		#	if t == 'OBJET5':
-		#		has_object5 = True
-		#	if t == 'MATRIX':
-		#		if e.IORD == 1 and e.IFOC>10:
-		#			has_matrix = True
 
 		has_object5 = 'OBJET5' in self.element_types
 		has_matrix = 'MATRIX' in self.element_types
@@ -1444,6 +1435,44 @@ class Results(object):
 						NU_Z = -1 
 					print "Tune: ", (NU_Y, NU_Z)
 					return (NU_Y, NU_Z)
+		raise NoTrackError, "Could not find MATRIX output, maybe beam lost"
+
+	def get_transfer_matrix(self):
+		"""Returns a transfer matrix of the line in (MKSA units).
+		Needs a beam line is an OBJET type 5, and a MATRIX element.
+
+		"""
+
+		has_object5 = 'OBJET5' in self.element_types
+		has_matrix = 'MATRIX' in self.element_types
+				
+		if not (has_object5 and has_matrix):
+			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX element with IORD=1 and IFOC>10 to get tune"
+
+		found_matrix = False
+
+		res_fh = self.res_fh()
+		while True:
+			try:
+				line = res_fh.next()
+			except StopIteration:
+				break
+			if not found_matrix and "MATRIX" in line:
+				bits = line.split()
+				if bits[0].isdigit() and bits[1] == "MATRIX":
+					found_matrix = True
+					continue
+			elif found_matrix and "TRANSFER  MATRIX  ORDRE  1  (MKSA units)" in line:
+				matrix_lines = [res_fh.next() for dummy in xrange(30) ]
+				#print "".join(matrix_lines)
+
+				transfer_matrix = numpy.zeros([6,6])
+				for x in range(6):
+					transfer_matrix[x] = matrix_lines[x+1].split()
+
+				return transfer_matrix
+
+
 		raise NoTrackError, "Could not find MATRIX output, maybe beam lost"
 
 	def get_twiss_parameters(self):
