@@ -1240,6 +1240,7 @@ class Results(object):
 		particles['T'] = last_lap['T'] /1000
 		particles['Z'] = last_lap['Z'] /100
 		particles['P'] = last_lap['P'] /1000
+		particles['S'] = last_lap['S'] /100
 		particles['D'] = last_lap['D-1'] +1
 
 		return last_bunch
