@@ -1571,16 +1571,18 @@ def calc_transfer_matrix(start_bunch, end_bunch):
 	DP = (start['D'][I10] - start['D'][I11] ) / 0.5 /( start['D'][I10] + start['D'][I11])
 
 	for j in xrange(2,6):
-		print "j=",j
 		tm[j-2, 5] = (end[co[j]][I10] - end[co[j]][I11]) / DP
+		#print co[j], I10, I11, (end[co[j]][I10] - end[co[j]][I11]) / DP
 
 		for i in xrange(1,5):
 			i2 = 2*i + IT1-1
 			i3 = i2 + 1
 			u0 = start[co[i+1]][i2] - start[co[i+1]][i3]
 			tm[j-2, i-1] = (end[co[j]][i2] - end[co[j]][i3]) / u0
+			#print co[j],i2, i3, (end[co[j]][i2] - end[co[j]][i3]) / u0
 			if (j == 5):
 				tm[4,i-1] = (end[co[6]][i2] - end[co[6]][i3]) /u0
+				#print co[6], i2, i3, (end[co[6]][i2] - end[co[6]][i3]) /u0
 	tm[4,5] = (end[co[6]][I10] - end[co[6]][I11] ) /DP
 
 
@@ -1588,7 +1590,7 @@ def calc_transfer_matrix(start_bunch, end_bunch):
 
 
 def calc_twiss_from_matrix(trans_matrix):
-	"Calculate the twiss parameters from a transfere matrix. Either use Results.get_transfer_matrix() or calc_transfer_matrix() to get matrix."
+	"Calculate the twiss parameters (beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z) from a transfer matrix. Either use Results.get_transfer_matrix() or calc_transfer_matrix() to get matrix."
 	tm = trans_matrix
 
 	mu_y = acos(0.5 * (tm[0,0]+tm[1,1]))
@@ -1602,3 +1604,9 @@ def calc_twiss_from_matrix(trans_matrix):
 	gamma_z = - tm[3,2]/sin(mu_z)
 	return (beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z)
 
+def calc_phase_ad_from_matrix(trans_matrix):
+	"Calculate the phase advance (mu_y,mu_z) from a transfer matrix. Either use Results.get_transfer_matrix() or calc_transfer_matrix() to get matrix."
+	tm = trans_matrix
+	mu_y = acos(0.5 * (tm[0,0]+tm[1,1]))
+	mu_z = acos(0.5 * (tm[2,2]+tm[3,3]))
+	return (mu_y,mu_z)

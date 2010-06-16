@@ -10,6 +10,7 @@ import numpy
 import pylab
 from zgoubi import rel_conv
 from zgoubi import io
+from zgoubi.core import zlog
 import struct
 
 #from zgoubi.utils import *
@@ -80,9 +81,11 @@ class Bunch(object):
 	def get_bunch_ke(self):
 		"Get bunch kinetic energy"
 		if self.mass == 0:
-			raise ValueError, "Particle mass can't be Zero"
+			zlog.warn("Particle mass is Zero. Set the mass before getting the KE")
+			return 0
 		if self.charge == 0:
-			raise ValueError, "Particle charge can't be Zero"
+			zlog.warn("Particle charge is Zero. Set the charge before getting the KE")
+			return 0
 		return rel_conv.rigidity_to_ke(mass=self.mass, rigidity=self.rigidity, charge=self.charge)
 
 	def set_bunch_rigidity(self, rigidity):
