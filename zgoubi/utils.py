@@ -1585,7 +1585,9 @@ def calc_transfer_matrix(start_bunch, end_bunch):
 				#print co[6], i2, i3, (end[co[6]][i2] - end[co[6]][i3]) /u0
 	tm[4,5] = (end[co[6]][I10] - end[co[6]][I11] ) /DP
 
-
+	if (tm[0,0] + tm[1,1] > 2) or (tm[2,2] + tm[3,3] > 2):
+		zlog.warning("Lattice is unstable")
+	
 	return tm
 
 
