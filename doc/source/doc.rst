@@ -436,10 +436,12 @@ Note that this method does not allow you to access the Result object.
 If you have a multi-CPU or multi-core CPU, then you can swap |Line.track_bunch| for the multithreaded version |Line.track_bunch_mt|. The multithreaded version also has the advantage that it can track an arbitrarily large bunch (more than Zgoubi's max particles limit).
 
 
-Loops
------
+Complex Lines
+-------------
 
-For making complex |Lines| it can be useful to use python features such as loops, e.g. to put 5 identical FODO cells you could use ::
+It is often useful to break down a complex lattice into sections and cells. This can be done in several ways in PyZgoubi. 
+
+Firstly you can use python features such as loops, e.g. to put 5 identical FODO cells you could use ::
 
     line = Line("example")
 
@@ -465,6 +467,31 @@ If you want to make one iteration different then you can do a test based on the 
         line.add(DRIFT( ... ))
         if (x == 2): #note x counts from zero
             line.add(DIPOLE( ... )
+
+Another method is to make a |Line| for each cell, and then build the full lattice from the cells::
+	
+	cell1 = Line("cell1")
+	cell1.add(...)
+	cell1.add(...)
+
+	cell2 = Line("cell2")
+	cell2.add(...)
+	cell2.add(...)
+
+	full_line = Line("fullline")
+	full_line.add(cell1)
+	full_line.add(cell2)
+	#or
+	full_line.add(cell1, cell2)
+	
+The +, * and - operators are overloaded for the line to add, repeat and reverse them.For example, assuming that you have defined the Lines ``injection``, ``extraction`` and ``ring_cell``::
+
+	full_line = injection + n * ring_cell + extraction
+
+To use a cell with its elements in reverse order::
+
+	full_line.add(-cell1)
+
 
 Command line arguments
 ----------------------
