@@ -18,18 +18,18 @@ line_seg.add(QUADRUPO(XL=1, R_0=5, B_0=0.1, XPAS=(50,500,50)))
 
 import time
 t0 = time.time()
-st_bunch = line_seg.track_bunch(b_orig)
+st_bunch = line_seg.track_bunch_mt(b_orig, n_threads=1, max_particles=1e3)
 t1 = time.time()
 st_time = t1-t0
 
 t0 = time.time()
-mt2_bunch = line_seg.track_bunch_mt(b_orig, n_threads=2)
+mt2_bunch = line_seg.track_bunch_mt(b_orig, n_threads=2, max_particles=1e3)
 t1 = time.time()
 mt2_time = t1-t0
 
 
 t0 = time.time()
-mt4_bunch = line_seg.track_bunch_mt(b_orig, n_threads=4)
+mt4_bunch = line_seg.track_bunch_mt(b_orig, n_threads=4, max_particles=1e3)
 t1 = time.time()
 mt4_time = t1-t0
 

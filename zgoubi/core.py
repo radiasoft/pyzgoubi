@@ -484,10 +484,12 @@ class Line(object):
 		result.clean()
 		return done_bunch
 		
-	def track_bunch_mt(self, bunch, n_threads=4, **kwargs):
-		"This function should be used identically to the track_bunch function, apart from the addition of the n_threads argument. This will split the bunch into several slices and run them simultaneously. Set n_threads to the number of CPU cores that you have."
+	def track_bunch_mt(self, bunch, n_threads=4, max_particles=None, **kwargs):
+		"This function should be used identically to the track_bunch function, apart from the addition of the n_threads argument. This will split the bunch into several slices and run them simultaneously. Set n_threads to the number of CPU cores that you have. max_particle can be set to limit how many particles are sent at a time."
 		in_q = Queue.Queue()
 		out_q = Queue.Queue()
+		if max_particles == None:
+			max_particles = 1e3
 
 		def worker(in_q, out_q, work_line, name, stop_flag):
 			"A worker function. Gets run in threads"
@@ -523,7 +525,7 @@ class Line(object):
 		start_index = 0
 		n_tasks = 0
 		#print "Queuing work"
-		for item in bunch.split_bunch(max_particles=10000, n_slices=n_threads):
+		for item in bunch.split_bunch(max_particles=max_particles, n_slices=n_threads):
 			#print "Queue task", n_tasks
 			in_q.put((start_index, item))
 			start_index += len(item)
@@ -1238,6 +1240,7 @@ class Results(object):
 		particles['T'] = last_lap['T'] /1000
 		particles['Z'] = last_lap['Z'] /100
 		particles['P'] = last_lap['P'] /1000
+		particles['S'] = last_lap['S'] /100
 		particles['D'] = last_lap['D-1'] +1
 
 		return last_bunch
@@ -1405,15 +1408,6 @@ class Results(object):
 
 
 		"""
-		#has_object5 = False
-		#has_matrix = False
-		#for e in self.line.elements():
-		#	t = str(type(e)).split("'")[1].rpartition(".")[2]
-		#	if t == 'OBJET5':
-		#		has_object5 = True
-		#	if t == 'MATRIX':
-		#		if e.IORD == 1 and e.IFOC>10:
-		#			has_matrix = True
 
 		has_object5 = 'OBJET5' in self.element_types
 		has_matrix = 'MATRIX' in self.element_types
@@ -1442,6 +1436,44 @@ class Results(object):
 						NU_Z = -1 
 					print "Tune: ", (NU_Y, NU_Z)
 					return (NU_Y, NU_Z)
+		raise NoTrackError, "Could not find MATRIX output, maybe beam lost"
+
+	def get_transfer_matrix(self):
+		"""Returns a transfer matrix of the line in (MKSA units).
+		Needs a beam line is an OBJET type 5, and a MATRIX element.
+
+		"""
+
+		has_object5 = 'OBJET5' in self.element_types
+		has_matrix = 'MATRIX' in self.element_types
+				
+		if not (has_object5 and has_matrix):
+			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX element with IORD=1 and IFOC>10 to get tune"
+
+		found_matrix = False
+
+		res_fh = self.res_fh()
+		while True:
+			try:
+				line = res_fh.next()
+			except StopIteration:
+				break
+			if not found_matrix and "MATRIX" in line:
+				bits = line.split()
+				if bits[0].isdigit() and bits[1] == "MATRIX":
+					found_matrix = True
+					continue
+			elif found_matrix and "TRANSFER  MATRIX  ORDRE  1  (MKSA units)" in line:
+				matrix_lines = [res_fh.next() for dummy in xrange(30) ]
+				#print "".join(matrix_lines)
+
+				transfer_matrix = numpy.zeros([6,6])
+				for x in range(6):
+					transfer_matrix[x] = matrix_lines[x+1].split()
+
+				return transfer_matrix
+
+
 		raise NoTrackError, "Could not find MATRIX output, maybe beam lost"
 
 	def get_twiss_parameters(self):

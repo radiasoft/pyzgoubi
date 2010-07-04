@@ -85,7 +85,7 @@ for func_name in res_funcs:
 def _show_help(help_arg):
 	"Show some help"
 	if help_arg == None:
-		print "For documentation see http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/"
+		_show_usage()
 		sys.exit(0)
 	if help_arg.lower() == "elements":
 		print "available elements"
@@ -118,8 +118,16 @@ def _show_help(help_arg):
 def _show_usage():
 	"Show some usage instructions"
 	print "Usage:"
-	print sys.argv[0], "input_file_name"
-	print sys.argv[0], "--help"
+	print "pyzgoubi", "input_file_name"
+	print "pyzgoubi", "--help"
+	print "pyzgoubi", "--help elements\t( show avalible elements"
+	print "pyzgoubi", "--help ELEMENT\t( show element info"
+	print "pyzgoubi", "--version"
+	print "pyzgoubi", "--zgoubi /path/to/zgoubi"
+	print "pyzgoubi", "--debug"
+	print "pyzgoubi", "--log_level DEBUG/WARNING/ERROR"
+	print "\nFor documentation see http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/"
+
 
 
 if __name__ == '__main__':

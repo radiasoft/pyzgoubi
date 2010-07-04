@@ -31,9 +31,11 @@ Fixes:
 
 Known problems
 * JAERI.py test will fail with Zgoubi 5.1.0 and older due to a bug in Zgoubi. This is fixed in Zgoubi SVN r237
-* Some tests use upto 10k particles, check that the MXT variable in zgoubi's MAXTRA.H is set to 10000 or larger (especially if you are using an SVN version of Zgoubi)
 * Binary file reading for Zgoubi 5.1.0 is broken. The new formats in Zgoubi SVN r251 and above works.
 * OBJET_bunch is broken with ZGOUBI SVN r256 and above.
+* You may see messages like "Exception exceptions.AttributeError: "'NoneType' object has no attribute
+'error'" in <bound method Popen.__del__ of <subprocess.Popen object at
+0x8a2596c>> ignored". This is a bug in python, but is harmless to pyzgoubi. http://bugs.python.org/issue5099
 
 For full changes see http://pyzgoubi.bzr.sf.net/bzr/ or run:
 bzr log --include-merges -r tag:pyzgoubi-0.3.1..tag:pyzgoubi-0.4.0
