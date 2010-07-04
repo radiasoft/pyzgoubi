@@ -323,6 +323,23 @@ class Line(object):
 		new_line.name = "-"+self.name
 		return new_line
 
+	def __add__(self, rhs):
+		new_line = Line(self.name)
+		for element in self.element_list:
+			new_line.add(element)
+		for element in rhs.element_list:
+			new_line.add(element)
+		return new_line
+
+	def __rmul__(self, lhs):
+		new_line = Line(self.name)
+		for x in xrange(lhs):
+			for element in self.element_list:
+				new_line.add(element)
+		return new_line
+
+
+
 	def __str__(self, prefix=""):
 		"For printing a line"
 		out = self.name + "\n"
