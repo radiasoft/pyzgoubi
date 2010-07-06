@@ -97,8 +97,15 @@ class Bunch(object):
 		return self.rigidity
 
 	def particles(self):
-		"Returns the numpy array that holds the coordinates"
+		"Returns the numpy array that holds the coordinates, as a structured numpy array"
 		return self.coords
+
+	def raw_particles(self):
+		"""Returns the numpy array that holds the coordinates, as a 2d numpy array and a list of comumn names. It is possible that the column names may change or reorder, so if you use this you may want to protect against it with something like::
+			assert(pbunch.raw_particles()[1] == ["D","Y","T","Z","P","S","TOF","X"])
+
+		"""
+		return self.coords.view((numpy.float64, len(self.coords.dtype.names))), self.coords.dtype.names
 
 	def get_min_BORO(self):
 		"Returns the minimum rigidity of the bunch"
