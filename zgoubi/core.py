@@ -484,6 +484,7 @@ class Line(object):
 		if self.full_line:
 			raise BadLineError("If line already has an OBJET use run()")
 
+		bunch_len = len(bunch)
 		#build a line with the bunch OBJET and segment we were passed
 		new_line = Line("bunch_line")
 		new_line.add(OBJET_bunch(bunch, binary=False))
@@ -498,6 +499,9 @@ class Line(object):
 		del new_line
 		# return the track bunch
 		done_bunch = result.get_bunch('bfai', end_label="trackbun", old_bunch=bunch)
+		done_bunch_len = len(done_bunch)
+		if bunch_len != done_bunch_len:
+			zlog.warn("Started with %s particles, finished with %s" % (bunch_len, done_bunch_len))
 		result.clean()
 		return done_bunch
 		
@@ -552,6 +556,9 @@ class Line(object):
 		#print "Work done"
 
 		final_bunch = zgoubi.bunch.Bunch(nparticles = len(bunch), rigidity=bunch.get_bunch_rigidity(), mass=bunch.mass, charge=bunch.charge)
+		survive_particles = numpy.zeros(len(bunch),dtype=numpy.bool) # bit map, set true when filling with particles
+
+		# workers may return out of order, so use start_index to put the coords in the correct place
 		for x in xrange(n_tasks):
 			#print "collecting task", x
 			result = out_q.get()
@@ -559,6 +566,7 @@ class Line(object):
 				start_index, done_bunch = result
 			except ValueError:
 				import traceback, time
+				stop_flag.set()
 				time.sleep(2) # give the other threads a couple of seconds, to make output prettier
 				zlog.error("Exception retrieved by main thread")
 				print
@@ -568,6 +576,12 @@ class Line(object):
 				raise result[0](result[1])
 			out_q.task_done()
 			final_bunch.particles()[start_index:start_index+len(done_bunch)] = done_bunch
+			survive_particles[start_index:start_index+len(done_bunch)] = True
+
+		if not numpy.all(survive_particles):
+			final_bunch.coords = final_bunch.particles()[survive_particles]
+			zlog.warn("Started with %s particles, finished with %s" % (len(bunch), len(final_bunch)))
+
 
 		#print "all done"
 		stop_flag.set()
@@ -1227,17 +1241,69 @@ class Results(object):
 			coords.append(this_coord)
 		return coords
 	
-	def get_bunch(self, file, end_label=None, old_bunch=None):
+	def loss_summary(self, coords=None, file='plt'):
+		"""Returns False if no losses, otherwise returns a summery of losses::
+			
+			loss = res.loss_summary(file='plt')
+			#or
+			all = res.get_all('plt')
+			loss = res.loss_summary(all) # if you already have got the coordinates
+
+		"""
+		if coords == None:
+			coords = self.get_all(file)
+	
+		if all(coords["IEX"] == 1):
+			return False
+		
+		loss_types = {-1:"the trajectory happened to wander outside the limits of a field map",
+				-2:"too many integration steps in an optical element",
+				-3:"deviation happened to exceed pi/2in an optical element",
+				-4:"stopped by walls (procedures CHAMBR, COLLIMA)",
+				-5:"too many iterations in subroutine DEPLA",
+				-6:"energy loss exceeds particle energy",
+				-7:"field discontinuities larger than 50% wthin a field map",
+				-8:"reached field limit in an optical element",
+				}
+		loss_res = {}
+		for iexval in loss_types.keys():
+			lossnum = (coords["IEX"] == iexval).sum()
+			if lossnum > 1:
+				loss_res[loss_types[iexval]] = lossnum
+		return loss_res
+
+
+
+
+	def get_bunch(self, file, end_label=None, old_bunch=None, drop_lost=True):
 		""""Get back a bunch object from the fai file. It is recommended that you put a MARKER before the last FAISCNL, and pass its label as end_label, so that only the bunch at the final position will be returned. All but the final lap is ignored automatically.
 		Optionally the an old_bunch can be passed to the function, its mass and charge will be copyed to the new bunch.
 		"""
-		all = self.get_all(file)
+		try:
+			all_c = self.get_all(file)
+		except IOError:
+			zlog.warn("Could not read %s. returning empty bunch" % file)
+			empty_bunch = zgoubi.bunch.Bunch(nparticles=0, rigidity=0)
+			if old_bunch != None:
+				empty_bunch.mass = old_bunch.mass
+				empty_bunch.charge = old_bunch.charge
+			return empty_bunch
 
-		if not (type(all) == type(numpy.zeros(0))):
+		loss_sum = self.loss_summary(all_c)
+		if loss_sum:
+			for k,v in loss_sum.items():
+				zlog.warn("%s particles lost: %s" % (v, k))
+
+			if drop_lost:
+				all_c = all_c[all_c['IEX'] == 1]
+
+
+
+		if not (type(all_c) == type(numpy.zeros(0))):
 			raise OldFormatError("get_bunch() only works with the new fai format")
 		
 		# select only the particles that made it to the last lap
-		last_lap = all[ all['PASS'] == all['PASS'].max() ]
+		last_lap = all_c[ all_c['PASS'] == all_c['PASS'].max() ]
 		# also select only particles at FAISTORE with matching end_label
 		if end_label:
 			end_label = end_label.ljust(8) # pad to match zgoubi

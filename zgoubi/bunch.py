@@ -60,7 +60,8 @@ class Bunch(object):
 			n_slices = ceil(len(self.coords)/max_particles)
 
 		for pslice in numpy.array_split(self.coords, n_slices):
-			yield Bunch(rigidity=self.get_bunch_rigidity(), mass=self.mass, charge=self.charge,
+			if pslice.size != 0:
+				yield Bunch(rigidity=self.get_bunch_rigidity(), mass=self.mass, charge=self.charge,
 			            particles=pslice)
 
 	def __str__(self):
