@@ -42,6 +42,10 @@ if zgoubi_settings['extra_defs_files'] == ['']:
 	zgoubi_settings['extra_defs_files'] = []
 
 zgoubi_settings['log_level'] = config.get('pyzgoubi','log_level').upper()
+if not zgoubi_settings['log_level'] in ['WARN', 'ERROR', 'DEBUG', 'INFO', 'WARNING', 'CRITICAL']:
+	print "invalid setting for log_level '%s' in settings.ini"%zgoubi_settings['log_level']
+	print "should be one of 'WARN', 'ERROR', 'DEBUG', 'INFO', 'WARNING', 'CRITICAL'"
+	exit(2)
 
 # create example defs file
 example_defs_path = os.path.join(config_dir, "user_elements.defs")
