@@ -228,9 +228,9 @@ class Bunch(object):
 			               ke=None, rigidity=0, mass=0, charge=1):
 		"""Generate a waterbag bunch, i.e. a filled hypersphere in x-xp-y-yp (Y-T-Z-P). S and D are set to 0 and 1 respectively.
 		example::
-			my_bunch = Bunch.gen_kv_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
+			my_bunch = Bunch.gen_waterbag_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
 		
-		creates a KV bunch called my_bunch with 1000 particles of the given parameters.
+		creates a waterbag bunch called my_bunch with 1000 particles of the given parameters.
 
 		"""
 
