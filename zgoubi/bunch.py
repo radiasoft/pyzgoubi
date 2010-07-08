@@ -197,16 +197,10 @@ class Bunch(object):
 		phi = numpy.random.uniform(-pi,pi,[npart])
 		the = numpy.random.uniform(-pi,pi,[npart])
 
-		a1 = numpy.cos(y2) * numpy.cos(phi)
-		a2 = numpy.cos(y2) * numpy.sin(phi)
-		a3 = numpy.sin(y2) * numpy.cos(the)
-		a4 = numpy.sin(y2) * numpy.sin(the)
-
-
-		coords[:, 0] = ry * a1
-		coords[:, 1] = ry * a2
-		coords[:, 2] = rz * a3
-		coords[:, 3] = rz * a4
+		coords[:, 0] = ry * numpy.cos(y2) * numpy.cos(phi)
+		coords[:, 1] = ry * numpy.cos(y2) * numpy.sin(phi)
+		coords[:, 2] = rz * numpy.sin(y2) * numpy.cos(the)
+		coords[:, 3] = rz * numpy.sin(y2) * numpy.sin(the)
 
 		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
 		
