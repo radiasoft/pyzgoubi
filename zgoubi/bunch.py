@@ -155,7 +155,7 @@ class Bunch(object):
 	@staticmethod
 	def gen_kv_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None,
 			               ke=None, rigidity=0, mass=0, charge=1):
-		"""Generate a uniform (KV) bunch, i.e. a filled elipse in x-xp (Y-T) and in y-yp (Z-P). S and D are set to 0 and 1 respectively.
+		"""Generate a uniform (KV) bunch, i.e. a surface of a 4D hypershere in x-xp-y-yp (Y-T-Z-P). S and D are set to 0 and 1 respectively.
 		example::
 			my_bunch = Bunch.gen_kv_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
 		
@@ -172,18 +172,102 @@ class Bunch(object):
 		if seed != None:
 			numpy.random.seed(seed)
 
-		ry = sqrt(emit_y) * numpy.random.random_sample([npart])
-		rz = sqrt(emit_z) * numpy.random.random_sample([npart]) 
+		ry = sqrt(emit_y)
+		rz = sqrt(emit_z)
 
-		u1 = numpy.random.random_sample([npart]) * pi * 2
-		u2 = numpy.random.random_sample([npart]) * pi * 2
+		#u1 = numpy.random.random_sample([npart]) * pi * 2
+		#u2 = numpy.random.random_sample([npart]) * pi * 2
 
 		coords = numpy.zeros([npart, 6], numpy.float64)
+	
+		# From Chris Prior.
+		y = numpy.random.uniform(-1,1,[npart])
+		y2 = numpy.arccos(y) /2
+		phi = numpy.random.uniform(-pi,pi,[npart])
+		the = numpy.random.uniform(-pi,pi,[npart])
 
-		coords[:, 0] = ry * numpy.cos(u1)
-		coords[:, 1] = ry * numpy.sin(u1)
-		coords[:, 2] = rz * numpy.cos(u2)
-		coords[:, 3] = rz * numpy.sin(u2)
+		a1 = numpy.cos(y2) * numpy.cos(phi)
+		a2 = numpy.cos(y2) * numpy.sin(phi)
+		a3 = numpy.sin(y2) * numpy.cos(the)
+		a4 = numpy.sin(y2) * numpy.sin(the)
+
+
+		coords[:, 0] = ry * a1
+		coords[:, 1] = ry * a2
+		coords[:, 2] = rz * a3
+		coords[:, 3] = rz * a4
+
+		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
+		
+		for n, coord in enumerate(coords):
+			#	new_coord = numpy.dot(coord, matrix)
+			coords[n] = numpy.dot(matrix, coord)
+		
+		bunch =  numpy.zeros([npart], Bunch.min_data_def)
+		
+		bunch['Y'] = coords[:, 0]
+		bunch['T'] = coords[:, 1]
+		bunch['Z'] = coords[:, 2]
+		bunch['P'] = coords[:, 3]
+		bunch['D'] = 1
+		
+		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=bunch)
+	@staticmethod
+	def gen_waterbag_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None,
+			               ke=None, rigidity=0, mass=0, charge=1):
+		"""Generate a waterbag bunch, i.e. a filled hypersphere in x-xp-y-yp (Y-T-Z-P). S and D are set to 0 and 1 respectively.
+		example::
+			my_bunch = Bunch.gen_waterbag_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
+		
+		creates a waterbag bunch called my_bunch with 1000 particles of the given parameters.
+
+		"""
+
+		if emit_y < 0 or emit_z < 0 or beta_y < 0 or beta_z < 0:
+			print "Emittance or beta can't be negative"
+			print "emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z"
+			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
+			raise ValueError
+
+		if seed != None:
+			numpy.random.seed(seed)
+
+		ry = sqrt(emit_y)
+		rz = sqrt(emit_z)
+
+		#u1 = numpy.random.random_sample([npart]) * pi * 2
+		#u2 = numpy.random.random_sample([npart]) * pi * 2
+
+		coords = numpy.zeros([npart, 6], numpy.float64)
+		
+		while True:
+			# fill a hypercube with 3.5 times as many particles as needed
+			a1 =  numpy.random.uniform(-1,1,[npart*3.5])
+			a2 =  numpy.random.uniform(-1,1,[npart*3.5])
+			a3 =  numpy.random.uniform(-1,1,[npart*3.5])
+			a4 =  numpy.random.uniform(-1,1,[npart*3.5])
+			
+			# discard ones that fall out of hypesphere
+			r = a1**2+a2**2+a3**2+a4**2
+			keep = r <= 1
+			
+			a1 = a1[keep]
+			a2 = a2[keep]
+			a3 = a3[keep]
+			a4 = a4[keep]
+
+			print len(a1)
+			
+			# it is possible that to many particles will be rejected
+			if len(a1) >= npart:
+				break
+
+		
+
+		coords[:, 0] = ry * a1[0:npart]
+		coords[:, 1] = ry * a2[0:npart]
+		coords[:, 2] = rz * a3[0:npart]
+		coords[:, 3] = rz * a4[0:npart]
 
 		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
 		
