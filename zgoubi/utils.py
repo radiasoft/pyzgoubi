@@ -1502,11 +1502,17 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 		dummy = len(data_x_list[0])
 	except TypeError:
 		single_x_data = True
+	except IndexError:
+		zlog.error("data_x_list is empty. data_x_list:"+str(data_x_list))
+		raise
 
 	try:
 		dummy = len(data_y_list[0])
 	except TypeError:
 		single_y_data = True
+	except IndexError:
+		zlog.error("data_y_list is empty. data_y_list:"+str(data_y_list))
+		raise
 
 	pylab.hold(True)
 
