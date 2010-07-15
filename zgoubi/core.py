@@ -338,6 +338,12 @@ class Line(object):
 				new_line.add(element)
 		return new_line
 
+	def __mul__(self, rhs):
+		new_line = Line(self.name)
+		for x in xrange(rhs):
+			for element in self.element_list:
+				new_line.add(element)
+		return new_line
 
 
 	def __str__(self, prefix=""):
