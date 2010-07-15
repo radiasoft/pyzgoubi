@@ -261,7 +261,7 @@ class Bunch(object):
 			a3 = a3[keep]
 			a4 = a4[keep]
 
-			print len(a1)
+			#print len(a1)
 			
 			# it is possible that to many particles will be rejected
 			if len(a1) >= npart:
@@ -453,6 +453,8 @@ class Bunch(object):
 		# it ought to be possible to do this:
 		#numpy.savetxt(fh, self.coords[['Y','T','Z','P','S','D']])
 		# but the field end up in the wrong order, see http://thread.gmane.org/gmane.comp.python.numeric.general/36933
+		if not numpy.all(numpy.isfinite(self.raw_particles()[0])):
+			zlog.error("Non finite coords in bunch")
 
 		fh = open(fname, "w")
 		if binary:
@@ -480,13 +482,23 @@ class Bunch(object):
 
 	
 	def get_widths(self):
-		"Returns the width of the bunch in each dimension Y,T,Z,P,S,D (D not calculated yet)"
+		"Returns the width of the bunch in each dimension Y,T,Z,P,S,D"
 		y_width = numpy.max(self.coords['Y']) - numpy.min(self.coords['Y'])
 		t_width = numpy.max(self.coords['T']) - numpy.min(self.coords['T'])
 		z_width = numpy.max(self.coords['Z']) - numpy.min(self.coords['Z'])
 		p_width = numpy.max(self.coords['P']) - numpy.min(self.coords['P'])
 		s_width = numpy.max(self.coords['S']) - numpy.min(self.coords['S'])
 		d_width = numpy.max(self.coords['D']) - numpy.min(self.coords['D'])
+		return (y_width, t_width, z_width, p_width, s_width, d_width)
+
+	def get_widths_rms(self):
+		"Returns the rms width of the bunch in each dimension Y,T,Z,P,S,D"
+		y_width = self.coords['Y'].std()
+		t_width = self.coords['T'].std()
+		z_width = self.coords['Z'].std()
+		p_width = self.coords['P'].std()
+		s_width = self.coords['S'].std()
+		d_width = self.coords['D'].std()
 		return (y_width, t_width, z_width, p_width, s_width, d_width)
 
 	def get_centers(self):
@@ -589,6 +601,24 @@ class Bunch(object):
 		#print "Emmitance (h, v):", emmitance_h, emmitance_v
 		return (emmitance_h, emmitance_v)
 
+	def get_emmitance_rms(self):
+		"return emittance h and v in m rad. Uses the RMS quantities"
+		centers = self.get_centers()
+		Ys = self.coords['Y'] - centers[0] # work relative to center
+		Ts = self.coords['T'] - centers[1]
+		Zs = self.coords['Z'] - centers[2]
+		Ps = self.coords['P'] - centers[3]
+
+		mxs = (Ys**2).mean()
+		mxps = (Ts**2).mean()
+		mxxp = (Ys*Ts).mean()
+		e_h_rms = sqrt(mxs * mxps - mxxp**2)
+
+		mys = (Zs**2).mean()
+		myps = (Ps**2).mean()
+		myyp = (Zs*Ps).mean()
+		e_v_rms = sqrt(mys * myps - myyp**2)
+		return (e_h_rms, e_v_rms)
 
 	def get_twiss(self, emittance):
 		"Returns the twiss valuse Beta_h, Alpha_h, Beta_v, Alpha_v, calculated from bunch width extent"
@@ -623,6 +653,28 @@ class Bunch(object):
 		#	alpha_v = sqrt((gamma_v*beta_v)-1 )
 
 		#print "twiss (bh,ah,bv,av):", beta_h, alpha_h, beta_v, alpha_v
+		return beta_h, alpha_h, beta_v, alpha_v
+
+
+	def get_twiss_rms(self, emittance):
+		"Returns the rms twiss valuse Beta_h, Alpha_h, Beta_v, Alpha_v, calculated from bunch rms width"
+		# emittance may be a single number, or tuple (emittance_h, emittance_v)
+		try:
+			emittance_h, emittance_v = emittance
+		except TypeError:
+			emittance_h = emittance_v = emittance
+
+		centers = self.get_centers()
+		Ys = self.coords['Y'] - centers[0] # work relative to center
+		Ts = self.coords['T'] - centers[1]
+		Zs = self.coords['Z'] - centers[2]
+		Ps = self.coords['P'] - centers[3]
+
+		beta_h = (Ys**2).mean()/emittance_h
+		alpha_h = -(Ys*Ts).mean()/emittance_h
+		beta_v = (Zs**2).mean()/emittance_v
+		alpha_v = -(Zs*Ps).mean()/emittance_v
+
 		return beta_h, alpha_h, beta_v, alpha_v
 
 
