@@ -163,3 +163,6 @@ ID, A, B, C : I, 3E  # if ID < 0 there should be more ABCs etc.
 IORDRE : I
 XPAS : X
 KPOS, XCE, YCE, ALE : I, 3E
+
+YMY
+YMY
