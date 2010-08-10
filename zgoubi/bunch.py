@@ -462,9 +462,12 @@ class Bunch(object):
 			for dummy in xrange(4):
 				io.write_fortran_record(fh, "a"*80)
 			#data
+			rec_len_r = struct.pack("i", 6*8)
 			for p in self.coords:
-				record = struct.pack("6d", p['Y'], p['T'], p['Z'], p['P'], p['S'], p['D'])
-				io.write_fortran_record(fh, record)
+				#record = struct.pack("6d", p['Y'], p['T'], p['Z'], p['P'], p['S'], p['D'])
+				record = p.tostring()[8:48] + p.tostring()[:8]
+				#io.write_fortran_record(fh, record)
+				fh.write(rec_len_r+record+rec_len_r)
 
 		else:
 			nparts = len(self.coords)
