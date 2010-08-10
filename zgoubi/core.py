@@ -485,15 +485,15 @@ class Line(object):
 
 		return result
 	
-	def track_bunch(self, bunch, **kwargs):
-		"Track a bunch through a Line, and return the bunch. This function will uses the OBJET_bunch object, and so need needs a Line that does not already have a OBJET"
+	def track_bunch(self, bunch, binary=False, **kwargs):
+		"Track a bunch through a Line, and return the bunch. This function will uses the OBJET_bunch object, and so need needs a Line that does not already have a OBJET. If binary is true then particles are sent to zgoubi in binary (needs a version of zgoubi that supports this)"
 		if self.full_line:
 			raise BadLineError("If line already has an OBJET use run()")
 
 		bunch_len = len(bunch)
 		#build a line with the bunch OBJET and segment we were passed
 		new_line = Line("bunch_line")
-		new_line.add(OBJET_bunch(bunch, binary=False))
+		new_line.add(OBJET_bunch(bunch, binary=binary))
 		new_line.add(self)
 		#mark the faiscnl that we are interested in
 		new_line.add(MARKER("trackbun"))
