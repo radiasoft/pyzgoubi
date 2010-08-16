@@ -514,8 +514,9 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 			has_object5 = True
 		if t == 'MATRIX':
 			has_matrix = True
-	if not (has_object5 and has_matrix):
+	if not (has_object5 and (has_matrix or input_twiss_parameters != [0, 0, 0, 0, 0, 0])):
 		raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
+
 
 	#run Zgoubi
 	r = line.run(xterm = False)
@@ -524,19 +525,18 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 #!-----------------------------------------------------------------------------------------
 	try:
 		try:
-			plt_track = r.get_track('plt', ['LET', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'X0', 'D', 'Y', 'T', 'Z', 'P', 'S', 'X'])
+			plt_track = r.get_track('plt', ['LET', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'D', 'Y', 'T', 'Z', 'P', 'S'])
 			track_type = 'plt'
 		except IOError:
-			plt_track = r.get_track('fai', ['LET', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'X0', 'D', 'Y', 'T', 'Z', 'P', 'S'])
+			plt_track = r.get_track('fai', ['LET', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'D', 'Y', 'T', 'Z', 'P', 'S'])
 			track_type = 'fai'
 	except ValueError:
-		# new file format has no 'X0', now called 'S0' to match zgoubi output
 		# also 'D' is now know as 'D-1'
 		try:
-			plt_track = r.get_track('plt', ['LET', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'D-1', 'Y', 'T', 'Z', 'P', 'X', 'S'])
+			plt_track = r.get_track('plt', ['LET', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'D-1', 'Y', 'T', 'Z', 'P', 'S'])
 			track_type = 'plt'
 		except IOError:
-			plt_track = r.get_track('fai', ['LET', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'D-1', 'Y', 'T', 'Z', 'P', 'S'])
+			plt_track = r.get_track('fai', ['LET', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'D-1', 'Y', 'T', 'Z', 'P', 'S'])
 			track_type = 'fai'
 
 	transpose_plt_track = map(list, zip(*plt_track))
@@ -546,19 +546,18 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 	T0 = transpose_plt_track[3]
 	Z0 = transpose_plt_track[4]			
 	P0 = transpose_plt_track[5]
-	X0 = transpose_plt_track[6]
-	D = transpose_plt_track[7]
-	Y = transpose_plt_track[8]
-	T = transpose_plt_track[9]
-	Z = transpose_plt_track[10]
-	P = transpose_plt_track[11]	
-	S = transpose_plt_track[12]
+	D = transpose_plt_track[6]
+	Y = transpose_plt_track[7]
+	T = transpose_plt_track[8]
+	Z = transpose_plt_track[9]
+	P = transpose_plt_track[10]	
+	S = transpose_plt_track[11]
 	if track_type == 'plt':
-		X = transpose_plt_track[13]
+		#X = transpose_plt_track[13]
 		#read labels
 		label = [x[0].strip() for x in r.get_track('plt', ['element_label1'])]
 	else:
-		X = [0 for x in xrange(len(S))]
+		#X = [0 for x in xrange(len(S))]
 		label = [x[0].strip() for x in r.get_track('fai', ['element_label1'])]
 
 
