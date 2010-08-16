@@ -94,9 +94,9 @@ def write_fortran_record(fh, record):
 	"Write a record, adds record length to start and end"
 	rec_len = len(record)
 	rec_len_r = struct.pack("i", rec_len)
-	fh.write(rec_len_r)
-	fh.write(record)
-	fh.write(rec_len_r)
+	fh.write(rec_len_r+record+rec_len_r)
+	#fh.write(record)
+	#fh.write(rec_len_r)
 
 
 

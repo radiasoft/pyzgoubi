@@ -60,7 +60,8 @@ class Bunch(object):
 			n_slices = ceil(len(self.coords)/max_particles)
 
 		for pslice in numpy.array_split(self.coords, n_slices):
-			yield Bunch(rigidity=self.get_bunch_rigidity(), mass=self.mass, charge=self.charge,
+			if pslice.size != 0:
+				yield Bunch(rigidity=self.get_bunch_rigidity(), mass=self.mass, charge=self.charge,
 			            particles=pslice)
 
 	def __str__(self):
@@ -97,8 +98,15 @@ class Bunch(object):
 		return self.rigidity
 
 	def particles(self):
-		"Returns the numpy array that holds the coordinates"
+		"Returns the numpy array that holds the coordinates, as a structured numpy array"
 		return self.coords
+
+	def raw_particles(self):
+		"""Returns the numpy array that holds the coordinates, as a 2d numpy array and a list of comumn names. It is possible that the column names may change or reorder, so if you use this you may want to protect against it with something like::
+			assert(pbunch.raw_particles()[1] == ["D","Y","T","Z","P","S","TOF","X"])
+
+		"""
+		return self.coords.view((numpy.float64, len(self.coords.dtype.names))), self.coords.dtype.names
 
 	def get_min_BORO(self):
 		"Returns the minimum rigidity of the bunch"
@@ -158,7 +166,7 @@ class Bunch(object):
 	@staticmethod
 	def gen_kv_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None,
 			               ke=None, rigidity=0, mass=0, charge=1):
-		"""Generate a uniform (KV) bunch, i.e. a filled elipse in x-xp (Y-T) and in y-yp (Z-P). S and D are set to 0 and 1 respectively.
+		"""Generate a uniform (KV) bunch, i.e. a surface of a 4D hypershere in x-xp-y-yp (Y-T-Z-P). S and D are set to 0 and 1 respectively.
 		example::
 			my_bunch = Bunch.gen_kv_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
 		
@@ -175,18 +183,96 @@ class Bunch(object):
 		if seed != None:
 			numpy.random.seed(seed)
 
-		ry = sqrt(emit_y) * numpy.random.random_sample([npart])
-		rz = sqrt(emit_z) * numpy.random.random_sample([npart]) 
+		ry = sqrt(emit_y)
+		rz = sqrt(emit_z)
 
-		u1 = numpy.random.random_sample([npart]) * pi * 2
-		u2 = numpy.random.random_sample([npart]) * pi * 2
+		#u1 = numpy.random.random_sample([npart]) * pi * 2
+		#u2 = numpy.random.random_sample([npart]) * pi * 2
 
 		coords = numpy.zeros([npart, 6], numpy.float64)
+	
+		# From Chris Prior.
+		y = numpy.random.uniform(-1,1,[npart])
+		y2 = numpy.arccos(y) /2
+		phi = numpy.random.uniform(-pi,pi,[npart])
+		the = numpy.random.uniform(-pi,pi,[npart])
 
-		coords[:, 0] = ry * numpy.cos(u1)
-		coords[:, 1] = ry * numpy.sin(u1)
-		coords[:, 2] = rz * numpy.cos(u2)
-		coords[:, 3] = rz * numpy.sin(u2)
+		coords[:, 0] = ry * numpy.cos(y2) * numpy.cos(phi)
+		coords[:, 1] = ry * numpy.cos(y2) * numpy.sin(phi)
+		coords[:, 2] = rz * numpy.sin(y2) * numpy.cos(the)
+		coords[:, 3] = rz * numpy.sin(y2) * numpy.sin(the)
+
+		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
+		
+		for n, coord in enumerate(coords):
+			#	new_coord = numpy.dot(coord, matrix)
+			coords[n] = numpy.dot(matrix, coord)
+		
+		bunch =  numpy.zeros([npart], Bunch.min_data_def)
+		
+		bunch['Y'] = coords[:, 0]
+		bunch['T'] = coords[:, 1]
+		bunch['Z'] = coords[:, 2]
+		bunch['P'] = coords[:, 3]
+		bunch['D'] = 1
+		
+		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=bunch)
+	@staticmethod
+	def gen_waterbag_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None,
+			               ke=None, rigidity=0, mass=0, charge=1):
+		"""Generate a waterbag bunch, i.e. a filled hypersphere in x-xp-y-yp (Y-T-Z-P). S and D are set to 0 and 1 respectively.
+		example::
+			my_bunch = Bunch.gen_waterbag_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
+		
+		creates a waterbag bunch called my_bunch with 1000 particles of the given parameters.
+
+		"""
+
+		if emit_y < 0 or emit_z < 0 or beta_y < 0 or beta_z < 0:
+			print "Emittance or beta can't be negative"
+			print "emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z"
+			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
+			raise ValueError
+
+		if seed != None:
+			numpy.random.seed(seed)
+
+		ry = sqrt(emit_y)
+		rz = sqrt(emit_z)
+
+		#u1 = numpy.random.random_sample([npart]) * pi * 2
+		#u2 = numpy.random.random_sample([npart]) * pi * 2
+
+		coords = numpy.zeros([npart, 6], numpy.float64)
+		
+		while True:
+			# fill a hypercube with 3.5 times as many particles as needed
+			a1 =  numpy.random.uniform(-1,1,[npart*3.5])
+			a2 =  numpy.random.uniform(-1,1,[npart*3.5])
+			a3 =  numpy.random.uniform(-1,1,[npart*3.5])
+			a4 =  numpy.random.uniform(-1,1,[npart*3.5])
+			
+			# discard ones that fall out of hypesphere
+			r = a1**2+a2**2+a3**2+a4**2
+			keep = r <= 1
+			
+			a1 = a1[keep]
+			a2 = a2[keep]
+			a3 = a3[keep]
+			a4 = a4[keep]
+
+			#print len(a1)
+			
+			# it is possible that to many particles will be rejected
+			if len(a1) >= npart:
+				break
+
+		
+
+		coords[:, 0] = ry * a1[0:npart]
+		coords[:, 1] = ry * a2[0:npart]
+		coords[:, 2] = rz * a3[0:npart]
+		coords[:, 3] = rz * a4[0:npart]
 
 		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
 		
@@ -367,6 +453,8 @@ class Bunch(object):
 		# it ought to be possible to do this:
 		#numpy.savetxt(fh, self.coords[['Y','T','Z','P','S','D']])
 		# but the field end up in the wrong order, see http://thread.gmane.org/gmane.comp.python.numeric.general/36933
+		if not numpy.all(numpy.isfinite(self.raw_particles()[0])):
+			zlog.error("Non finite coords in bunch")
 
 		fh = open(fname, "w")
 		if binary:
@@ -374,9 +462,12 @@ class Bunch(object):
 			for dummy in xrange(4):
 				io.write_fortran_record(fh, "a"*80)
 			#data
+			rec_len_r = struct.pack("i", 6*8)
 			for p in self.coords:
-				record = struct.pack("6d", p['Y'], p['T'], p['Z'], p['P'], p['S'], p['D'])
-				io.write_fortran_record(fh, record)
+				#record = struct.pack("6d", p['Y'], p['T'], p['Z'], p['P'], p['S'], p['D'])
+				record = p.tostring()[8:48] + p.tostring()[:8]
+				#io.write_fortran_record(fh, record)
+				fh.write(rec_len_r+record+rec_len_r)
 
 		else:
 			nparts = len(self.coords)
@@ -394,13 +485,23 @@ class Bunch(object):
 
 	
 	def get_widths(self):
-		"Returns the width of the bunch in each dimension Y,T,Z,P,S,D (D not calculated yet)"
+		"Returns the width of the bunch in each dimension Y,T,Z,P,S,D"
 		y_width = numpy.max(self.coords['Y']) - numpy.min(self.coords['Y'])
 		t_width = numpy.max(self.coords['T']) - numpy.min(self.coords['T'])
 		z_width = numpy.max(self.coords['Z']) - numpy.min(self.coords['Z'])
 		p_width = numpy.max(self.coords['P']) - numpy.min(self.coords['P'])
 		s_width = numpy.max(self.coords['S']) - numpy.min(self.coords['S'])
 		d_width = numpy.max(self.coords['D']) - numpy.min(self.coords['D'])
+		return (y_width, t_width, z_width, p_width, s_width, d_width)
+
+	def get_widths_rms(self):
+		"Returns the rms width of the bunch in each dimension Y,T,Z,P,S,D"
+		y_width = self.coords['Y'].std()
+		t_width = self.coords['T'].std()
+		z_width = self.coords['Z'].std()
+		p_width = self.coords['P'].std()
+		s_width = self.coords['S'].std()
+		d_width = self.coords['D'].std()
 		return (y_width, t_width, z_width, p_width, s_width, d_width)
 
 	def get_centers(self):
@@ -503,6 +604,24 @@ class Bunch(object):
 		#print "Emmitance (h, v):", emmitance_h, emmitance_v
 		return (emmitance_h, emmitance_v)
 
+	def get_emmitance_rms(self):
+		"return emittance h and v in m rad. Uses the RMS quantities"
+		centers = self.get_centers()
+		Ys = self.coords['Y'] - centers[0] # work relative to center
+		Ts = self.coords['T'] - centers[1]
+		Zs = self.coords['Z'] - centers[2]
+		Ps = self.coords['P'] - centers[3]
+
+		mxs = (Ys**2).mean()
+		mxps = (Ts**2).mean()
+		mxxp = (Ys*Ts).mean()
+		e_h_rms = sqrt(mxs * mxps - mxxp**2)
+
+		mys = (Zs**2).mean()
+		myps = (Ps**2).mean()
+		myyp = (Zs*Ps).mean()
+		e_v_rms = sqrt(mys * myps - myyp**2)
+		return (e_h_rms, e_v_rms)
 
 	def get_twiss(self, emittance):
 		"Returns the twiss valuse Beta_h, Alpha_h, Beta_v, Alpha_v, calculated from bunch width extent"
@@ -537,6 +656,28 @@ class Bunch(object):
 		#	alpha_v = sqrt((gamma_v*beta_v)-1 )
 
 		#print "twiss (bh,ah,bv,av):", beta_h, alpha_h, beta_v, alpha_v
+		return beta_h, alpha_h, beta_v, alpha_v
+
+
+	def get_twiss_rms(self, emittance):
+		"Returns the rms twiss valuse Beta_h, Alpha_h, Beta_v, Alpha_v, calculated from bunch rms width"
+		# emittance may be a single number, or tuple (emittance_h, emittance_v)
+		try:
+			emittance_h, emittance_v = emittance
+		except TypeError:
+			emittance_h = emittance_v = emittance
+
+		centers = self.get_centers()
+		Ys = self.coords['Y'] - centers[0] # work relative to center
+		Ts = self.coords['T'] - centers[1]
+		Zs = self.coords['Z'] - centers[2]
+		Ps = self.coords['P'] - centers[3]
+
+		beta_h = (Ys**2).mean()/emittance_h
+		alpha_h = -(Ys*Ts).mean()/emittance_h
+		beta_v = (Zs**2).mean()/emittance_v
+		alpha_v = -(Zs*Ps).mean()/emittance_v
+
 		return beta_h, alpha_h, beta_v, alpha_v
 
 
