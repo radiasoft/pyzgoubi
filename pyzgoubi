@@ -150,10 +150,13 @@ if __name__ == '__main__':
 			except NameError:
 				pass
 			print "Default Zgoubi path", zgoubi_settings['zgoubi_path']
-			output = subprocess.Popen([zgoubi_settings['zgoubi_path']], stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+			tmpdir = tempfile.mkdtemp()
+			print tmpdir
+			output = subprocess.Popen([zgoubi_settings['zgoubi_path']], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tmpdir).communicate()[0]
 			for line in output.split('\n'):
 				if "version" in line.lower():
 					print line.strip()
+			shutil.rmtree(tmpdir)
 			sys.exit(0)
 		if o in ['--help', "-h"]:
 			if len(args):
@@ -179,8 +182,12 @@ if __name__ == '__main__':
 		sys.exit(1)
 		
 	try:
-		subprocess.Popen([zgoubi_settings['zgoubi_path']], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		tmpdir = tempfile.mkdtemp()
+		print tmpdir
+		subprocess.Popen([zgoubi_settings['zgoubi_path']], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tmpdir).wait()
+		shutil.rmtree(tmpdir)
 	except OSError:
+		shutil.rmtree(tmpdir)
 		print "can't zgoubi binary", zgoubi_settings['zgoubi_path']
 		print "please modify the 'zgoubi_path' entry in ~/.pyzgoubi/settings.ini to the full path of zgoubi"
 		print "or add the direcory containing zgoubi to the $PATH"
