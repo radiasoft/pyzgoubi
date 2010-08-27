@@ -776,55 +776,67 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 	sign_sine_z_old = 1.0
 	n_pi_y = 0
 	n_pi_z = 0
-	for i in range(len(R11_list)):
-		# Horizontal plane
-		#-----------------
-		beta_y = (R11_list[i]**2)*beta_y_0 - 2.0*R11_list[i]*R12_list[i]*alpha_y_0 + (R12_list[i]**2)*gamma_y_0
-		beta_y_list.append(beta_y)
+	try:
+		for i in range(len(R11_list)):
+			# Horizontal plane
+			#-----------------
+			beta_y = (R11_list[i]**2)*beta_y_0 - 2.0*R11_list[i]*R12_list[i]*alpha_y_0 + (R12_list[i]**2)*gamma_y_0
+			beta_y_list.append(beta_y)
 
-		# Horizontal phase advance calculation
-		# To account for range of acos=(0,Pi), check sign of sin(angle) to know when to change from angle to (2*Pi-angle) etc.	
-		sine_angle = R12_list[i]/sqrt(beta_y*beta_y_0)
-		if abs(sine_angle) > 1: 
-			mu_y_list.append(mu_y_list[i-1])
-		else:
-			sign_sine_y = numpy.sign(asin(sine_angle))
-			if sign_sine_y - sign_sine_y_old == -2:
-				n_pi_y = n_pi_y + 1
-			sign_sine_y_old = sign_sine_y
-			if sign_sine_y >= 0:
-				mu_y_list.append(n_pi_y*2*pi+acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+			# Horizontal phase advance calculation
+			# To account for range of acos=(0,Pi), check sign of sin(angle) to know when to change from angle to (2*Pi-angle) etc.	
+			sine_angle = R12_list[i]/sqrt(beta_y*beta_y_0)
+			if abs(sine_angle) > 1: 
+				mu_y_list.append(mu_y_list[i-1])
 			else:
-				mu_y_list.append(n_pi_y*2*pi-acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+				sign_sine_y = numpy.sign(asin(sine_angle))
+				if sign_sine_y - sign_sine_y_old == -2:
+					n_pi_y = n_pi_y + 1
+				sign_sine_y_old = sign_sine_y
+				if sign_sine_y >= 0:
+					mu_y_list.append(n_pi_y*2*pi+acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+				else:
+					mu_y_list.append(n_pi_y*2*pi-acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
 
-		alpha_y_list.append(-R11_list[i]*R21_list[i]*beta_y_0 + (R11_list[i]*R22_list[i]+R12_list[i]*R21_list[i])*alpha_y_0 \
-			- R12_list[i]*R22_list[i]*gamma_y_0)
-		gamma_y_list.append((R21_list[i]**2)*beta_y_0-2*R21_list[i]*R22_list[i]*alpha_y_0+(R22_list[i]**2)*gamma_y_0)
-		# Vertical plane
-		#---------------
-		beta_z = (R33_list[i]**2)*beta_z_0 - 2.0*R33_list[i]*R34_list[i]*alpha_z_0 + (R34_list[i]**2)*gamma_z_0
-		beta_z_list.append(beta_z)
+			alpha_y_list.append(-R11_list[i]*R21_list[i]*beta_y_0 + (R11_list[i]*R22_list[i]+R12_list[i]*R21_list[i])*alpha_y_0 \
+				- R12_list[i]*R22_list[i]*gamma_y_0)
+			gamma_y_list.append((R21_list[i]**2)*beta_y_0-2*R21_list[i]*R22_list[i]*alpha_y_0+(R22_list[i]**2)*gamma_y_0)
+			# Vertical plane
+			#---------------
+			beta_z = (R33_list[i]**2)*beta_z_0 - 2.0*R33_list[i]*R34_list[i]*alpha_z_0 + (R34_list[i]**2)*gamma_z_0
+			beta_z_list.append(beta_z)
 
-		# Vertical phase advance calculation
-		sine_angle = R34_list[i]/sqrt(beta_z*beta_z_0)
-		if abs(sine_angle) > 1:
-			mu_z_list.append(mu_z_list[i-1])
-		else:
-			sign_sine_z = numpy.sign(asin(sine_angle))
-			if sign_sine_z - sign_sine_z_old == -2:
-				n_pi_z = n_pi_z + 1
-			sign_sine_z_old = sign_sine_z
-			if sign_sine_z >= 0:
-				mu_z_list.append(n_pi_z*2*pi+acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
-			else: 
-				mu_z_list.append(n_pi_z*2*pi-acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
+			# Vertical phase advance calculation
+			sine_angle = R34_list[i]/sqrt(beta_z*beta_z_0)
+			if abs(sine_angle) > 1:
+				mu_z_list.append(mu_z_list[i-1])
+			else:
+				sign_sine_z = numpy.sign(asin(sine_angle))
+				if sign_sine_z - sign_sine_z_old == -2:
+					n_pi_z = n_pi_z + 1
+				sign_sine_z_old = sign_sine_z
+				if sign_sine_z >= 0:
+					mu_z_list.append(n_pi_z*2*pi+acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
+				else: 
+					mu_z_list.append(n_pi_z*2*pi-acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
 
-		alpha_z_list.append(-R33_list[i]*R43_list[i]*beta_z_0 + (R33_list[i]*R44_list[i]+R34_list[i]*R43_list[i])*alpha_z_0 \
-			- R34_list[i]*R44_list[i]*gamma_z_0)
-		gamma_z_list.append((R43_list[i]**2)*beta_z_0-2*R43_list[i]*R44_list[i]*alpha_z_0+(R44_list[i]**2)*gamma_z_0)
-		print >> fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], mu_y_list[i], beta_y, alpha_y_list[i], \
-			gamma_y_list[i], mu_z_list[i], beta_z, alpha_z_list[i], gamma_z_list[i])
-
+			alpha_z_list.append(-R33_list[i]*R43_list[i]*beta_z_0 + (R33_list[i]*R44_list[i]+R34_list[i]*R43_list[i])*alpha_z_0 \
+				- R34_list[i]*R44_list[i]*gamma_z_0)
+			gamma_z_list.append((R43_list[i]**2)*beta_z_0-2*R43_list[i]*R44_list[i]*alpha_z_0+(R44_list[i]**2)*gamma_z_0)
+			print >> fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], mu_y_list[i], beta_y, alpha_y_list[i], \
+				gamma_y_list[i], mu_z_list[i], beta_z, alpha_z_list[i], gamma_z_list[i])
+	except (IndexError, ZeroDivisionError, ValueError):
+		print "Error calculating twiss parameters from twiss matrix"
+		print "i=", i, "(", label[i], ")"
+		print "Matrix:"
+		for ai in range(1,7):
+			for aj in range(1,7):
+				if aj == 5 or ai == 6:
+					print "-\t",
+					continue
+				print eval("R%s%s_list[i]"%(ai,aj)),"\t",
+			print
+		raise
 	#put twiss parameters together. Format [s_coord, mu_y, beta_y, alpha_y, gamma_y, mu_z, beta_z, alpha_z, gamma_z]. Units are SI
 	twiss_profiles = [[s*cm for s in S_alltracks[0]], label_ref, mu_y_list, beta_y_list, alpha_y_list, gamma_y_list, mu_z_list, beta_z_list, alpha_z_list, gamma_z_list]
 
