@@ -751,6 +751,10 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 		beta_z_0 = input_twiss_parameters[3]
 		alpha_z_0 = input_twiss_parameters[4]
 		gamma_z_0 = input_twiss_parameters[5]
+	
+	zlog.debug("Initial parameters:\nbeta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0\n%s, %s, %s, %s, %s, %s" % (beta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0))
+	if beta_y_0 == 0 or beta_z_0 == 0:
+		zlog.error("Beam is unstable")
 
 
 #! Calculate twiss parameters at all points in plt file 
