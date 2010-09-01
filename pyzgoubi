@@ -113,7 +113,17 @@ def _show_help(help_arg):
 	help_elem_inst = eval("%s()" % help_arg.upper())
 	print "zgoubi name:", help_elem_inst._zgoubi_name
 	print "Parameters:"
-	print '\n'.join(help_elem_inst.list_params())
+	params = help_elem_inst.list_params()
+	params.sort()
+	print '\n'.join(params)
+	if hasattr(help_elem_inst, "_looped_data"):
+		help_elem_inst.add()
+		print "Sub element parameters:"
+		sparams = help_elem_inst._looped_data[0].keys()
+		sparams.sort()
+		print '\n'.join(sparams)
+
+
 
 def _show_usage():
 	"Show some usage instructions"
