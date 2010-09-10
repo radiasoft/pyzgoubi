@@ -303,6 +303,7 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 	would create 100 particles in a grid.
 	
 	"""
+	zlog.debug("enter function")
 	if range_YTZP == None:
 		range_YTZP = [10, 10, 10, 10]
 	if init_YTZP == None:
@@ -313,6 +314,7 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 	#first check center
 	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
 	if result != None:
+		zlog.debug("Found a closed orbit without needing range")
 		return result
 
 	# if the init_YTZP is not stable, then send a bunch, and see if any of those are not lost
@@ -341,9 +343,12 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 		else:
 			ranges.append(numpy.linspace(-range_YTZP[x], range_YTZP[x], count_YTZP[x]))
 
+	n_coords = 0
 	for coord in itertools.product(*ranges):
+		n_coords += 1
 		objet.add(Y=current_YTZP[0]+coord[0], T=current_YTZP[1]+coord[1], Z=current_YTZP[2]+coord[2], P=current_YTZP[3]+coord[3], LET='A', D=D)
 
+	zlog.debug("Search for a stable orbit with %s particles"%n_coords)
 	r = line.run(xterm=False)
 
 	if not r.run_success():
@@ -450,6 +455,8 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 		area_h = calc_area_simple(track_a[:, 0:2], centre=centre_h)
 		centre_v = find_centre(track_a[:, 2:4])
 		area_v = calc_area_simple(track_a[:, 2:4], centre=centre_v)
+
+		zlog.debug("End iteration: "+str(iteration)+ " final coords "+str(track_a[-1])+", center "+str([centre_h, centre_v])+", area "+str([area_h,area_v]))
 
 
 		areas.append([area_h , area_v])
