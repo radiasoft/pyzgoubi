@@ -10,10 +10,12 @@ import sys
 import os
 import warnings
 from glob import glob
+from zgoubi.common import *
 from zgoubi.constants import *
 from zgoubi.exceptions import *
 import itertools
 from zgoubi.core import zlog, dep_warn
+from StringIO import StringIO
 
 # use these to convert things to metres and tesla
 m = 1
@@ -291,7 +293,7 @@ def show_file(file_path, mode):
 		command = 'xterm -e "less %s"'% file_path
 		os.system(command)
 
-def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, range_YTZP=None, count_YTZP=None):
+def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, range_YTZP=None, count_YTZP=None, record_fname=None):
 	"""Same as find_closed_orbit, but if init_YTZP is unstable, will generate a bunch or particles, with a spread of range_YTZP, and if any of those are stable will do a closed orbit search with that particle::
 
 		init_YTZP=[5,0,0,0], range_YTZP=[10,0,0,0], count_YTZP[50,0,0,0]
@@ -311,8 +313,15 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 	if count_YTZP == None:
 		count_YTZP = [10, 10, 10, 10]
 	
+	if record_fname:
+		record_fh = open_file_or_name(record_fname, "w", mkdir=True)
+	else:
+		record_fh = None
+	
 	#first check center
-	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
+	if record_fname:
+		record_fh.write("#center\n")
+	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D, record_fname=record_fh)
 	if result != None:
 		zlog.debug("Found a closed orbit without needing range")
 		return result
@@ -363,20 +372,29 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 		surviving_particles = track[ numpy.logical_and(track['PASS'] == final_lap_n , track['IEX']>0)  ]
 		zlog.debug("%d particles survived"%len(surviving_particles))
 
-		for surviving_particle in surviving_particles:
+		#measure lengths and sort
+		surviving_particles2 = [ [ sqrt((p['Y']-p['Y0'])**2 + (p['T']-p['T0'])**2 + (p['Z']-p['Z0'])**2 + (p['P']-p['P0'])**2),p] for p in surviving_particles ]
+		surviving_particles2.sort()
+
+		if record_fname:
+			record_fh.write("#survivors %s\n"%len(surviving_particles))
+			for length, surviving_particle in surviving_particles2:
+				surviving_coords = (surviving_particle['Y0'], surviving_particle['T0'], surviving_particle['Z0'], surviving_particle['P0'], surviving_particle['Y'], surviving_particle['T'], surviving_particle['Z'], surviving_particle['P'])
+				record_fh.write("%s %s %s %s %s %s %s %s\n"%surviving_coords)
+
+
+		for length, surviving_particle in surviving_particles2[:10]:
 			surviving_init_coord = [surviving_particle['Y0'], surviving_particle['T0'], surviving_particle['Z0'], surviving_particle['P0']]
 		
 			# use stable particle to find closed orbit
-			result = find_closed_orbit(line=line, init_YTZP=surviving_init_coord, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
+			result = find_closed_orbit(line=line, init_YTZP=surviving_init_coord, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D, record_fname=record_fh)
 			if result != None:
 				return result
 		zlog.warning("Despite finding surviving particles, none were stable")	
 		return None
 
-	
 
-
-def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1):
+def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, record_fname=None):
 	"""Find a closed orbit for the line. can optionally give a list of initial coordinates, init_YTZP, eg:
 	find_closed_orbit(line, init_YTZP=[1.2,2.1,0,0])
 	otherwise [0,0,0,0] are used.
@@ -385,11 +403,14 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 
 	It is recommend to have a REBELOTE, with several laps. The area of the phase space ellipse is approximated from the coordinates from the FAISCNL (or MARKER with fai_label), and the center is used for the new coordinates. Once the relative variation between iterations is less that the tolerance, the function returns the closed orbit coordinates. If a coordinate is close to zero (less than the tolerance) then it is compared absolutely instead of relatively.
 	
+	record_fname is used to record search details to a file that can be used with plot_find_closed_orbit().
 	"""
 	zlog.debug("enter function")
 	if init_YTZP == None:
 		init_YTZP = [0, 0, 0, 0]
 
+	if record_fname:
+		record_fh = open_file_or_name(record_fname, "w", mkdir=True)
 	#check line has an objet2
 	for e in line.element_list:
 		if ("OBJET2" in str(type(e)).split("'")[1]):
@@ -445,6 +466,10 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 		track_a = numpy.zeros([len(track)+1, len(track[0])])
 		track_a[0] = current_YTZP
 		track_a[1:] = track
+		
+		if record_fname:
+			record_fh.write("#track %s\n"%track_a.shape[0])
+			numpy.savetxt(record_fh, track_a)
 
 		tracks.append(track_a)
 
@@ -493,6 +518,95 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 	else:
 		zlog.warn("Iterations did not converge, no closed orbit found")
 		return None
+
+
+def plot_find_closed_orbit(data_fname, outfile=None):
+	"""When the closed orbit search fails it can be useful to see what happened. find_closed_orbit() and find_closed_orbit_range() can take an optional argument record_fname. This causes them to write a log file, which can be read by this function and plotted. ::
+
+		closed_orbit =  find_closed_orbit(tline, init_YTZP=[1,20,0,0], record_fname="res/closedorbit.log")
+		plot_find_closed_orbit(data_fname="res/closedorbit.log", outfile="res/closedorbit.png")
+	
+	This will show you the succession of guesses. If using plot_find_closed_orbit_range() it will also show a plot of all the coordinates that survive being tracked through the lattice.
+
+	From the plots it may be clear whether the lattice is unstable, or if the convergence is just too slow. In the latter case it may help to repeat the cell using REBELOTE, or to increase the number of iterations allowed.
+
+	"""
+	import pylab
+	all_data = open(data_fname).readlines()
+	outfile_pre, dummy, outfile_ext = outfile.rpartition(".")
+
+	line_n = 0
+	tracks = []
+	survivors = None
+	while line_n < len(all_data):
+		line = all_data[line_n]
+		if line.startswith("#track"):
+			dummy, track_len = line.split()
+			track_len = int(track_len)
+
+			track_str = "\n".join(all_data[line_n+1: line_n+track_len+1])
+			#print track_str
+			track = numpy.genfromtxt(StringIO(track_str))
+			#print track
+
+			line_n = line_n+track_len
+			tracks.append(track)
+		if line.startswith("#survivors"):
+			dummy, surv_len = line.split()
+			surv_len = int(surv_len)
+
+			surv_str = "\n".join(all_data[line_n+1: line_n+surv_len+1])
+			surv = numpy.genfromtxt(StringIO(surv_str))
+
+			line_n = line_n+surv_len
+			survivors = surv
+
+		line_n += 1
+
+	for axis in ['h', 'v']:
+		pylab.clf()
+		pylab.title("closed orbit searches")
+
+		for track in tracks[:]:
+			if axis=='h':
+				x, y = track[:,0], track[:,1]
+				pylab.xlabel("x")
+				pylab.ylabel("x'")
+			if axis=='v':
+				x, y = track[:,2], track[:,3]
+				pylab.xlabel("y")
+				pylab.ylabel("y'")
+			#print
+			#print x, y
+			pylab.plot(x,y, 'x')
+		
+		
+		if outfile != None:
+			pylab.savefig(outfile_pre+"track_"+axis+"."+outfile_ext)
+		else:
+			pylab.show()
+
+		pylab.clf()
+		pylab.title("surviving particle start and ends")
+
+		if survivors != None:
+			for surv in survivors[:10]:
+				if axis=='h':
+					x, y, x1, y1 = surv[[0,1,4,5]]
+					pylab.xlabel("x")
+					pylab.ylabel("x'")
+				if axis=='v':
+					x, y, x1, y1 = surv[[2,3,6,7]]
+					pylab.xlabel("y")
+					pylab.ylabel("y'")
+				pylab.plot([x], [y], 'x')
+				pylab.plot([x,x1], [y,y1])
+
+
+			if outfile != None:
+				pylab.savefig(outfile_pre+"survivor_"+axis+"."+outfile_ext)
+			else:
+				pylab.show()
 
 
 def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
