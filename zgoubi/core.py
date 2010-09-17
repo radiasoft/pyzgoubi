@@ -491,6 +491,9 @@ class Line(object):
 			raise BadLineError("If line already has an OBJET use run()")
 
 		bunch_len = len(bunch)
+		if bunch_len == 0:
+			zlog.error("Bunch has zero particles")
+			raise ValueError
 		#build a line with the bunch OBJET and segment we were passed
 		new_line = Line("bunch_line")
 		new_line.add(OBJET_bunch(bunch, binary=binary))
