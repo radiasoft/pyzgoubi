@@ -12,6 +12,7 @@ from zgoubi import rel_conv
 from zgoubi import io
 from zgoubi.core import zlog
 import struct
+import inspect
 
 #from zgoubi.utils import *
 
@@ -447,14 +448,25 @@ class Bunch(object):
 		coords['D'] = dist[:, 5]
 		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=coords)
 
+	def check_bunch(self):
+		"Check that the bunch is not empty, and contains finite values"
+		if self.coords.size == 0:
+			zlog.error("Empty Bunch. Called by %s()"%inspect.stack()[1][3])
+			return False
+		if not numpy.all(numpy.isfinite(self.raw_particles()[0])):
+			zlog.error("Non finite coordinates in bunch. Called by %s()"%inspect.stack()[1][3])
+			return False
+	
+		return True
+
+
 	def write_YTZPSD(self, fname, binary=False):
 		"Output a bunch, compatible with read_YTZPSD"
+		self.check_bunch()
 		
 		# it ought to be possible to do this:
 		#numpy.savetxt(fh, self.coords[['Y','T','Z','P','S','D']])
 		# but the field end up in the wrong order, see http://thread.gmane.org/gmane.comp.python.numeric.general/36933
-		if not numpy.all(numpy.isfinite(self.raw_particles()[0])):
-			zlog.error("Non finite coords in bunch")
 
 		fh = open(fname, "w")
 		if binary:
@@ -486,6 +498,7 @@ class Bunch(object):
 	
 	def get_widths(self):
 		"Returns the width of the bunch in each dimension Y,T,Z,P,S,D"
+		self.check_bunch()
 		y_width = numpy.max(self.coords['Y']) - numpy.min(self.coords['Y'])
 		t_width = numpy.max(self.coords['T']) - numpy.min(self.coords['T'])
 		z_width = numpy.max(self.coords['Z']) - numpy.min(self.coords['Z'])
@@ -496,6 +509,7 @@ class Bunch(object):
 
 	def get_widths_rms(self):
 		"Returns the rms width of the bunch in each dimension Y,T,Z,P,S,D"
+		self.check_bunch()
 		y_width = self.coords['Y'].std()
 		t_width = self.coords['T'].std()
 		z_width = self.coords['Z'].std()
@@ -506,6 +520,7 @@ class Bunch(object):
 
 	def get_centers(self):
 		"Returns the center of the bunch in each dimension Y,T,Z,P,S,D"
+		self.check_bunch()
 		y_mean = numpy.mean(self.coords['Y'])
 		t_mean = numpy.mean(self.coords['T'])
 		z_mean = numpy.mean(self.coords['Z'])
@@ -521,6 +536,7 @@ class Bunch(object):
 	def plot(self, fname=None, lims=None, add_bunch=None):
 		"Plot a bunch, if no file name give plot is displayed on screen. lims can be used to force axis limits eg [lY,lT,lZ,lP,lX,lD] would plot limit plot from -lY to +lY in Y, etc. Additional bunches can be passed, as add_bunch, to overlay onto the same plot."
 		
+		self.check_bunch()
 		bunches = [self]
 		if add_bunch != None:
 			try:
@@ -579,6 +595,7 @@ class Bunch(object):
 	
 	def get_emmitance(self):
 		"return emittance h and v in m rad. Uses the bunch full width, so should only be used for a hard edge distribution"
+		self.check_bunch()
 		centers = self.get_centers()
 		Ys = self.coords['Y'] - centers[0] # work relative to center
 		Ts = self.coords['T'] - centers[1]
@@ -606,6 +623,7 @@ class Bunch(object):
 
 	def get_emmitance_rms(self):
 		"return emittance h and v in m rad. Uses the RMS quantities"
+		self.check_bunch()
 		centers = self.get_centers()
 		Ys = self.coords['Y'] - centers[0] # work relative to center
 		Ts = self.coords['T'] - centers[1]
@@ -625,6 +643,7 @@ class Bunch(object):
 
 	def get_twiss(self, emittance):
 		"Returns the twiss valuse Beta_h, Alpha_h, Beta_v, Alpha_v, calculated from bunch width extent"
+		self.check_bunch()
 		# emittance may be a single number, or tuple (emittance_h, emittance_v)
 		try:
 			emittance_h, emittance_v = emittance
@@ -661,6 +680,7 @@ class Bunch(object):
 
 	def get_twiss_rms(self, emittance):
 		"Returns the rms twiss valuse Beta_h, Alpha_h, Beta_v, Alpha_v, calculated from bunch rms width"
+		self.check_bunch()
 		# emittance may be a single number, or tuple (emittance_h, emittance_v)
 		try:
 			emittance_h, emittance_v = emittance
