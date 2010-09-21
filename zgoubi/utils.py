@@ -428,13 +428,14 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 					label = flatten(r.get_track('fai', ['element_label1']))
 					label = [lab.rstrip() for lab in label]
 
-					if len(find_indices(label, fai_label)) != 1:
+					if len(find_indices(label, fai_label)) < 1:
 						zlog.error("number of instances of label "+ str(fai_label) + " not equal 1")
 						return
 
-					fai_index = find_indices(label, fai_label)[0]
-					track = [track[fai_index]]
-				else:
+					fai_index = find_indices(label, fai_label)
+				try:
+					track = numpy.array([track[fi] for fi in fai_index])
+				except:
 					track = [track[fai_index]]
 
 		track_a = numpy.zeros([len(track)+1, len(track[0])])
