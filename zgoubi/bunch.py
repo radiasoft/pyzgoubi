@@ -13,6 +13,7 @@ from zgoubi import io
 from zgoubi.core import zlog
 import struct
 import inspect
+import itertools
 
 #from zgoubi.utils import *
 
@@ -533,9 +534,13 @@ class Bunch(object):
 		"Returns length of bunch. Use len(my_bunch)"
 		return len(self.coords)
 
-	def plot(self, fname=None, lims=None, add_bunch=None):
-		"Plot a bunch, if no file name give plot is displayed on screen. lims can be used to force axis limits eg [lY,lT,lZ,lP,lX,lD] would plot limit plot from -lY to +lY in Y, etc. Additional bunches can be passed, as add_bunch, to overlay onto the same plot."
-		
+	def plot(self, fname=None, lims=None, add_bunch=None, fmt=None):
+		"""Plot a bunch, if no file name give plot is displayed on screen. lims can be used to force axis limits eg [lY,lT,lZ,lP,lX,lD] would plot limit plot from -lY to +lY in Y, etc. Additional bunches can be passed, as add_bunch, to overlay onto the same plot.
+		fmt can be a list of formats in matplotlib style, eg ['rx', 'bo']
+		"""
+		if fmt==None:
+			fmt = [',']
+
 		self.check_bunch()
 		bunches = [self]
 		if add_bunch != None:
@@ -547,46 +552,26 @@ class Bunch(object):
 				# otherwise just append it
 				bunches.append(add_bunch)
 
-		pylab.subplot(2, 2, 1)
-		pylab.grid()
-		for abunch in bunches:
-			pylab.plot(abunch.coords['Y'], abunch.coords['Z'], ',')
-		if lims != None:
-			pylab.xlim(-lims[0], lims[0])
-			pylab.ylim(-lims[2], lims[2])
-		plotname = "X-Y (Y-T)"
-		pylab.title(plotname)
+		coords = ['Y','T','Z','P','X','D']
+		plot_specs = [None,
+				(0,2,"x-y (Y-Z)"),
+				(0,1,"x-x' (Y-T)"),
+				(2,3,"y-y' (Z-P)"),
+				(4,5,"s-p (X-D)"),
+				]
 
-		
-		pylab.subplot(2, 2, 2)
-		pylab.grid()
-		for abunch in bunches:
-			pylab.plot(abunch.coords['Y'], abunch.coords['T'], ',')
-		if lims != None:
-			pylab.xlim(-lims[0], lims[0])
-			pylab.ylim(-lims[1], lims[1])
-		plotname = "X-XP (Y-T"
-		pylab.title(plotname)
+		for n in range(1,5):
+			x,y,title = plot_specs[n]
+			
+			pylab.subplot(2, 2, n)
+			pylab.grid()
+			for abunch, f in zip(bunches, itertools.cycle(fmt)):
+				pylab.plot(abunch.coords[coords[x]], abunch.coords[coords[y]], f)
+			if lims != None and n!=4:
+				pylab.xlim(-lims[x], lims[x])
+				pylab.ylim(-lims[y], lims[y])
+			pylab.title(title)
 
-		pylab.subplot(2, 2, 3)
-		pylab.grid()
-		for abunch in bunches:
-			pylab.plot(abunch.coords['Z'], abunch.coords['P'], ',')
-		if lims != None:
-			pylab.xlim(-lims[2], lims[2])
-			pylab.ylim(-lims[3], lims[3])
-		plotname = "Y-YP (z-P)"
-		pylab.title(plotname)
-
-		pylab.subplot(2, 2, 4)
-		pylab.grid()
-		for abunch in bunches:
-			pylab.plot(abunch.coords['X'], abunch.coords['D'], ',')
-		if False:# lims != None:
-			pylab.xlim(-lims[4], lims[4])
-			pylab.ylim(-lims[5], lims[5])
-		plotname = "X-D"
-		pylab.title(plotname)
 		if fname == None:
 			pylab.show()
 		else:
