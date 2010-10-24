@@ -45,9 +45,11 @@ else:
 			pyzgoubi_cmd = line.partition('=')[2]
 			pyzgoubi_cmd = pyzgoubi_cmd.strip('"')
 
-	sys.path.append(pyzgoubi_cmd.partition(" ")[0].partition("=")[2])
+	pyzgoubi_sys_path = pyzgoubi_cmd.partition(" ")[0].partition("=")[2].partition(":")[0] 
+	sys.path.append(pyzgoubi_sys_path)
 	# take the pyzgoubi source directory off the path
 	sys.path.pop(0)
+	print "pyzgoubi_sys_path", pyzgoubi_sys_path
 
 # -- General configuration -----------------------------------------------------
 
