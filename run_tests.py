@@ -85,6 +85,7 @@ if install_res.returncode != 0:
 print
 print >>log
 log.flush()
+pyzgoubi_cmd = pyzgoubi_cmd.replace(r"\$", "$")
 proc = subprocess.Popen(pyzgoubi_cmd+" --version", shell=True, stderr=subprocess.STDOUT, stdout=log)
 proc.wait()
 
