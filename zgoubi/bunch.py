@@ -534,7 +534,7 @@ class Bunch(object):
 		"Returns length of bunch. Use len(my_bunch)"
 		return len(self.coords)
 
-	def plot(self, fname=None, lims=None, add_bunch=None, fmt=None):
+	def plot(self, fname=None, lims=None, add_bunch=None, fmt=None, longitudinal=True):
 		"""Plot a bunch, if no file name give plot is displayed on screen. lims can be used to force axis limits eg [lY,lT,lZ,lP,lX,lD] would plot limit plot from -lY to +lY in Y, etc. Additional bunches can be passed, as add_bunch, to overlay onto the same plot.
 		fmt can be a list of formats in matplotlib style, eg ['rx', 'bo']
 		"""
@@ -552,25 +552,29 @@ class Bunch(object):
 				# otherwise just append it
 				bunches.append(add_bunch)
 
-		coords = ['Y','T','Z','P','X','D']
+		coordsz = ['Y','T','Z','P','X','D']
+		coords = ["x","x'","y","y'","s","p"]
 		plot_specs = [None,
 				(0,2,"x-y (Y-Z)"),
-				(0,1,"x-x' (Y-T)"),
 				(2,3,"y-y' (Z-P)"),
+				(0,1,"x-x' (Y-T)"),
 				(4,5,"s-p (X-D)"),
 				]
 
 		for n in range(1,5):
+			if n == 4 and longitudinal==False: continue
 			x,y,title = plot_specs[n]
 			
 			pylab.subplot(2, 2, n)
 			pylab.grid()
 			for abunch, f in zip(bunches, itertools.cycle(fmt)):
-				pylab.plot(abunch.coords[coords[x]], abunch.coords[coords[y]], f)
+				pylab.plot(abunch.coords[coordsz[x]], abunch.coords[coordsz[y]], f)
+				pylab.xlabel(coords[x])
+				pylab.ylabel(coords[y])
 			if lims != None and n!=4:
 				pylab.xlim(-lims[x], lims[x])
 				pylab.ylim(-lims[y], lims[y])
-			pylab.title(title)
+			#pylab.title(title)
 
 		if fname == None:
 			pylab.show()
