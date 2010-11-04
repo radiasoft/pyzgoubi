@@ -10,10 +10,11 @@ import numpy
 import pylab
 from zgoubi import rel_conv
 from zgoubi import io
-from zgoubi.core import zlog
+from zgoubi.core import zlog, dep_warn
 import struct
 import inspect
 import itertools
+import warnings
 
 #from zgoubi.utils import *
 
@@ -583,6 +584,10 @@ class Bunch(object):
 			pylab.clf()
 	
 	def get_emmitance(self):
+		warnings.warn("Bunch.get_emmitance() has been renamed to Bunch.get_emittance(). get_emmitance()"+dep_warn, DeprecationWarning)
+		return self.get_emittance()
+
+	def get_emittance(self):
 		"return emittance h and v in m rad. Uses the bunch full width, so should only be used for a hard edge distribution"
 		self.check_bunch()
 		centers = self.get_centers()
@@ -597,7 +602,7 @@ class Bunch(object):
 		theta_yt -= major_angle
 		rot_y = r_yt * numpy.sin(theta_yt)
 		rot_t = r_yt * numpy.cos(theta_yt)
-		emmitance_h = rot_y.max()*rot_t.max()
+		emittance_h = rot_y.max()*rot_t.max()
 
 		
 		r_zp = numpy.sqrt(Zs**2 + Ps**2)
@@ -606,11 +611,15 @@ class Bunch(object):
 		theta_zp -= major_angle
 		rot_z = r_zp * numpy.sin(theta_zp)
 		rot_p = r_zp * numpy.cos(theta_zp)
-		emmitance_v = rot_z.max() * rot_p.max()
-		#print "Emmitance (h, v):", emmitance_h, emmitance_v
-		return (emmitance_h, emmitance_v)
+		emittance_v = rot_z.max() * rot_p.max()
+		#print "Emittance (h, v):", emittance_h, emittance_v
+		return (emittance_h, emittance_v)
 
 	def get_emmitance_rms(self):
+		warnings.warn("Bunch.get_emmitance_rms() has been renamed to Bunch.get_emittance_rms(). get_emmitance_rms()"+dep_warn, DeprecationWarning)
+		return self.get_emittance_rms()
+
+	def get_emittance_rms(self):
 		"return emittance h and v in m rad. Uses the RMS quantities"
 		self.check_bunch()
 		centers = self.get_centers()
