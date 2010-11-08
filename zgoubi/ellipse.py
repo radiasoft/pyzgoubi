@@ -267,8 +267,7 @@ class BestCircle:
 									li.pop(j)
 							elif z1 < z2:
 								ivl_add(l1, (z1, z2))
-								#li.insert(j, (li[j][0], z1)) better insert list
-								li.insert(j, [li[j][0], z1])
+								li.insert(j, (li[j][0], z1))
 								j = j + 1
 								li[j][0] = z2
 								j = j + 1
