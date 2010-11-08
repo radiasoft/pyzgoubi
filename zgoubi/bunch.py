@@ -10,8 +10,11 @@ import numpy
 import pylab
 from zgoubi import rel_conv
 from zgoubi import io
-from zgoubi.core import zlog
+from zgoubi.core import zlog, dep_warn
 import struct
+import inspect
+import itertools
+import warnings
 
 #from zgoubi.utils import *
 
@@ -447,14 +450,25 @@ class Bunch(object):
 		coords['D'] = dist[:, 5]
 		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=coords)
 
+	def check_bunch(self):
+		"Check that the bunch is not empty, and contains finite values"
+		if self.coords.size == 0:
+			zlog.error("Empty Bunch. Called by %s()"%inspect.stack()[1][3])
+			return False
+		if not numpy.all(numpy.isfinite(self.raw_particles()[0])):
+			zlog.error("Non finite coordinates in bunch. Called by %s()"%inspect.stack()[1][3])
+			return False
+	
+		return True
+
+
 	def write_YTZPSD(self, fname, binary=False):
 		"Output a bunch, compatible with read_YTZPSD"
+		self.check_bunch()
 		
 		# it ought to be possible to do this:
 		#numpy.savetxt(fh, self.coords[['Y','T','Z','P','S','D']])
 		# but the field end up in the wrong order, see http://thread.gmane.org/gmane.comp.python.numeric.general/36933
-		if not numpy.all(numpy.isfinite(self.raw_particles()[0])):
-			zlog.error("Non finite coords in bunch")
 
 		fh = open(fname, "w")
 		if binary:
@@ -486,6 +500,7 @@ class Bunch(object):
 	
 	def get_widths(self):
 		"Returns the width of the bunch in each dimension Y,T,Z,P,S,D"
+		self.check_bunch()
 		y_width = numpy.max(self.coords['Y']) - numpy.min(self.coords['Y'])
 		t_width = numpy.max(self.coords['T']) - numpy.min(self.coords['T'])
 		z_width = numpy.max(self.coords['Z']) - numpy.min(self.coords['Z'])
@@ -496,6 +511,7 @@ class Bunch(object):
 
 	def get_widths_rms(self):
 		"Returns the rms width of the bunch in each dimension Y,T,Z,P,S,D"
+		self.check_bunch()
 		y_width = self.coords['Y'].std()
 		t_width = self.coords['T'].std()
 		z_width = self.coords['Z'].std()
@@ -506,6 +522,7 @@ class Bunch(object):
 
 	def get_centers(self):
 		"Returns the center of the bunch in each dimension Y,T,Z,P,S,D"
+		self.check_bunch()
 		y_mean = numpy.mean(self.coords['Y'])
 		t_mean = numpy.mean(self.coords['T'])
 		z_mean = numpy.mean(self.coords['Z'])
@@ -518,9 +535,14 @@ class Bunch(object):
 		"Returns length of bunch. Use len(my_bunch)"
 		return len(self.coords)
 
-	def plot(self, fname=None, lims=None, add_bunch=None):
-		"Plot a bunch, if no file name give plot is displayed on screen. lims can be used to force axis limits eg [lY,lT,lZ,lP,lX,lD] would plot limit plot from -lY to +lY in Y, etc. Additional bunches can be passed, as add_bunch, to overlay onto the same plot."
-		
+	def plot(self, fname=None, lims=None, add_bunch=None, fmt=None, longitudinal=True):
+		"""Plot a bunch, if no file name give plot is displayed on screen. lims can be used to force axis limits eg [lY,lT,lZ,lP,lX,lD] would plot limit plot from -lY to +lY in Y, etc. Additional bunches can be passed, as add_bunch, to overlay onto the same plot.
+		fmt can be a list of formats in matplotlib style, eg ['rx', 'bo']
+		"""
+		if fmt==None:
+			fmt = [',']
+
+		self.check_bunch()
 		bunches = [self]
 		if add_bunch != None:
 			try:
@@ -531,46 +553,30 @@ class Bunch(object):
 				# otherwise just append it
 				bunches.append(add_bunch)
 
-		pylab.subplot(2, 2, 1)
-		pylab.grid()
-		for abunch in bunches:
-			pylab.plot(abunch.coords['Y'], abunch.coords['Z'], ',')
-		if lims != None:
-			pylab.xlim(-lims[0], lims[0])
-			pylab.ylim(-lims[2], lims[2])
-		plotname = "X-Y (Y-T)"
-		pylab.title(plotname)
+		coordsz = ['Y','T','Z','P','X','D']
+		coords = ["x","x'","y","y'","s","p"]
+		plot_specs = [None,
+				(0,2,"x-y (Y-Z)"),
+				(2,3,"y-y' (Z-P)"),
+				(0,1,"x-x' (Y-T)"),
+				(4,5,"s-p (X-D)"),
+				]
 
-		
-		pylab.subplot(2, 2, 2)
-		pylab.grid()
-		for abunch in bunches:
-			pylab.plot(abunch.coords['Y'], abunch.coords['T'], ',')
-		if lims != None:
-			pylab.xlim(-lims[0], lims[0])
-			pylab.ylim(-lims[1], lims[1])
-		plotname = "X-XP (Y-T"
-		pylab.title(plotname)
+		for n in range(1,5):
+			if n == 4 and longitudinal==False: continue
+			x,y,title = plot_specs[n]
+			
+			pylab.subplot(2, 2, n)
+			pylab.grid()
+			for abunch, f in zip(bunches, itertools.cycle(fmt)):
+				pylab.plot(abunch.coords[coordsz[x]], abunch.coords[coordsz[y]], f)
+				pylab.xlabel(coords[x])
+				pylab.ylabel(coords[y])
+			if lims != None and n!=4:
+				pylab.xlim(-lims[x], lims[x])
+				pylab.ylim(-lims[y], lims[y])
+			#pylab.title(title)
 
-		pylab.subplot(2, 2, 3)
-		pylab.grid()
-		for abunch in bunches:
-			pylab.plot(abunch.coords['Z'], abunch.coords['P'], ',')
-		if lims != None:
-			pylab.xlim(-lims[2], lims[2])
-			pylab.ylim(-lims[3], lims[3])
-		plotname = "Y-YP (z-P)"
-		pylab.title(plotname)
-
-		pylab.subplot(2, 2, 4)
-		pylab.grid()
-		for abunch in bunches:
-			pylab.plot(abunch.coords['X'], abunch.coords['D'], ',')
-		if False:# lims != None:
-			pylab.xlim(-lims[4], lims[4])
-			pylab.ylim(-lims[5], lims[5])
-		plotname = "X-D"
-		pylab.title(plotname)
 		if fname == None:
 			pylab.show()
 		else:
@@ -578,7 +584,12 @@ class Bunch(object):
 			pylab.clf()
 	
 	def get_emmitance(self):
+		warnings.warn("Bunch.get_emmitance() has been renamed to Bunch.get_emittance(). get_emmitance()"+dep_warn, DeprecationWarning)
+		return self.get_emittance()
+
+	def get_emittance(self):
 		"return emittance h and v in m rad. Uses the bunch full width, so should only be used for a hard edge distribution"
+		self.check_bunch()
 		centers = self.get_centers()
 		Ys = self.coords['Y'] - centers[0] # work relative to center
 		Ts = self.coords['T'] - centers[1]
@@ -591,7 +602,7 @@ class Bunch(object):
 		theta_yt -= major_angle
 		rot_y = r_yt * numpy.sin(theta_yt)
 		rot_t = r_yt * numpy.cos(theta_yt)
-		emmitance_h = rot_y.max()*rot_t.max()
+		emittance_h = rot_y.max()*rot_t.max()
 
 		
 		r_zp = numpy.sqrt(Zs**2 + Ps**2)
@@ -600,12 +611,17 @@ class Bunch(object):
 		theta_zp -= major_angle
 		rot_z = r_zp * numpy.sin(theta_zp)
 		rot_p = r_zp * numpy.cos(theta_zp)
-		emmitance_v = rot_z.max() * rot_p.max()
-		#print "Emmitance (h, v):", emmitance_h, emmitance_v
-		return (emmitance_h, emmitance_v)
+		emittance_v = rot_z.max() * rot_p.max()
+		#print "Emittance (h, v):", emittance_h, emittance_v
+		return (emittance_h, emittance_v)
 
 	def get_emmitance_rms(self):
+		warnings.warn("Bunch.get_emmitance_rms() has been renamed to Bunch.get_emittance_rms(). get_emmitance_rms()"+dep_warn, DeprecationWarning)
+		return self.get_emittance_rms()
+
+	def get_emittance_rms(self):
 		"return emittance h and v in m rad. Uses the RMS quantities"
+		self.check_bunch()
 		centers = self.get_centers()
 		Ys = self.coords['Y'] - centers[0] # work relative to center
 		Ts = self.coords['T'] - centers[1]
@@ -625,6 +641,7 @@ class Bunch(object):
 
 	def get_twiss(self, emittance):
 		"Returns the twiss valuse Beta_h, Alpha_h, Beta_v, Alpha_v, calculated from bunch width extent"
+		self.check_bunch()
 		# emittance may be a single number, or tuple (emittance_h, emittance_v)
 		try:
 			emittance_h, emittance_v = emittance
@@ -661,6 +678,7 @@ class Bunch(object):
 
 	def get_twiss_rms(self, emittance):
 		"Returns the rms twiss valuse Beta_h, Alpha_h, Beta_v, Alpha_v, calculated from bunch rms width"
+		self.check_bunch()
 		# emittance may be a single number, or tuple (emittance_h, emittance_v)
 		try:
 			emittance_h, emittance_v = emittance

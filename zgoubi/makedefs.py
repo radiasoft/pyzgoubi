@@ -216,6 +216,8 @@ def make_element_class(defs):
 		init_params_code += "\t\tself._looped_data = []\n"
 	
 		add_func_code += "\t\tfor k, v in settings.items():\n"
+		add_func_code += "\t\t\tif not params.has_key(k):\n"
+		add_func_code += "\t\t\t\traise ValueError('Sub element of %s does not have parameter %s'%(self._class_name, k))\n"
 		add_func_code += "\t\t\tparams[k] = v\n"
 		add_func_code += "\t\tself._looped_data.append(params)\n"
 		add_func_code += "\t\tself._params['%s'] = len(self._looped_data)\n" % loop_on

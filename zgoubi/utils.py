@@ -10,10 +10,12 @@ import sys
 import os
 import warnings
 from glob import glob
+from zgoubi.common import *
 from zgoubi.constants import *
 from zgoubi.exceptions import *
 import itertools
 from zgoubi.core import zlog, dep_warn
+from StringIO import StringIO
 
 # use these to convert things to metres and tesla
 m = 1
@@ -291,7 +293,7 @@ def show_file(file_path, mode):
 		command = 'xterm -e "less %s"'% file_path
 		os.system(command)
 
-def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, range_YTZP=None, count_YTZP=None):
+def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, range_YTZP=None, count_YTZP=None, record_fname=None):
 	"""Same as find_closed_orbit, but if init_YTZP is unstable, will generate a bunch or particles, with a spread of range_YTZP, and if any of those are stable will do a closed orbit search with that particle::
 
 		init_YTZP=[5,0,0,0], range_YTZP=[10,0,0,0], count_YTZP[50,0,0,0]
@@ -303,6 +305,7 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 	would create 100 particles in a grid.
 	
 	"""
+	zlog.debug("enter function")
 	if range_YTZP == None:
 		range_YTZP = [10, 10, 10, 10]
 	if init_YTZP == None:
@@ -310,9 +313,17 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 	if count_YTZP == None:
 		count_YTZP = [10, 10, 10, 10]
 	
+	if record_fname:
+		record_fh = open_file_or_name(record_fname, "w", mkdir=True)
+	else:
+		record_fh = None
+	
 	#first check center
-	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
+	if record_fname:
+		record_fh.write("#center\n")
+	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D, record_fname=record_fh)
 	if result != None:
+		zlog.debug("Found a closed orbit without needing range")
 		return result
 
 	# if the init_YTZP is not stable, then send a bunch, and see if any of those are not lost
@@ -341,9 +352,12 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 		else:
 			ranges.append(numpy.linspace(-range_YTZP[x], range_YTZP[x], count_YTZP[x]))
 
+	n_coords = 0
 	for coord in itertools.product(*ranges):
+		n_coords += 1
 		objet.add(Y=current_YTZP[0]+coord[0], T=current_YTZP[1]+coord[1], Z=current_YTZP[2]+coord[2], P=current_YTZP[3]+coord[3], LET='A', D=D)
 
+	zlog.debug("Search for a stable orbit with %s particles"%n_coords)
 	r = line.run(xterm=False)
 
 	if not r.run_success():
@@ -358,20 +372,29 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 		surviving_particles = track[ numpy.logical_and(track['PASS'] == final_lap_n , track['IEX']>0)  ]
 		zlog.debug("%d particles survived"%len(surviving_particles))
 
-		for surviving_particle in surviving_particles:
+		#measure lengths and sort
+		surviving_particles2 = [ [ sqrt((p['Y']-p['Y0'])**2 + (p['T']-p['T0'])**2 + (p['Z']-p['Z0'])**2 + (p['P']-p['P0'])**2),p] for p in surviving_particles ]
+		surviving_particles2.sort()
+
+		if record_fname:
+			record_fh.write("#survivors %s\n"%len(surviving_particles))
+			for length, surviving_particle in surviving_particles2:
+				surviving_coords = (surviving_particle['Y0'], surviving_particle['T0'], surviving_particle['Z0'], surviving_particle['P0'], surviving_particle['Y'], surviving_particle['T'], surviving_particle['Z'], surviving_particle['P'])
+				record_fh.write("%s %s %s %s %s %s %s %s\n"%surviving_coords)
+
+
+		for length, surviving_particle in surviving_particles2[:10]:
 			surviving_init_coord = [surviving_particle['Y0'], surviving_particle['T0'], surviving_particle['Z0'], surviving_particle['P0']]
 		
 			# use stable particle to find closed orbit
-			result = find_closed_orbit(line=line, init_YTZP=surviving_init_coord, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
+			result = find_closed_orbit(line=line, init_YTZP=surviving_init_coord, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D, record_fname=record_fh)
 			if result != None:
 				return result
 		zlog.warning("Despite finding surviving particles, none were stable")	
 		return None
 
-	
 
-
-def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1):
+def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, record_fname=None):
 	"""Find a closed orbit for the line. can optionally give a list of initial coordinates, init_YTZP, eg:
 	find_closed_orbit(line, init_YTZP=[1.2,2.1,0,0])
 	otherwise [0,0,0,0] are used.
@@ -380,11 +403,14 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 
 	It is recommend to have a REBELOTE, with several laps. The area of the phase space ellipse is approximated from the coordinates from the FAISCNL (or MARKER with fai_label), and the center is used for the new coordinates. Once the relative variation between iterations is less that the tolerance, the function returns the closed orbit coordinates. If a coordinate is close to zero (less than the tolerance) then it is compared absolutely instead of relatively.
 	
+	record_fname is used to record search details to a file that can be used with plot_find_closed_orbit().
 	"""
 	zlog.debug("enter function")
 	if init_YTZP == None:
 		init_YTZP = [0, 0, 0, 0]
 
+	if record_fname:
+		record_fh = open_file_or_name(record_fname, "w", mkdir=True)
 	#check line has an objet2
 	for e in line.element_list:
 		if ("OBJET2" in str(type(e)).split("'")[1]):
@@ -441,6 +467,10 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 		track_a = numpy.zeros([len(track)+1, len(track[0])])
 		track_a[0] = current_YTZP
 		track_a[1:] = track
+		
+		if record_fname:
+			record_fh.write("#track %s\n"%track_a.shape[0])
+			numpy.savetxt(record_fh, track_a)
 
 		tracks.append(track_a)
 
@@ -451,6 +481,8 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 		area_h = calc_area_simple(track_a[:, 0:2], centre=centre_h)
 		centre_v = find_centre(track_a[:, 2:4])
 		area_v = calc_area_simple(track_a[:, 2:4], centre=centre_v)
+
+		zlog.debug("End iteration: "+str(iteration)+ " final coords "+str(track_a[-1])+", center "+str([centre_h, centre_v])+", area "+str([area_h,area_v]))
 
 
 		areas.append([area_h , area_v])
@@ -487,6 +519,95 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 	else:
 		zlog.warn("Iterations did not converge, no closed orbit found")
 		return None
+
+
+def plot_find_closed_orbit(data_fname, outfile=None):
+	"""When the closed orbit search fails it can be useful to see what happened. find_closed_orbit() and find_closed_orbit_range() can take an optional argument record_fname. This causes them to write a log file, which can be read by this function and plotted. ::
+
+		closed_orbit =  find_closed_orbit(tline, init_YTZP=[1,20,0,0], record_fname="res/closedorbit.log")
+		plot_find_closed_orbit(data_fname="res/closedorbit.log", outfile="res/closedorbit.png")
+	
+	This will show you the succession of guesses. If using plot_find_closed_orbit_range() it will also show a plot of all the coordinates that survive being tracked through the lattice.
+
+	From the plots it may be clear whether the lattice is unstable, or if the convergence is just too slow. In the latter case it may help to repeat the cell using REBELOTE, or to increase the number of iterations allowed.
+
+	"""
+	import pylab
+	all_data = open(data_fname).readlines()
+	outfile_pre, dummy, outfile_ext = outfile.rpartition(".")
+
+	line_n = 0
+	tracks = []
+	survivors = None
+	while line_n < len(all_data):
+		line = all_data[line_n]
+		if line.startswith("#track"):
+			dummy, track_len = line.split()
+			track_len = int(track_len)
+
+			track_str = "\n".join(all_data[line_n+1: line_n+track_len+1])
+			#print track_str
+			track = numpy.genfromtxt(StringIO(track_str))
+			#print track
+
+			line_n = line_n+track_len
+			tracks.append(track)
+		if line.startswith("#survivors"):
+			dummy, surv_len = line.split()
+			surv_len = int(surv_len)
+
+			surv_str = "\n".join(all_data[line_n+1: line_n+surv_len+1])
+			surv = numpy.genfromtxt(StringIO(surv_str))
+
+			line_n = line_n+surv_len
+			survivors = surv
+
+		line_n += 1
+
+	for axis in ['h', 'v']:
+		pylab.clf()
+		pylab.title("closed orbit searches")
+
+		for track in tracks[:]:
+			if axis=='h':
+				x, y = track[:,0], track[:,1]
+				pylab.xlabel("x")
+				pylab.ylabel("x'")
+			if axis=='v':
+				x, y = track[:,2], track[:,3]
+				pylab.xlabel("y")
+				pylab.ylabel("y'")
+			#print
+			#print x, y
+			pylab.plot(x,y, 'x')
+		
+		
+		if outfile != None:
+			pylab.savefig(outfile_pre+"track_"+axis+"."+outfile_ext)
+		else:
+			pylab.show()
+
+		pylab.clf()
+		pylab.title("surviving particle start and ends")
+
+		if survivors != None:
+			for surv in survivors[:10]:
+				if axis=='h':
+					x, y, x1, y1 = surv[[0,1,4,5]]
+					pylab.xlabel("x")
+					pylab.ylabel("x'")
+				if axis=='v':
+					x, y, x1, y1 = surv[[2,3,6,7]]
+					pylab.xlabel("y")
+					pylab.ylabel("y'")
+				pylab.plot([x], [y], 'x')
+				pylab.plot([x,x1], [y,y1])
+
+
+			if outfile != None:
+				pylab.savefig(outfile_pre+"survivor_"+axis+"."+outfile_ext)
+			else:
+				pylab.show()
 
 
 def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
@@ -751,6 +872,10 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 		beta_z_0 = input_twiss_parameters[3]
 		alpha_z_0 = input_twiss_parameters[4]
 		gamma_z_0 = input_twiss_parameters[5]
+	
+	zlog.debug("Initial parameters:\nbeta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0\n%s, %s, %s, %s, %s, %s" % (beta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0))
+	if beta_y_0 == 0 or beta_z_0 == 0:
+		zlog.error("Beam is unstable")
 
 
 #! Calculate twiss parameters at all points in plt file 
@@ -776,55 +901,67 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 	sign_sine_z_old = 1.0
 	n_pi_y = 0
 	n_pi_z = 0
-	for i in range(len(R11_list)):
-		# Horizontal plane
-		#-----------------
-		beta_y = (R11_list[i]**2)*beta_y_0 - 2.0*R11_list[i]*R12_list[i]*alpha_y_0 + (R12_list[i]**2)*gamma_y_0
-		beta_y_list.append(beta_y)
+	try:
+		for i in range(len(R11_list)):
+			# Horizontal plane
+			#-----------------
+			beta_y = (R11_list[i]**2)*beta_y_0 - 2.0*R11_list[i]*R12_list[i]*alpha_y_0 + (R12_list[i]**2)*gamma_y_0
+			beta_y_list.append(beta_y)
 
-		# Horizontal phase advance calculation
-		# To account for range of acos=(0,Pi), check sign of sin(angle) to know when to change from angle to (2*Pi-angle) etc.	
-		sine_angle = R12_list[i]/sqrt(beta_y*beta_y_0)
-		if abs(sine_angle) > 1: 
-			mu_y_list.append(mu_y_list[i-1])
-		else:
-			sign_sine_y = numpy.sign(asin(sine_angle))
-			if sign_sine_y - sign_sine_y_old == -2:
-				n_pi_y = n_pi_y + 1
-			sign_sine_y_old = sign_sine_y
-			if sign_sine_y >= 0:
-				mu_y_list.append(n_pi_y*2*pi+acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+			# Horizontal phase advance calculation
+			# To account for range of acos=(0,Pi), check sign of sin(angle) to know when to change from angle to (2*Pi-angle) etc.	
+			sine_angle = R12_list[i]/sqrt(beta_y*beta_y_0)
+			if abs(sine_angle) > 1: 
+				mu_y_list.append(mu_y_list[i-1])
 			else:
-				mu_y_list.append(n_pi_y*2*pi-acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+				sign_sine_y = numpy.sign(asin(sine_angle))
+				if sign_sine_y - sign_sine_y_old == -2:
+					n_pi_y = n_pi_y + 1
+				sign_sine_y_old = sign_sine_y
+				if sign_sine_y >= 0:
+					mu_y_list.append(n_pi_y*2*pi+acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+				else:
+					mu_y_list.append(n_pi_y*2*pi-acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
 
-		alpha_y_list.append(-R11_list[i]*R21_list[i]*beta_y_0 + (R11_list[i]*R22_list[i]+R12_list[i]*R21_list[i])*alpha_y_0 \
-			- R12_list[i]*R22_list[i]*gamma_y_0)
-		gamma_y_list.append((R21_list[i]**2)*beta_y_0-2*R21_list[i]*R22_list[i]*alpha_y_0+(R22_list[i]**2)*gamma_y_0)
-		# Vertical plane
-		#---------------
-		beta_z = (R33_list[i]**2)*beta_z_0 - 2.0*R33_list[i]*R34_list[i]*alpha_z_0 + (R34_list[i]**2)*gamma_z_0
-		beta_z_list.append(beta_z)
+			alpha_y_list.append(-R11_list[i]*R21_list[i]*beta_y_0 + (R11_list[i]*R22_list[i]+R12_list[i]*R21_list[i])*alpha_y_0 \
+				- R12_list[i]*R22_list[i]*gamma_y_0)
+			gamma_y_list.append((R21_list[i]**2)*beta_y_0-2*R21_list[i]*R22_list[i]*alpha_y_0+(R22_list[i]**2)*gamma_y_0)
+			# Vertical plane
+			#---------------
+			beta_z = (R33_list[i]**2)*beta_z_0 - 2.0*R33_list[i]*R34_list[i]*alpha_z_0 + (R34_list[i]**2)*gamma_z_0
+			beta_z_list.append(beta_z)
 
-		# Vertical phase advance calculation
-		sine_angle = R34_list[i]/sqrt(beta_z*beta_z_0)
-		if abs(sine_angle) > 1:
-			mu_z_list.append(mu_z_list[i-1])
-		else:
-			sign_sine_z = numpy.sign(asin(sine_angle))
-			if sign_sine_z - sign_sine_z_old == -2:
-				n_pi_z = n_pi_z + 1
-			sign_sine_z_old = sign_sine_z
-			if sign_sine_z >= 0:
-				mu_z_list.append(n_pi_z*2*pi+acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
-			else: 
-				mu_z_list.append(n_pi_z*2*pi-acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
+			# Vertical phase advance calculation
+			sine_angle = R34_list[i]/sqrt(beta_z*beta_z_0)
+			if abs(sine_angle) > 1:
+				mu_z_list.append(mu_z_list[i-1])
+			else:
+				sign_sine_z = numpy.sign(asin(sine_angle))
+				if sign_sine_z - sign_sine_z_old == -2:
+					n_pi_z = n_pi_z + 1
+				sign_sine_z_old = sign_sine_z
+				if sign_sine_z >= 0:
+					mu_z_list.append(n_pi_z*2*pi+acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
+				else: 
+					mu_z_list.append(n_pi_z*2*pi-acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
 
-		alpha_z_list.append(-R33_list[i]*R43_list[i]*beta_z_0 + (R33_list[i]*R44_list[i]+R34_list[i]*R43_list[i])*alpha_z_0 \
-			- R34_list[i]*R44_list[i]*gamma_z_0)
-		gamma_z_list.append((R43_list[i]**2)*beta_z_0-2*R43_list[i]*R44_list[i]*alpha_z_0+(R44_list[i]**2)*gamma_z_0)
-		print >> fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], mu_y_list[i], beta_y, alpha_y_list[i], \
-			gamma_y_list[i], mu_z_list[i], beta_z, alpha_z_list[i], gamma_z_list[i])
-
+			alpha_z_list.append(-R33_list[i]*R43_list[i]*beta_z_0 + (R33_list[i]*R44_list[i]+R34_list[i]*R43_list[i])*alpha_z_0 \
+				- R34_list[i]*R44_list[i]*gamma_z_0)
+			gamma_z_list.append((R43_list[i]**2)*beta_z_0-2*R43_list[i]*R44_list[i]*alpha_z_0+(R44_list[i]**2)*gamma_z_0)
+			print >> fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], mu_y_list[i], beta_y, alpha_y_list[i], \
+				gamma_y_list[i], mu_z_list[i], beta_z, alpha_z_list[i], gamma_z_list[i])
+	except (IndexError, ZeroDivisionError, ValueError):
+		print "Error calculating twiss parameters from twiss matrix"
+		print "i=", i, "(", label[i], ")"
+		print "Matrix:"
+		for ai in range(1,7):
+			for aj in range(1,7):
+				if aj == 5 or ai == 6:
+					print "-\t",
+					continue
+				print eval("R%s%s_list[i]"%(ai,aj)),"\t",
+			print
+		raise
 	#put twiss parameters together. Format [s_coord, mu_y, beta_y, alpha_y, gamma_y, mu_z, beta_z, alpha_z, gamma_z]. Units are SI
 	twiss_profiles = [[s*cm for s in S_alltracks[0]], label_ref, mu_y_list, beta_y_list, alpha_y_list, gamma_y_list, mu_z_list, beta_z_list, alpha_z_list, gamma_z_list]
 
