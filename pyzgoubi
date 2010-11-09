@@ -156,19 +156,32 @@ def show_version():
 
 	import sys
 	print "Python version", sys.version
+	show_path = False
 
 	try:
 		import numpy
 		print "numpy version", numpy.version.version
 	except ImportError:
 		print "No numpy"
+		show_path = True
 	try:
 		import scipy
 		print "scipy version", scipy.version.version
 	except ImportError:
 		print "No scipy"
-	
-	print "python sys.path", str(sys.path)
+		show_path = True
+	try:
+		import matplotlib
+		print "matplotlib version", matplotlib.__version__
+	except ImportError:
+		print "No matplotlib"
+		show_path = True
+	except RuntimeError:
+		print "Problem loading matplotlib"
+		show_path = True
+
+	if show_path:
+		print "python sys.path", str(sys.path)
 
 
 

@@ -7,7 +7,6 @@ Note that all values are in SI units, m, rad, eV, s
 from __future__ import division
 from math import *
 import numpy
-import pylab
 from zgoubi import rel_conv
 from zgoubi import io
 from zgoubi.core import zlog, dep_warn
@@ -539,6 +538,7 @@ class Bunch(object):
 		"""Plot a bunch, if no file name give plot is displayed on screen. lims can be used to force axis limits eg [lY,lT,lZ,lP,lX,lD] would plot limit plot from -lY to +lY in Y, etc. Additional bunches can be passed, as add_bunch, to overlay onto the same plot.
 		fmt can be a list of formats in matplotlib style, eg ['rx', 'bo']
 		"""
+		import pylab
 		if fmt==None:
 			fmt = [',']
 
