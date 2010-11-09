@@ -631,8 +631,6 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 
 	import zgoubi.core as zg
 
-	if input_twiss_parameters == None:
-		input_twiss_parameters = [0, 0, 0, 0, 0, 0]
 
 	has_object5 = False
 	has_matrix = False
@@ -643,7 +641,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 			objet = e
 		if t == 'MATRIX':
 			has_matrix = True
-	if not (has_object5 and (has_matrix or input_twiss_parameters != [0, 0, 0, 0, 0, 0])):
+	if not (has_object5 and (has_matrix or input_twiss_parameters != None)):
 		raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
 
 	#run Zgoubi
@@ -871,6 +869,9 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 
 #! Get inital twiss paramters. If no input_twiss_parameters supplied, assume cell is periodic and find results using get_twiss_parameters
 
+	if input_twiss_parameters == None:
+		input_twiss_parameters = [0, 0, 0, 0, 0, 0]
+
 	if input_twiss_parameters == [0, 0, 0, 0, 0, 0]:
 		twissparam = r.get_twiss_parameters()
 		beta_y_0 = twissparam[0]
@@ -947,6 +948,9 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 	disp_py_list = [xd*mm/del_p for xd in map(numpy.subtract, t_disp, T_alltracks[0])]
 	disp_z_list = [xd*mm/del_p for xd in map(numpy.subtract, z_disp, Z_alltracks[0])]
 	disp_pz_list = [xd*mm/del_p for xd in map(numpy.subtract, p_disp, P_alltracks[0])]
+
+	#replace original objet
+	line.replace(ob2,objet)
 
 	#plot_data_xy_multi([S_alltracks[0],s_disp],[Y_alltracks[0],y_disp], 'Y_disp', labels=["","s [cm]","Y [cm]"],style=['k+','r+'])
 	#plot_data_xy_multi(s_disp,disp_y_list, 'disp_y', labels=["","s [cm]","D [m]"],style=['k+'])
@@ -1025,8 +1029,8 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 			gamma_z_list.append((R43_list[i]**2)*beta_z_0-2*R43_list[i]*R44_list[i]*alpha_z_0+(R44_list[i]**2)*gamma_z_0)
 
 			if file_result != None:
-				print >> fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], \
-				mu_y_list[i], beta_y, alpha_y_list[i], gamma_y_list[i],disp_y_list[i],disp_py_list,\
+				print >> fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], \
+				mu_y_list[i], beta_y, alpha_y_list[i], gamma_y_list[i],disp_y_list[i],disp_py_list[i],\
 				mu_z_list[i], beta_z, alpha_z_list[i], gamma_z_list[i],disp_z_list[i],disp_pz_list[i])
 
 	except (IndexError, ZeroDivisionError, ValueError):
