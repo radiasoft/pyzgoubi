@@ -610,20 +610,26 @@ def plot_find_closed_orbit(data_fname, outfile=None):
 				pylab.show()
 
 
-def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
+def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 	""" Calculates the twiss parameters at all points written to zgoubi.plt. 11 particle trajectories are used to calculate the
 	transfer matrix, just as is done in zgoubi. The code mirrors that found in mat1.f, mksa.f. The twiss parameters are first
 	calculated at the end of the cell using either input_twiss_parameters (format [beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z]) 
 	or, if this is not supplied, it assumes the cell is periodic and uses get_twiss_parameters to find the boundary condition. 
 
 	The twiss parameters are then mapped to all points in the magnets using the transfer matrix calculated at each point. The results are stored
-	in list twiss_profiles where each row represents a point in the zgoubi.plt file and has format 
+	in list twiss_profiles where each column represents a point in the zgoubi.plt file and has format 
 
-	[s_coord, label,  mu_y, beta_y, alpha_y, gamma_y, mu_z, beta_z, alpha_z, gamma_z]
+	Dispersion and dispersion-prime are also calculated.
+
+	[s_coord, label,  mu_y, beta_y, alpha_y, gamma_y, disp_y, disp_py, mu_z, beta_z, alpha_z, gamma_z, disp_z, disp_pz]
+
+	The results are stored in file specified by file_result (optional)
 
 	Requires an OBJET type 5, and a MATRIX element.
 
 	Note - This calculation uses trajectories as measured in the local coordinate system of the magnet."""
+
+	import zgoubi.core as zg
 
 	if input_twiss_parameters == None:
 		input_twiss_parameters = [0, 0, 0, 0, 0, 0]
@@ -634,14 +640,21 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 		t = str(type(e)).split("'")[1].rpartition(".")[2]
 		if t == 'OBJET5':
 			has_object5 = True
+			objet = e
 		if t == 'MATRIX':
 			has_matrix = True
 	if not (has_object5 and (has_matrix or input_twiss_parameters != [0, 0, 0, 0, 0, 0])):
 		raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
 
-
 	#run Zgoubi
 	r = line.run(xterm = False)
+
+	#extract rigidty from fai or plt file. At least one of these files must be available. 
+	try:
+		rig  = r.get_track('fai', ['BORO'])[0][0]
+	except:
+		rig  = r.get_track('plt', ['BORO'])[0][0]
+
 #!-----------------------------------------------------------------------------------------
 #!  PREPARE DATA FOR CALCULATION
 #!-----------------------------------------------------------------------------------------
@@ -713,8 +726,8 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 	for i in ref_indices:
 		Y_track.append(Y[i])
 		T_track.append(T[i])
-		Z_track.append(Y[i])
-		P_track.append(T[i])
+		Z_track.append(Z[i])
+		P_track.append(P[i])
 		S_track.append(S[i])
 		label_ref.append(label[i])
 	Y_alltracks.append(Y_track)
@@ -748,8 +761,9 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 			T_alltracks.append(T_track)
 			Z_alltracks.append(Z_track)
 			P_alltracks.append(P_track)
-			S_alltracks.append(S_track)	
-       				
+			S_alltracks.append(S_track)
+
+	
 
 	#11 coordinate in Y0_alltracks,T0_alltracks etc correspond to 11 starting conditions required by MATRIX
 
@@ -862,21 +876,81 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 		beta_y_0 = twissparam[0]
 		alpha_y_0 = twissparam[1]
 		gamma_y_0 = twissparam[2]
-		beta_z_0 = twissparam[3]
-		alpha_z_0 = twissparam[4]
-		gamma_z_0 = twissparam[5]
+		disp_y_0 = twissparam[3]
+		disp_py_0 = twissparam[4]
+		beta_z_0 = twissparam[5]
+		alpha_z_0 = twissparam[6]
+		gamma_z_0 = twissparam[7]
+		disp_z_0 = twissparam[8]
+		disp_pz_0 = twissparam[9]
 	else:
 		beta_y_0 = input_twiss_parameters[0]
 		alpha_y_0 = input_twiss_parameters[1]
 		gamma_y_0 = input_twiss_parameters[2]
-		beta_z_0 = input_twiss_parameters[3]
+		disp_y_0 = input_twiss_parameters[3]
+		disp_py_0 = input_twiss_parameters[4]
+		beta_z_0 = input_twiss_parameters[5]
 		alpha_z_0 = input_twiss_parameters[4]
-		gamma_z_0 = input_twiss_parameters[5]
+		gamma_z_0 = input_twiss_parameters[7]
+		#optional input of vertical dispersion terms
+		if len(input_twiss_parameters) == 10:
+			disp_z_0 = input_twiss_parameters[8]
+			disp_pz_0 = input_twiss_parameters[9]			
 	
+
 	zlog.debug("Initial parameters:\nbeta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0\n%s, %s, %s, %s, %s, %s" % (beta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0))
 	if beta_y_0 == 0 or beta_z_0 == 0:
 		zlog.error("Beam is unstable")
 
+#!Calculate horizontal dispersion. Start tracking at y_co + del_p*disp_y
+#########################################################################
+
+	del_p = 0.0001 #momentum shift
+
+	#need to switch to objet2
+	ob2 = zg.OBJET2()
+	line.replace(objet, ob2)
+	ob2.set(BORO=rig)
+
+	#reference index
+	ind0 = ref_indices[0]
+
+	closedorb_YTZP = None
+	#Try to find closed orbit of off-momentum particle, other wise use dispersion to estimate closed orbit
+	if input_twiss_parameters == [0, 0, 0, 0, 0, 0]:
+		closedorb_YTZP = find_closed_orbit(line, init_YTZP=[0,0,0,0], tol=1e-5, D=(1+ D0[ind0])*(1+del_p))
+
+	if closedorb_YTZP != None:
+		ob2.clear()
+		ob2.add(Y=closedorb_YTZP[0], T=closedorb_YTZP[1],Z=0,P=0, D=(1+ D0[ind0])*(1+del_p))
+	else:
+		#Closed orbit of off-momentum particle determined by dispersion (for small del_p)
+		ob2.clear()
+		ob2.add(Y=Y0[ind0] + del_p*disp_y_0*cm_, T=T0[ind0] + del_p*disp_py_0*mm_, 
+			Z=Z0[ind0] + del_p*disp_z_0*cm_, P=P0[ind0] + del_p*disp_pz_0*mm_, D=(1+ D0[ind0])*(1+del_p))		
+
+	r = line.run(xterm = False)
+
+	if track_type == 'plt':
+		plt_track_disp = r.get_track('plt', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
+	else:
+		plt_track_disp = r.get_track('fai', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
+
+	transpose_plt_track_disp = map(list, zip(*plt_track_disp))
+	y_disp = transpose_plt_track_disp[1]
+	t_disp = transpose_plt_track_disp[2]
+	z_disp = transpose_plt_track_disp[3]
+	p_disp = transpose_plt_track_disp[4]
+	s_disp = transpose_plt_track_disp[5]
+
+	disp_y_list = [xd*cm/del_p for xd in map(numpy.subtract, y_disp, Y_alltracks[0])]
+	disp_py_list = [xd*mm/del_p for xd in map(numpy.subtract, t_disp, T_alltracks[0])]
+	disp_z_list = [xd*mm/del_p for xd in map(numpy.subtract, z_disp, Z_alltracks[0])]
+	disp_pz_list = [xd*mm/del_p for xd in map(numpy.subtract, p_disp, P_alltracks[0])]
+
+	#plot_data_xy_multi([S_alltracks[0],s_disp],[Y_alltracks[0],y_disp], 'Y_disp', labels=["","s [cm]","Y [cm]"],style=['k+','r+'])
+	#plot_data_xy_multi(s_disp,disp_y_list, 'disp_y', labels=["","s [cm]","D [m]"],style=['k+'])
+	#plot_data_xy_multi(s_disp,disp_py_list, 'disp_py', labels=["","s [cm]","D' [rad]"],style=['k+'])
 
 #! Calculate twiss parameters at all points in plt file 
 #!######################################################
@@ -887,7 +961,8 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 #! - The phase advance can be found by applying a Floquet transformation to the transfer matrix (S.Y.Lee eqn 2.65)
 
  
-	fresults = open(file_result, 'w')
+	if file_result != None:
+		fresults = open(file_result, 'w')
               
 	mu_y_list = []
 	beta_y_list = []
@@ -948,8 +1023,12 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 			alpha_z_list.append(-R33_list[i]*R43_list[i]*beta_z_0 + (R33_list[i]*R44_list[i]+R34_list[i]*R43_list[i])*alpha_z_0 \
 				- R34_list[i]*R44_list[i]*gamma_z_0)
 			gamma_z_list.append((R43_list[i]**2)*beta_z_0-2*R43_list[i]*R44_list[i]*alpha_z_0+(R44_list[i]**2)*gamma_z_0)
-			print >> fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], mu_y_list[i], beta_y, alpha_y_list[i], \
-				gamma_y_list[i], mu_z_list[i], beta_z, alpha_z_list[i], gamma_z_list[i])
+
+			if file_result != None:
+				print >> fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], \
+				mu_y_list[i], beta_y, alpha_y_list[i], gamma_y_list[i],disp_y_list[i],disp_py_list,\
+				mu_z_list[i], beta_z, alpha_z_list[i], gamma_z_list[i],disp_z_list[i],disp_pz_list[i])
+
 	except (IndexError, ZeroDivisionError, ValueError):
 		print "Error calculating twiss parameters from twiss matrix"
 		print "i=", i, "(", label[i], ")"
@@ -962,8 +1041,9 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 				print eval("R%s%s_list[i]"%(ai,aj)),"\t",
 			print
 		raise
+
 	#put twiss parameters together. Format [s_coord, mu_y, beta_y, alpha_y, gamma_y, mu_z, beta_z, alpha_z, gamma_z]. Units are SI
-	twiss_profiles = [[s*cm for s in S_alltracks[0]], label_ref, mu_y_list, beta_y_list, alpha_y_list, gamma_y_list, mu_z_list, beta_z_list, alpha_z_list, gamma_z_list]
+	twiss_profiles = [[s*cm for s in S_alltracks[0]], label_ref, mu_y_list, beta_y_list, alpha_y_list, gamma_y_list, disp_y_list, disp_py_list, mu_z_list, beta_z_list, alpha_z_list, gamma_z_list, disp_z_list, disp_pz_list]
 
 	return twiss_profiles
 
@@ -1580,8 +1660,6 @@ def tune_diagram(tune_list, order=3, xlim=None, ylim=None):
 	#plot list of tunes
 	pylab.plot(tune_list[0], tune_list[1], 'k+')
 
-	#pylab.xlim( (xlim[0] ,xlim[1]) )
-	#pylab.axis([-0.05,1.05,-0.05,1.05])
 	pylab.axis([xlim[0], xlim[1], ylim[0], ylim[1]])
 
 	pylab.savefig('tune_diagram')

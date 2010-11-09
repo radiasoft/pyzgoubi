@@ -1569,7 +1569,15 @@ class Results(object):
 		raise NoTrackError, "Could not find MATRIX output, maybe beam lost"
 
 	def get_twiss_parameters(self):
-		"""Returns a tuple (beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z) from the twiss parameter matrix.
+		"""Returns a tuple (beta_y, alpha_y, gamma_y, disp_y, disp_py, beta_z, alpha_z, gamma_z, disp_z, disp_pz) from 
+			the twiss parameter matrix.
+
+		#Outputs
+		beta_y, alpha_y, gamma_y: horizontal Twiss parameters
+		beta_y, alpha_y, gamma_y: vertical Twiss parameters
+		disp_y, disp_py : horizontal dispersion and dispersion-prime
+		disp_z, disp_pz : vertical dispersion and dispersion-prime
+
 		Needs a beam line is an OBJET type 5, and a MATRIX element.
 
 		"""
@@ -1603,21 +1611,25 @@ class Results(object):
 				row = line.split()
 				beta_y = float(row[0])
 				alpha_y = -1*float(row[1])
+				disp_y = float(row[5])
 				found_row1 = True
 			elif found_row1 and not found_row2 and len(line) > 1:
 				row = line.split()
 				gamma_y = float(row[1])
+				disp_py = float(row[5])
 				found_row2 = True
 			elif found_row2 and not found_row3 and len(line) > 1:
 				row = line.split()
 				beta_z = float(row[2])
 				alpha_z = -1*float(row[3])
+				disp_z = float(row[5])
 				found_row3 = True
 			elif found_row3 and not found_row4 and len(line) > 1:
 				row = line.split()
 				gamma_z = float(row[3])
+				disp_pz = float(row[5])
 				found_row4 = True
-				return (beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z)
+				return (beta_y, alpha_y, gamma_y, disp_y, disp_py, beta_z, alpha_z, gamma_z, disp_z, disp_pz)
 
 	def show_particle_info(self):
 		"show the particle info, a good check of energies, mass etc"
