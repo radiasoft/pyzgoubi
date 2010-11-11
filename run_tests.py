@@ -130,6 +130,8 @@ for test_file in os.listdir(test_dir):
 		t0 = time.time()
 		#	result = os.system(command)
 		print command
+		print >>log, command
+		log.flush()
 		proc = subprocess.Popen(command, shell=True, stderr=subprocess.STDOUT, stdout=log)
 		proc.wait()
 		result = proc.returncode
