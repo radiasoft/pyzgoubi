@@ -761,7 +761,10 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 			P_alltracks.append(P_track)
 			S_alltracks.append(S_track)
 
-	
+	#check all trajectories have equal number of elements
+	if len(sets.Set([len(y) for y  in Y_alltracks])) != 1:
+		print "not all trajectories have equal number of elements"
+		
 
 	#11 coordinate in Y0_alltracks,T0_alltracks etc correspond to 11 starting conditions required by MATRIX
 
