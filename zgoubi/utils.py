@@ -776,13 +776,13 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 			T_alltracks_interp.append(numpy.interp(S_alltracks[0], S_alltracks[index], T_alltracks[index]))
 			Z_alltracks_interp.append(numpy.interp(S_alltracks[0], S_alltracks[index], Z_alltracks[index]))
 			P_alltracks_interp.append(numpy.interp(S_alltracks[0], S_alltracks[index], P_alltracks[index]))
-	#plot_data_xy_multi([S_alltracks[1],S_alltracks[0]],[Y_alltracks[1],Y_alltracks_interp[1]],'test_interp1',labels = ["","",""],style=["k+","r-"])
-	#plot_data_xy_multi([S_alltracks[2],S_alltracks[0]],[Y_alltracks[2],Y_alltracks_interp[2]],'test_interp2',labels = ["","",""],style=["k+","r-"])
-	Y_alltracks = Y_alltracks_interp
-	T_alltracks = T_alltracks_interp
-	Z_alltracks = Z_alltracks_interp
-	P_alltracks = P_alltracks_interp
-	S_alltracks = [S_alltracks[0] for s in range(len(S_alltracks))]
+		#plot_data_xy_multi([S_alltracks[1],S_alltracks[0]],[Y_alltracks[1],Y_alltracks_interp[1]],'test_interp1',labels = ["","",""],style=["k+","r-"])
+		#plot_data_xy_multi([S_alltracks[2],S_alltracks[0]],[Y_alltracks[2],Y_alltracks_interp[2]],'test_interp2',labels = ["","",""],style=["k+","r-"])
+		Y_alltracks = Y_alltracks_interp
+		T_alltracks = T_alltracks_interp
+		Z_alltracks = Z_alltracks_interp
+		P_alltracks = P_alltracks_interp
+		S_alltracks = [S_alltracks[0] for s in range(len(S_alltracks))]
 
 	#11 coordinate in Y0_alltracks,T0_alltracks etc correspond to 11 starting conditions required by MATRIX
 

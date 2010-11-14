@@ -135,8 +135,8 @@ for n, tp in enumerate (zgoubi_data):
 	assert are_close( tp[0], cd[1],1e-8 )
 	assert are_close( tp[3], cd[2],1e-4 )
 	assert are_close( tp[4], cd[3],1e-4 )
-	assert are_close( tp[7], cd[4],1e-4 )
-	assert are_close( tp[8], cd[5],1e-4 )
+	assert are_close( tp[9], cd[4],1e-4 )
+	assert are_close( tp[10], cd[5],1e-4 )
 	
 
 
