@@ -13,6 +13,7 @@ from glob import glob
 from zgoubi.common import *
 from zgoubi.constants import *
 from zgoubi.exceptions import *
+from zgoubi.rel_conv import *
 import itertools
 from zgoubi.core import zlog, dep_warn
 from StringIO import StringIO
@@ -619,18 +620,18 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 	The twiss parameters are then mapped to all points in the magnets using the transfer matrix calculated at each point. The results are stored
 	in list twiss_profiles where each column represents a point in the zgoubi.plt file and has format 
 
-	Dispersion and dispersion-prime are also calculated.
+	Dispersion and dispersion-prime are also calculated. If TOF can be read from the zgoubi.fai file then phase slip is calculated. If mass and charge can 
+	also be read from that file then gamma transition is also output.
 
-	[s_coord, label,  mu_y, beta_y, alpha_y, gamma_y, disp_y, disp_py, mu_z, beta_z, alpha_z, gamma_z, disp_z, disp_pz]
-
+	[s_coord, label,  mu_y, beta_y, alpha_y, gamma_y, disp_y, disp_py, mu_z, beta_z, alpha_z, gamma_z, disp_z, disp_pz, phase_slip, gamma_transition]
+	
 	The results are stored in file specified by file_result (optional)
 
 	Requires an OBJET type 5, and a MATRIX element.
 
 	Note - This calculation uses trajectories as measured in the local coordinate system of the magnet."""
-
+		
 	import zgoubi.core as zg
-
 
 	has_object5 = False
 	has_matrix = False
@@ -647,11 +648,29 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 	#run Zgoubi
 	r = line.run(xterm = False)
 
+	tof_ref = None
+	mass_mev = None
+	charge = None
+	
 	#extract rigidty from fai or plt file. At least one of these files must be available. 
+	#if fai file present, extract tof_ref, mass and charge.
 	try:
+		#rigidity used in calculation of dispersion
 		rig  = r.get_track('fai', ['BORO'])[0][0]
+		#tof of ref trajectory for later calculation of phase slip
+		tof_ref = r.get_track('fai', ['tof'])[0][0]
+		#mass, charge allows calculation of lorentz gamma
+		mass_mev = r.get_track('fai', ['M'])[0][0]
+		charge= r.get_track('fai', ['Q'])[0][0]
 	except:
 		rig  = r.get_track('plt', ['BORO'])[0][0]
+	
+	#Calculate Lorentz factor if mass and charge are known
+	if mass_mev !=None and charge !=None:
+		ke = rigidity_to_ke(mass_mev*1e6, rig*1e-3, charge)
+		gamma_lorentz = ke_to_gamma(mass_mev*1e6, ke)
+	
+
 
 #!-----------------------------------------------------------------------------------------
 #!  PREPARE DATA FOR CALCULATION
@@ -924,7 +943,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 	if beta_y_0 == 0 or beta_z_0 == 0:
 		zlog.error("Beam is unstable")
 
-#!Calculate horizontal dispersion. Start tracking at y_co + del_p*disp_y
+#!Calculate horizontal and vertical dispersion. Start tracking at y_co + del_p*disp_y
 #########################################################################
 
 	del_p = 0.0001 #momentum shift
@@ -969,6 +988,24 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 	disp_py_list = [xd*mm/del_p for xd in map(numpy.subtract, t_disp, T_alltracks[0])]
 	disp_z_list = [xd*mm/del_p for xd in map(numpy.subtract, z_disp, Z_alltracks[0])]
 	disp_pz_list = [xd*mm/del_p for xd in map(numpy.subtract, p_disp, P_alltracks[0])]
+		
+	#go on to calculate phase slip and transition gamma if enough information available
+	if tof_ref != None:
+		#calculate off-momentum tof. Assume just one point
+		tof_delp = r.get_track('fai', ['tof'])[0][0]
+		#calculate phase slip factor, often given the symbol eta
+		phase_slip = (tof_delp - tof_ref)/(del_p*tof_ref)
+	
+
+		#calculate transition gamma if gamma_lorentz is known, i.e. if mass and charge are known
+		if mass_mev != None and charge != None:
+			momentum_compaction = phase_slip + (1/(gamma_lorentz**2))
+			gamma_transition = (1/momentum_compaction)**0.5
+		else:
+			gamma_transition = None
+	else:
+		phase_slip = None
+		gamma_transition = None
 
 	#replace original objet
 	line.replace(ob2,objet)
@@ -1068,8 +1105,15 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 		raise
 
 	#put twiss parameters together. Format [s_coord, mu_y, beta_y, alpha_y, gamma_y, mu_z, beta_z, alpha_z, gamma_z]. Units are SI
-	twiss_profiles = [[s*cm for s in S_alltracks[0]], label_ref, mu_y_list, beta_y_list, alpha_y_list, gamma_y_list, disp_y_list, disp_py_list, mu_z_list, beta_z_list, alpha_z_list, gamma_z_list, disp_z_list, disp_pz_list]
+	twiss_profiles = [[s*cm for s in S_alltracks[0]], label_ref, mu_y_list, beta_y_list, alpha_y_list, gamma_y_list, disp_y_list, disp_py_list,\
+		mu_z_list, beta_z_list, alpha_z_list, gamma_z_list, disp_z_list, disp_pz_list]
 
+	if phase_slip != None:
+		twiss_profiles.extend([phase_slip])
+
+	if gamma_transition != None:
+		twiss_profiles.extend([gamma_transition])
+	
 	return twiss_profiles
 
 
