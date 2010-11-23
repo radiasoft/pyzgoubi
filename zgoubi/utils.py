@@ -611,7 +611,7 @@ def plot_find_closed_orbit(data_fname, outfile=None):
 				pylab.show()
 
 
-def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
+def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc_dispersion = True):
 	""" Calculates the twiss parameters at all points written to zgoubi.plt. 11 particle trajectories are used to calculate the
 	transfer matrix, just as is done in zgoubi. The code mirrors that found in mat1.f, mksa.f. The twiss parameters are first
 	calculated at the end of the cell using either input_twiss_parameters (format [beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z]) 
@@ -620,8 +620,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 	The twiss parameters are then mapped to all points in the magnets using the transfer matrix calculated at each point. The results are stored
 	in list twiss_profiles where each column represents a point in the zgoubi.plt file and has format 
 
-	Dispersion and dispersion-prime are also calculated. If TOF can be read from the zgoubi.fai file then phase slip is calculated. If mass and charge can 
-	also be read from that file then gamma transition is also output.
+	Dispersion and dispersion-prime are also calculated if calc_dispersion is True (default). If TOF can be read from the zgoubi.fai file then phase slip is calculated. If mass and charge can also be read from that file then gamma transition is also output.
 
 	[s_coord, label,  mu_y, beta_y, alpha_y, gamma_y, disp_y, disp_py, mu_z, beta_z, alpha_z, gamma_z, disp_z, disp_pz, phase_slip, gamma_transition]
 	
@@ -946,69 +945,80 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 #!Calculate horizontal and vertical dispersion. Start tracking at y_co + del_p*disp_y
 #########################################################################
 
-	del_p = 0.0001 #momentum shift
-
-	#need to switch to objet2
-	ob2 = zg.OBJET2()
-	line.replace(objet, ob2)
-	ob2.set(BORO=rig)
-
-	#reference index
-	ind0 = ref_indices[0]
-
-	closedorb_YTZP = None
-	#Try to find closed orbit of off-momentum particle, other wise use dispersion to estimate closed orbit
-	if input_twiss_parameters == [0, 0, 0, 0, 0, 0]:
-		closedorb_YTZP = find_closed_orbit(line, init_YTZP=[0,0,0,0], tol=1e-5, D=(1+ D0[ind0])*(1+del_p))
-
-	if closedorb_YTZP != None:
-		ob2.clear()
-		ob2.add(Y=closedorb_YTZP[0], T=closedorb_YTZP[1],Z=0,P=0, D=(1+ D0[ind0])*(1+del_p))
-	else:
-		#Closed orbit of off-momentum particle determined by dispersion (for small del_p)
-		ob2.clear()
-		ob2.add(Y=Y0[ind0] + del_p*disp_y_0*cm_, T=T0[ind0] + del_p*disp_py_0*mm_, 
-			Z=Z0[ind0] + del_p*disp_z_0*cm_, P=P0[ind0] + del_p*disp_pz_0*mm_, D=(1+ D0[ind0])*(1+del_p))		
-
-	r = line.run(xterm = False)
-
-	if track_type == 'plt':
-		plt_track_disp = r.get_track('plt', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
-	else:
-		plt_track_disp = r.get_track('fai', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
-
-	transpose_plt_track_disp = map(list, zip(*plt_track_disp))
-	y_disp = transpose_plt_track_disp[1]
-	t_disp = transpose_plt_track_disp[2]
-	z_disp = transpose_plt_track_disp[3]
-	p_disp = transpose_plt_track_disp[4]
-	s_disp = transpose_plt_track_disp[5]
-
-	disp_y_list = [xd*cm/del_p for xd in map(numpy.subtract, y_disp, Y_alltracks[0])]
-	disp_py_list = [xd*mm/del_p for xd in map(numpy.subtract, t_disp, T_alltracks[0])]
-	disp_z_list = [xd*mm/del_p for xd in map(numpy.subtract, z_disp, Z_alltracks[0])]
-	disp_pz_list = [xd*mm/del_p for xd in map(numpy.subtract, p_disp, P_alltracks[0])]
-		
-	#go on to calculate phase slip and transition gamma if enough information available
-	if tof_ref != None:
-		#calculate off-momentum tof. Assume just one point
-		tof_delp = r.get_track('fai', ['tof'])[0][0]
-		#calculate phase slip factor, often given the symbol eta
-		phase_slip = (tof_delp - tof_ref)/(del_p*tof_ref)
 	
+	if calc_dispersion:
+		del_p = 0.0001 #momentum shift
 
-		#calculate transition gamma if gamma_lorentz is known, i.e. if mass and charge are known
-		if mass_mev != None and charge != None:
-			momentum_compaction = phase_slip + (1/(gamma_lorentz**2))
-			gamma_transition = (1/momentum_compaction)**0.5
+		#need to switch to objet2
+		ob2 = zg.OBJET2()
+		line.replace(objet, ob2)
+		ob2.set(BORO=rig)
+
+		#reference index
+		ind0 = ref_indices[0]
+
+		closedorb_YTZP = None
+		#Try to find closed orbit of off-momentum particle, other wise use dispersion to estimate closed orbit
+		if input_twiss_parameters == [0, 0, 0, 0, 0, 0]:
+			closedorb_YTZP = find_closed_orbit(line, init_YTZP=[0,0,0,0], tol=1e-5, D=(1+ D0[ind0])*(1+del_p))
+
+		if closedorb_YTZP != None:
+			ob2.clear()
+			ob2.add(Y=closedorb_YTZP[0], T=closedorb_YTZP[1],Z=0,P=0, D=(1+ D0[ind0])*(1+del_p))
 		else:
+			#Closed orbit of off-momentum particle determined by dispersion (for small del_p)
+			ob2.clear()
+			ob2.add(Y=Y0[ind0] + del_p*disp_y_0*cm_, T=T0[ind0] + del_p*disp_py_0*mm_, 
+				Z=Z0[ind0] + del_p*disp_z_0*cm_, P=P0[ind0] + del_p*disp_pz_0*mm_, D=(1+ D0[ind0])*(1+del_p))		
+
+		r = line.run(xterm = False)
+
+		if track_type == 'plt':
+			plt_track_disp = r.get_track('plt', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
+		else:
+			plt_track_disp = r.get_track('fai', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
+
+		transpose_plt_track_disp = map(list, zip(*plt_track_disp))
+		y_disp = transpose_plt_track_disp[1]
+		t_disp = transpose_plt_track_disp[2]
+		z_disp = transpose_plt_track_disp[3]
+		p_disp = transpose_plt_track_disp[4]
+		s_disp = transpose_plt_track_disp[5]
+
+		disp_y_list = [xd*cm/del_p for xd in map(numpy.subtract, y_disp, Y_alltracks[0])]
+		disp_py_list = [xd*mm/del_p for xd in map(numpy.subtract, t_disp, T_alltracks[0])]
+		disp_z_list = [xd*mm/del_p for xd in map(numpy.subtract, z_disp, Z_alltracks[0])]
+		disp_pz_list = [xd*mm/del_p for xd in map(numpy.subtract, p_disp, P_alltracks[0])]
+			
+		#go on to calculate phase slip and transition gamma if enough information available
+		if tof_ref != None:
+			#calculate off-momentum tof. Assume just one point
+			tof_delp = r.get_track('fai', ['tof'])[0][0]
+			#calculate phase slip factor, often given the symbol eta
+			phase_slip = (tof_delp - tof_ref)/(del_p*tof_ref)
+		
+
+			#calculate transition gamma if gamma_lorentz is known, i.e. if mass and charge are known
+			if mass_mev != None and charge != None:
+				momentum_compaction = phase_slip + (1/(gamma_lorentz**2))
+				gamma_transition = (1/momentum_compaction)**0.5
+			else:
+				gamma_transition = None
+		else:
+			phase_slip = None
 			gamma_transition = None
+
+		#replace original objet
+		line.replace(ob2,objet)
 	else:
+		#disp_y_list = [0]*len(Y_alltracks[0])
+		disp_y_list = [None]*len(Y_alltracks[0])
+		disp_py_list = [None]*len(Y_alltracks[0])
+		disp_z_list = [None]*len(Y_alltracks[0])
+		disp_pz_list = [None]*len(Y_alltracks[0])
 		phase_slip = None
 		gamma_transition = None
 
-	#replace original objet
-	line.replace(ob2,objet)
 
 	#plot_data_xy_multi([S_alltracks[0],s_disp],[Y_alltracks[0],y_disp], 'Y_disp', labels=["","s [cm]","Y [cm]"],style=['k+','r+'])
 	#plot_data_xy_multi(s_disp,disp_y_list, 'disp_y', labels=["","s [cm]","D [m]"],style=['k+'])
@@ -1087,9 +1097,14 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None):
 			gamma_z_list.append((R43_list[i]**2)*beta_z_0-2*R43_list[i]*R44_list[i]*alpha_z_0+(R44_list[i]**2)*gamma_z_0)
 
 			if file_result != None:
-				print >> fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], \
-				mu_y_list[i], beta_y, alpha_y_list[i], gamma_y_list[i],disp_y_list[i],disp_py_list[i],\
-				mu_z_list[i], beta_z, alpha_z_list[i], gamma_z_list[i],disp_z_list[i],disp_pz_list[i])
+				if calc_dispersion:
+					print >> fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], \
+					mu_y_list[i], beta_y, alpha_y_list[i], gamma_y_list[i],disp_y_list[i],disp_py_list[i],\
+					mu_z_list[i], beta_z, alpha_z_list[i], gamma_z_list[i],disp_z_list[i],disp_pz_list[i])
+				else:
+					print >> fresults, '%2f %2s %2f %2f %2f %2f %2s %2s %2f %2f %2f %2f %2s %2s' % (S_alltracks[0][i], label_ref[i], \
+					mu_y_list[i], beta_y, alpha_y_list[i], gamma_y_list[i],disp_y_list[i],disp_py_list[i],\
+					mu_z_list[i], beta_z, alpha_z_list[i], gamma_z_list[i],disp_z_list[i],disp_pz_list[i])
 
 	except (IndexError, ZeroDivisionError, ValueError):
 		print "Error calculating twiss parameters from twiss matrix"
