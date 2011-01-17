@@ -60,7 +60,7 @@ ob.add(Y=0, T=0, D=1)
 r = emma.run(xterm = False)
 
 #first step is to find closed orbit
-closedorb_YTZP = find_closed_orbit(emma, init_YTZP=[1,2,3,4], tol=1e-10)
+closedorb_YTZP = find_closed_orbit(emma, init_YTZP=[1,2,3,4], tol=1e-6)
 
 #Change from OBJET2 to OBJET5 so that MATRIX can compute transfer matrix etc
 ob5 = OBJET5()

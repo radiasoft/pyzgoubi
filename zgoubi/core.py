@@ -376,6 +376,40 @@ class Line(object):
 			except AttributeError:
 				pass
 	
+	def check_line(self):
+		"Check that line has OBJET or MCOBJET at the start, and an END at the end. Gives warnings otherwise. Called by run() if in debug mode."
+		has_end = False
+		line_good = True
+		for n, element in enumerate(self.elements()):
+			if has_end:
+				line_good = False
+				try:
+					zlog.warn("Element (%s) after END" % element._zgoubi_name)
+				except AttributeError:
+					zlog.warn("Element after END")
+
+			isobjet = False
+			try:
+				if 'OBJET' in element._zgoubi_name:
+					isobjet = True
+				if 'END' in element._zgoubi_name:
+					has_end = True
+			except AttributeError:
+				pass
+
+			if n == 0 and not isobjet:
+				zlog.warn("First element in line no OBJET/MCOBJET")
+				line_good = False
+			if n != 0 and isobjet:
+				zlog.warn("OBJET/MCOBJET appears as element number %d. (Should only be first)" % n)
+				line_good = False
+		if not has_end:
+				zlog.warn("No END element found")
+				line_good = False
+
+		return line_good
+				
+	
 	def full_tracking(self, enable=True):
 		"""Enable full tracking on magnetic elements.
 		This works by setting IL=2 for any element with an IL parameter.
@@ -417,6 +451,8 @@ class Line(object):
 		
 	def run(self, xterm=False, tmp_prefix=zgoubi_settings['tmp_dir'], silence=False):
 		"Run zgoubi on line. If break is true, stop after running zgoubi, and open an xterm for the user in the tmp dir. From here zpop can be run."
+		if zlog.isEnabledFor(logging.DEBUG):
+			self.check_line()
 		orig_cwd = os.getcwd()
 		tmpdir = tempfile.mkdtemp("zgoubi", prefix=tmp_prefix)
 		self.tmpdir = tmpdir

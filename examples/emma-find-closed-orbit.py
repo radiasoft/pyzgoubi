@@ -63,4 +63,4 @@ ob.add(Y=0, T=0, D=1)
 #print emma.res()
 #emma.clean()
 
-find_closed_orbit(emma, init_YTZP=[0,0,0,0], tol=1e-10)
+find_closed_orbit(emma, init_YTZP=[0,0,0,0], tol=1e-6)
