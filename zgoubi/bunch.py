@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """A bunch object to hold the coordinates for many particles
 
 Note that all values are in SI units, m, rad, eV, s

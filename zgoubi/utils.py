@@ -1243,7 +1243,13 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 
 		plot_data - If True, creates phase space plots at all emittances scanned in both transverse planes.
 	
-	If a particle is lost, returns index_lost in emit_list where the loss occurs. Otherwise index_lost remains 0.
+		Returns [index_lost, coord_index], fourier_tune_emit, coords_YTZP_ini]  where 
+		index_lost is the index in emit_list where particle is lost (0 if no loss). 
+		coord_index indicates at which coord in ellipse_coords the particle is lost. 
+		fourier_tune_emit is a list of tunes found at each emittance using Fourier analysis. 
+		coords_YTZP_ini_list is a list of all initial coordinates tested. 
+
+		If a particle is lost, returns index_lost in emit_list where the loss occurs. Otherwise index_lost remains 0.
 	"""
 
 	import zgoubi.core as zg
@@ -1316,6 +1322,7 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 		reverse_search = True
 		
 
+	coords_YTZP_ini_list = []
 	for emit_h, emit_v in zip(emit_list_h, emit_list_v):
 		print "check emit (h/v) ", emit_h, emit_v
 		print "ellipse_coords, coord_pick ",ellipse_coords, coord_pick
@@ -1339,6 +1346,8 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 			else:
 				coords_YTZP_ini = [[a-b for a,b in zip(closedorb_YTZP,coords_YTZP_ini)]]
 
+
+		coords_YTZP_ini_list.append(coords_YTZP_ini)
 
 		for coord_index, current_YTZP in enumerate(coords_YTZP_ini):
 
@@ -1412,31 +1421,31 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 
 		if coord_pick == None:
 			#obtain coordinates on phase space ellipses. Use beta, gamma values found at closed orbit
-			coords_YTZP_ini = emittance_to_coords(emit_plot_h, emit_plot_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))
+			coords_YTZP_lim = emittance_to_coords(emit_plot_h, emit_plot_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))
 		else:
 			#select one point on phase space ellipse. Use beta, gamma values found at closed orbit
-			coords_YTZP_ini = emittance_to_coords(emit_plot_h, emit_plot_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))[coord_pick]
+			coords_YTZP_lim = emittance_to_coords(emit_plot_h, emit_plot_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))[coord_pick]
 
 		try:
-			l = len(coords_YTZP_ini[0])
+			l = len(coords_YTZP_lim[0])
 			if ellipse_coords != -1:
-				coords_YTZP_ini = [map(add, closedorb_YTZP, coords) for coords in coords_YTZP_ini]
+				coords_YTZP_lim = [map(add, closedorb_YTZP, coords) for coords in coords_YTZP_lim]
 			else:
-				coords_YTZP_ini = [[a-b for a,b in zip(closedorb_YTZP, coords)] for coords in coords_YTZP_ini]
+				coords_YTZP_lim = [[a-b for a,b in zip(closedorb_YTZP, coords)] for coords in coords_YTZP_lim]
 		except TypeError:
 			if ellipse_coords != -1:
-				coords_YTZP_ini = [map(add, closedorb_YTZP, coords_YTZP_ini)]
+				coords_YTZP_lim = [map(add, closedorb_YTZP, coords_YTZP_lim)]
 			else:
-				coords_YTZP_ini = [[a-b for a,b in zip(closedorb_YTZP,coords_YTZP_ini)]]
+				coords_YTZP_lim = [[a-b for a,b in zip(closedorb_YTZP,coords_YTZP_lim)]]
 
 
 		#coords_YTZP_ini = [map(add, closedorb_YTZP, coords) for coords in coords_YTZP_ini]
 
 		#add points on phase space ellipse actually used to initialise scan above
-		Y_data.insert(0,numpy.transpose(coords_YTZP_ini)[0])
-		T_data.insert(0,numpy.transpose(coords_YTZP_ini)[1])
-		Z_data.insert(0,numpy.transpose(coords_YTZP_ini)[2])
-		P_data.insert(0,numpy.transpose(coords_YTZP_ini)[3])
+		Y_data.insert(0,numpy.transpose(coords_YTZP_lim)[0])
+		T_data.insert(0,numpy.transpose(coords_YTZP_lim)[1])
+		Z_data.insert(0,numpy.transpose(coords_YTZP_lim)[2])
+		P_data.insert(0,numpy.transpose(coords_YTZP_lim)[3])
 
 		#add many coordinates to draw phase space ellipse
 		Y_data.insert(0,numpy.transpose(coords_YTZP_full)[0])
@@ -1452,7 +1461,7 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 		plot_data_xy_multi(Y_data, T_data, 'yt_phasespace', labels=["Horizontal phase space", "y [cm]", "y' [mrad]"], style=style_list)
 		plot_data_xy_multi(Z_data, P_data, 'zp_phasespace', labels=["Vertical phase space", "z [cm]", "z' [mrad]"], style=style_list)
 
-	return [index_lost, coord_index], fourier_tune_emit
+	return [index_lost, coord_index], fourier_tune_emit, coords_YTZP_ini_list
 
 
 
