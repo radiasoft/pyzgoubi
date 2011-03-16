@@ -1208,9 +1208,14 @@ def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier=False, co
 
 	#plot tunes if desired	
 	if(plot_fourier):
+		pylab.subplot(211)
 		pylab.plot(yampfreq, 'k-')
+		pylab.ylim((0, max(yampfreq[1:-1])))
+		pylab.ylabel("FFT(y)")
+		pylab.subplot(212)
 		pylab.plot(zampfreq, 'b-')
-		pylab.ylim([0, max([max(yampfreq[1:-1]), max(zampfreq[1:-1])])])
+		pylab.ylim((0, max(zampfreq[1:-1])))
+		pylab.ylabel("FFT(z)")
 		pylab.savefig('fspectrum')
 
 	return yfouriertune, zfouriertune
