@@ -1244,7 +1244,7 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 
 		Can also specify ellipse coords = [n,m] -- distribute n points around ellipse but only test point m of these.
 
-		twiss_parameters - Can supply twiss parameters in format [[alpha_y,beta_y,gamma_y],[alpha_z,beta_z,gamma_z]], i.e the output of r.get_twiss_parameters(). If not supplied an attempt will be made to calculate the twiss parameters in this function.
+		twiss_parameters - Can supply twiss parameters in format [beta_y, alpha_y, gamma_y, disp_y, disp_py, beta_z, alpha_z, gamma_z, disp_z, disp_pz], i.e the output of r.get_twiss_parameters(). If not supplied an attempt will be made to calculate the twiss parameters in this function.
 
 		plot_data - If True, creates phase space plots at all emittances scanned in both transverse planes.
 	
@@ -1288,8 +1288,8 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 
 
 	if twiss_parameters != []:
-		betayz = [twiss_parameters[0], twiss_parameters[3]]
-		gammayz = [twiss_parameters[2], twiss_parameters[5]]
+		betayz = [twiss_parameters[0], twiss_parameters[5]]
+		gammayz = [twiss_parameters[2], twiss_parameters[7]]
 	else:
 		#calculate optical parameters on closed orbit. This is required to convert emittances into a coordinate.
 		objet5 = zg.OBJET5()
@@ -1302,8 +1302,8 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 		r = line.run(xterm = False)
 		twissparam = r.get_twiss_parameters()
 		#alphayz = [twissparam[1],twissparam[4]]
-		betayz = [twissparam[0], twissparam[3]]
-		gammayz = [twissparam[2], twissparam[5]]
+		betayz = [twissparam[0], twissparam[5]]
+		gammayz = [twissparam[2], twissparam[7]]
 	
 		#revert to objet2 mode with rebelote
 		line.replace(objet5, objet)
@@ -1487,8 +1487,8 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 	Emittances in both the horizontal and vertical planes may be supplied. Twiss parameters beta and gamma in 
 	both places may be determined calling get_twiss_parameters beforehand i.e.::
 			twissparam = r.get_twiss_parameters()
-			betayz = [twissparam[0],twissparam[3]]
-			gammayz = [twissparam[2],twissparam[5]]
+			betayz = [twissparam[0],twissparam[5]]
+			gammayz = [twissparam[2],twissparam[7]]
 	"""
 	
 	coords_YTZP = []
