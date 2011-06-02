@@ -263,6 +263,18 @@ def mom_to_ke(mom, mass):
 	return ke
 
 
+def ke_to_relativistic_beta(ke, mass):
+	"""ke in eV, mass in eV/c^2
+	"""
+	te = ke + mass
+
+	mom = sqrt(te**2 - mass**2) # in eV/c
+
+	beta_rel = mom/te
+
+	return beta_rel
+
+
 def ke_to_relativistic_beta_gamma(ke, mass):
 	"""ke in eV, mass in eV/c^2
 	"""
