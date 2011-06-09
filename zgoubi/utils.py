@@ -1847,7 +1847,7 @@ def plot_data_xy(data, filename, labels=None, style='b-', xlim=None, ylim=None):
 	pylab.cla()
 
 
-def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style='', legend=' ', legend_location='best', xlim=None, ylim=None):
+def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style='', legend=' ', legend_location='best', xlim=None, ylim=None, tick_multiple = None):
 	""" Plots multiple sets of data where the X and Y coordinates are each specified in a list of lists. Should also
 	    work if a single set of X, Y data is specified or if one X is supplied with multiple Y data points (as long 
 	    the dimensions of Y equals that of X in all cases). 
@@ -1863,7 +1863,9 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 		legend - Legends can be supplied as a list of strings or as a single string. 
 		legend_location - Default of location of legend box is 'best', otherwise can select 'upper right' or numerical code for position. See matplotlib documentation. 
 		xlim = [lower_value, upper_value] - Limit horizontal axis
-		ylim = [lower_value, upper_value] - Limit vertical axis  """
+		ylim = [lower_value, upper_value] - Limit vertical axis
+		majorLocator = horizontal axis tick marks defined as multiple of majorLocator"""
+
 	import pylab
 
 	if labels == None:
@@ -1893,6 +1895,11 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 		legend = [legend]
 
 
+	if tick_multiple != None:
+		from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+		majorLocator   = MultipleLocator(tick_multiple)
+		ax = pylab.subplot(111)
+
 	if single_y_data:
 		pylab.plot(data_x_list, data_y_list, style[0])
 	else:
@@ -1912,6 +1919,9 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 
 	if legend != [' ']:
 		pylab.legend(loc=legend_location)
+
+	if tick_multiple != None:
+		ax.xaxis.set_major_locator(majorLocator)
 
 	pylab.savefig(filename)
 	pylab.cla()
