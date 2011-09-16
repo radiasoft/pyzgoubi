@@ -363,11 +363,13 @@ class CHANGREF_NEW(zgoubi_element):
 		and XR,YR,ZR for rotations about the longitudinal, horizontal and vertical axes
 		order can be specified, for example order=["ZR","YS"].
 	"""
-	def __init__(self ,**settings):
+	def __init__(self ,label1=None,**settings):
 		self._zgoubi_name = "CHANGREF"
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
+		if label1 != None:
+			self.label1 = label1
 		self._params['XS'] = None
 		self._params['YS'] = None
 		self._params['ZS'] = None
@@ -384,7 +386,7 @@ class CHANGREF_NEW(zgoubi_element):
 		f = self.f2s
 		i = self.i2s
 
-		out = "'CHANGREF'" +nl
+		out = "'CHANGREF'" +' '+self.label1+nl
 		for elem in self.order:
 			if elem == "XS" and self.XS != None:
 				out += "XS " + f(self.XS)+' '

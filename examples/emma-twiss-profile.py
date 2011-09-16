@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 print "running emma example"
 
 emma = Line('emma')
@@ -76,26 +77,32 @@ r = emma.run(xterm = False)
 #find tune calculated by MATRIX over this periodic cell
 tune = r.get_tune()
 
-#get twiss parameters at end of cell
+#get twiss parameters at end of cell, returns [beta_y,alpha_y,gamma_y,disp_y,disp_py,beta_z,alpha_z,gamma_z,disp_z,disp_pz]
 twissparam = r.get_twiss_parameters()
-betayz = [twissparam[0],twissparam[3]]
-print "beta Y,Z at end of cell ",betayz
+betayz = [twissparam[0],twissparam[5]]
+alphayz = [twissparam[1],twissparam[6]]
+gammayz = [twissparam[2],twissparam[7]]
 
-#get_twiss_profiles has format [s_coord, label, mu_y, beta_y, alpha_y, gamma_y, mu_z,beta_z, alpha_z, gamma_z]
+print "beta Y,Z at end of cell ",betayz
+print "alpha Y,Z at end of cell ",alphayz
+print "gamma Y,Z at end of cell ",gammayz
+
+#get_twiss_profiles has format [s_coord, label, mu_y, beta_y, alpha_y, gamma_y, disp_y, disp_py, mu_z,beta_z, alpha_z, gamma_z, disp_z, disp_pz]
 twiss_profiles = get_twiss_profiles(emma,'twiss_profiles.txt')
 
 #Note - Could specify twiss parameters at beginning of cell
-#twiss_profiles = get_twiss_profiles(emma,'twiss_profiles.txt',input_twiss_parameters = [beta_y,alpha_y,gamma_y,beta_z,alpha_z,gamma_z])
+#twiss_profiles = get_twiss_profiles(emma,'twiss_profiles.txt',input_twiss_parameters = twissparam)
 
 #extract s coordinate and beta_y from twiss_profiles and create figure beta_y_profile.png
 s = twiss_profiles[0]
 beta_y = twiss_profiles[3]
-plot_data = map(list,zip(*[s,beta_y]))
-plot_data_xy(plot_data, 'beta_y_profile', labels=["beta_y profile","s [m]","beta_y [m]"],style='b+')
+beta_z = twiss_profiles[9]
+plot_data_xy_multi(s,[beta_y,beta_z], 'beta_profiles', labels=["beta profile","s [m]","beta_y [m]"],style=['k+','b.'],legend=['beta_y','beta_z'])
 
 #plot horizontal phase advance mu_y
 mu_y = twiss_profiles[2]
-plot_data = map(list,zip(*[s,mu_y]))
-plot_data_xy(plot_data, 'mu_y_profile', labels=["mu_y profile","s [m]","mu_y [rad]"],style='g+')
+plot_data_xy_multi(s, mu_y, 'mu_y_profile', labels=["mu_y profile","s [m]","mu_y [rad]"],style='b+')
 
-
+#plot dispersion in the horizontal plane
+disp_y = twiss_profiles[6]
+plot_data_xy_multi(s, disp_y, 'disp_profile', labels=["D profile","s [m]","D [m]"],style='b+')
