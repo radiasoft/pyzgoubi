@@ -116,7 +116,7 @@ matrix=MATRIX(IORD=1,IFOC=11)
 emma.replace(reb,matrix)
 
 #set normalised emittance of beam in pi m rad. Assume a round beam (equal emittance in horizontal and vertical planes)
-emittance = 30e-6
+emittance = 3e-3
 
 Y_rad_QD = []
 Z_rad_QD = []
@@ -131,7 +131,7 @@ for index, closedorb_YTZP in enumerate(closedorbs):
 	#get_twiss_profiles has format [s_coord, label, mu_y, beta_y, alpha_y, gamma_y, mu_z,beta_z, alpha_z, gamma_z	
 	twiss_profiles = get_twiss_profiles(emma,'twiss_profiles.txt')
 	beta_y = twiss_profiles[3]
-	beta_z = twiss_profiles[7]
+	beta_z = twiss_profiles[9]
 	#convert from beta profile to beam size using assumed emittance. Units converted to cm
 	y_rad = [cm_*sqrt(beta*emittance/beta_gamma_rel) for beta in beta_y]
 	z_rad = [cm_*sqrt(beta*emittance/beta_gamma_rel) for beta in beta_z]
