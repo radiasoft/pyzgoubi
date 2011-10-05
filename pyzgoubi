@@ -136,6 +136,7 @@ def _show_usage():
 	print "pyzgoubi", "--zgoubi /path/to/zgoubi"
 	print "pyzgoubi", "--debug"
 	print "pyzgoubi", "--log_level DEBUG/WARNING/ERROR"
+	print "pyzgoubi", "--install-zgoubi"
 	print "\nFor documentation see http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/"
 
 def show_version():
@@ -193,7 +194,7 @@ def show_version():
 
 if __name__ == '__main__':
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "version", "zgoubi=", "debug", "log_level="])
+		opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "version", "zgoubi=", "debug", "log_level=", "install-zgoubi"])
 	except getopt.GetoptError, err:
 		print str(err)
 		_show_usage()
@@ -218,6 +219,10 @@ if __name__ == '__main__':
 			zlog.setLevel(logging._levelNames[a.upper()])
 		if o in ['--version']:
 			show_version()
+			sys.exit(0)
+		if o in ['--install-zgoubi']:
+			from zgoubi import build_zgoubi
+			build_zgoubi.install_zgoubi_all()
 			sys.exit(0)
 
 	try:

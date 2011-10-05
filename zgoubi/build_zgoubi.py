@@ -15,17 +15,21 @@ zgoubi_install_dir = os.path.expanduser("~/.pyzgoubi/bin")
 zgoubi_svn_address = "https://zgoubi.svn.sourceforge.net/svnroot/zgoubi/trunk"
 
 def get_zgoubi_svn():
+	"Download zgoubi from SVN"
+	devnull = open("/dev/null", "w")
 	common.mkdir_p(zgoubi_build_dir)
 	try:
-		ret = subprocess.call(['svn', '--version'])
+		ret = subprocess.call(['svn', '--version'], stdout=devnull)
 	except OSError:
 		raise ZgoubiBuildError("svn not found: install subversion")
+	print "Downloading Zgoubi SVN:", zgoubi_svn_address
 	ret = subprocess.call(['svn', 'co', zgoubi_svn_address, "zgoubi-trunk"], cwd=zgoubi_build_dir)
 	if ret != 0:
-		raise ZgoubiBuildError("svn download failed")
+		raise ZgoubiBuildError("SVN download failed")
 
 
 def set_zgoubi_version(version=None):
+	"Set downloaded SVN to a given version. or, if no version given, to latest version"
 	ret = subprocess.call(['svn', 'revert','-R',  '.'], cwd=zgoubi_build_dir2)
 	if version == None:
 		ret = subprocess.call(['svn', 'update'], cwd=zgoubi_build_dir2)
@@ -34,29 +38,40 @@ def set_zgoubi_version(version=None):
 
 
 def apply_zgoubi_patches(patches):
+	"Download and apply a set of patches"
 	for patch in patches:
 		print "applying", patch
 		patchname = patch.rpartition("/")[2]
 		ret = subprocess.call(['wget', patch, "-O", patchname], cwd=zgoubi_build_dir2)
+		if ret != 0:
+			raise ZgoubiBuildError("Patch download failed: %s" % patch)
 		ret = subprocess.call('patch -p0 < %s' % patchname, cwd=zgoubi_build_dir2, shell=True)
+		if ret != 0:
+			raise ZgoubiBuildError("Patch application failed: %s" % patch)
 
 
 def make_zgoubi(threads=2):
+	"Build zgoubi source code"
 	print "building zgoubi"
 	ret = subprocess.call(['make', 'clean' ], cwd=zgoubi_build_dir2)
+	if ret != 0:
+		raise ZgoubiBuildError("Make clean failed")
 	ret = subprocess.call(['make', '-j%d'%threads ], cwd=zgoubi_build_dir2)
+	if ret != 0:
+		raise ZgoubiBuildError("Building zgoubi failed")
 
 def install_zgoubi(postfix=""):
+	"Install zgoubi into ~/.pyzgoubi folder"
 	common.mkdir_p(zgoubi_install_dir)
 
 	shutil.copy(os.path.join(zgoubi_build_dir2, "zgoubi", "zgoubi"),
-	                os.path.join(zgoubi_install_dir, "zgoubi_%s"%postfix )  )
+	                os.path.join(zgoubi_install_dir, "zgoubi%s"%postfix )  )
 	shutil.copy(os.path.join(zgoubi_build_dir2, "zpop", "zpop"),
-	                os.path.join(zgoubi_install_dir, "zpop_%s"%postfix )  )
+	                os.path.join(zgoubi_install_dir, "zpop%s"%postfix )  )
 
 
-
-if __name__ == "__main__":
+def install_zgoubi_all():
+	"This currently install a version of zgoubi known to work with pyzgoubi"
 	get_zgoubi_svn()
 	set_zgoubi_version(261)
 	patches=[
@@ -69,6 +84,11 @@ if __name__ == "__main__":
 	apply_zgoubi_patches(patches)
 	make_zgoubi()
 
-	install_zgoubi("261+patches")
+	install_zgoubi("_261+patches")
+	print "\nInstalled zgoubi into ", zgoubi_install_dir
+	print "Add the following line to ~/.pyzgoubi/settings.ini"
+	print "zgoubi_path = %s/zgoubi%s" % (zgoubi_install_dir, "_261+patches")
 
 
+if __name__ == "__main__":
+	install_zgoubi_all()
