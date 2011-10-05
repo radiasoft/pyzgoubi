@@ -143,7 +143,7 @@ def show_version():
 	"Output version information"
 	print "Pyzgoubi version: %s" % MAIN_VERSION
 	try:
-		print 'Bzr: %(branch_nick)s rev %(revno)d' % version_info
+		print 'Bzr: %(branch_nick)s rev %(revno)s' % version_info
 	except NameError:
 		pass
 	print "Default Zgoubi path", zgoubi_settings['zgoubi_path']

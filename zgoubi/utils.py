@@ -636,7 +636,9 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 
 	Requires an OBJET type 5, and a MATRIX element.
 
-	Note - This calculation uses trajectories as measured in the local coordinate system of the magnet."""
+	Note - This calculation uses trajectories as measured in the local coordinate system of the magnet.
+	
+	The table is also writen to file_result"""
 
 	if input_twiss_parameters == None:
 		input_twiss_parameters = [0, 0, 0, 0, 0, 0]
