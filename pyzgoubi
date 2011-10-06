@@ -150,15 +150,14 @@ def show_version():
 	tmpdir = tempfile.mkdtemp()
 	try:
 		output = subprocess.Popen([zgoubi_settings['zgoubi_path']], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tmpdir).communicate()[0]
+		for line in output.split('\n'):
+			if "version" in line.lower():
+				print line.strip()
 	except OSError:
 		print "Failed to run zgoubi"
 		print "[from settings.ini] zgoubi_path:", zgoubi_settings['zgoubi_path']
 		print "$PATH:", os.environ['PATH']
-		raise
 
-	for line in output.split('\n'):
-		if "version" in line.lower():
-			print line.strip()
 	shutil.rmtree(tmpdir)
 
 	import sys
