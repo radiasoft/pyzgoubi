@@ -26,7 +26,9 @@ except OSError:
 
 MAIN_VERSION = '0.4.1'
 
-if os.path.exists(".bzr") and os.system("bzr version-info --format=python > zgoubi/version.py") == 0:
+if (os.path.exists(".bzr") and
+	os.system("bzr version-info --format=python > zgoubi/version.py") == 0 and
+	"sdist" not in sys.argv):
 	# run from a bzr repo, can use version info
 	print "updated zgoubi/version.py"
 	vfile = open("zgoubi/version.py","a")
