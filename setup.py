@@ -50,6 +50,8 @@ setup(name='pyzgoubi',
 	cmdclass={'build_doc': BuildDoc},
 	author="Sam Tygier",
 	author_email="sam.tygier@hep.manchester.ac.uk",
+	url="http://sourceforge.net/projects/pyzgoubi/",
+	license="GNU GENERAL PUBLIC LICENSE"
 	)
 
 is_cygwin = False
