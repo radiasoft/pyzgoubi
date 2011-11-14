@@ -97,6 +97,10 @@ else:
 	elif os.path.basename(os.path.normpath(os.path.join(zgoubi_module_path, '..', '..',))).lower().startswith("lib"):
 		static_defs = os.path.join(zgoubi_module_path, '..', '..', '..', "share", "pyzgoubi", "definitions", "static_defs.py")
 		simple_defs = os.path.join(zgoubi_module_path, '..', '..', '..', "share", "pyzgoubi", "definitions", "simple_elements.defs")
+	elif os.path.basename(os.path.normpath(os.path.join(zgoubi_module_path, '..', '..', '..','..',))).startswith("Library"):
+		python_vers = os.path.normpath(os.path.join(zgoubi_module_path, '..', '..',)).split('/')[3]
+		static_defs = os.path.join("/System", "Library", "Frameworks", "Python.framework","Versions",python_vers,"share","pyzgoubi","definitions","static_defs.py")
+		simple_defs = os.path.join("/System", "Library", "Frameworks", "Python.framework","Versions",python_vers,"share","pyzgoubi","definitions","simple_elements.defs")
 	else:
 		path_info = " zgoubi_module_path: %s\nzgoubi_path: %s\npyzgoubi_egg_path: %s" % (zgoubi_module_path, zgoubi_path, pyzgoubi_egg_path)
 		zlog.error("Could not find 'lib' directory from zgoubi_module_path")
