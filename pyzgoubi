@@ -113,7 +113,17 @@ def _show_help(help_arg):
 	help_elem_inst = eval("%s()" % help_arg.upper())
 	print "zgoubi name:", help_elem_inst._zgoubi_name
 	print "Parameters:"
-	print '\n'.join(help_elem_inst.list_params())
+	params = help_elem_inst.list_params()
+	params.sort()
+	print '\n'.join(params)
+	if hasattr(help_elem_inst, "_looped_data"):
+		help_elem_inst.add()
+		print "Sub element parameters:"
+		sparams = help_elem_inst._looped_data[0].keys()
+		sparams.sort()
+		print '\n'.join(sparams)
+
+
 
 def _show_usage():
 	"Show some usage instructions"
@@ -126,13 +136,64 @@ def _show_usage():
 	print "pyzgoubi", "--zgoubi /path/to/zgoubi"
 	print "pyzgoubi", "--debug"
 	print "pyzgoubi", "--log_level DEBUG/WARNING/ERROR"
+	print "pyzgoubi", "--install-zgoubi"
 	print "\nFor documentation see http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/"
+
+def show_version():
+	"Output version information"
+	print "Pyzgoubi version: %s" % MAIN_VERSION
+	try:
+		print 'Bzr: %(branch_nick)s rev %(revno)s' % version_info
+	except NameError:
+		pass
+	print "Default Zgoubi path", zgoubi_settings['zgoubi_path']
+	tmpdir = tempfile.mkdtemp()
+	try:
+		output = subprocess.Popen([zgoubi_settings['zgoubi_path']], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tmpdir).communicate()[0]
+		for line in output.split('\n'):
+			if "version" in line.lower():
+				print line.strip()
+	except OSError:
+		print "Failed to run zgoubi"
+		print "[from settings.ini] zgoubi_path:", zgoubi_settings['zgoubi_path']
+		print "$PATH:", os.environ['PATH']
+
+	shutil.rmtree(tmpdir)
+
+	import sys
+	print "Python version", sys.version
+	show_path = False
+
+	try:
+		import numpy
+		print "numpy version", numpy.version.version
+	except ImportError:
+		print "No numpy"
+		show_path = True
+	try:
+		import scipy
+		print "scipy version", scipy.version.version
+	except ImportError:
+		print "No scipy"
+		show_path = True
+	try:
+		import matplotlib
+		print "matplotlib version", matplotlib.__version__
+	except ImportError:
+		print "No matplotlib"
+		show_path = True
+	except RuntimeError:
+		print "Problem loading matplotlib"
+		show_path = True
+
+	if show_path:
+		print "python sys.path", str(sys.path)
 
 
 
 if __name__ == '__main__':
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "version", "zgoubi=", "debug", "log_level="])
+		opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "version", "zgoubi=", "debug", "log_level=", "install-zgoubi"])
 	except getopt.GetoptError, err:
 		print str(err)
 		_show_usage()
@@ -143,18 +204,6 @@ if __name__ == '__main__':
 		sys.exit(1)
 
 	for o, a in opts:
-		if o in ['--version']:
-			print "Pyzgoubi version: %s" % MAIN_VERSION
-			try:
-				print 'Bzr: %(branch_nick)s rev %(revno)d' % version_info
-			except NameError:
-				pass
-			print "Default Zgoubi path", zgoubi_settings['zgoubi_path']
-			output = subprocess.Popen([zgoubi_settings['zgoubi_path']], stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
-			for line in output.split('\n'):
-				if "version" in line.lower():
-					print line.strip()
-			sys.exit(0)
 		if o in ['--help', "-h"]:
 			if len(args):
 				_show_help(args[0])
@@ -167,8 +216,17 @@ if __name__ == '__main__':
 			zlog.setLevel(logging._levelNames['DEBUG'])
 		if o in ['--log_level']:
 			zlog.setLevel(logging._levelNames[a.upper()])
+		if o in ['--version']:
+			show_version()
+			sys.exit(0)
+		if o in ['--install-zgoubi']:
+			from zgoubi import build_zgoubi
+			build_zgoubi.install_zgoubi_all()
+			sys.exit(0)
+
 	try:
 		input_file_name = args[0]
+		sys.argv.pop(0)
 	except IndexError:
 		print "No input file, try:"
 		print "pyzgoubi inputfile"
@@ -179,8 +237,11 @@ if __name__ == '__main__':
 		sys.exit(1)
 		
 	try:
-		subprocess.Popen([zgoubi_settings['zgoubi_path']], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		tmpdir = tempfile.mkdtemp()
+		subprocess.Popen([zgoubi_settings['zgoubi_path']], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tmpdir).wait()
+		shutil.rmtree(tmpdir)
 	except OSError:
+		shutil.rmtree(tmpdir)
 		print "can't zgoubi binary", zgoubi_settings['zgoubi_path']
 		print "please modify the 'zgoubi_path' entry in ~/.pyzgoubi/settings.ini to the full path of zgoubi"
 		print "or add the direcory containing zgoubi to the $PATH"

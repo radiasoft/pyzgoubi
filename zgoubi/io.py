@@ -9,6 +9,7 @@ import struct
 
 from zgoubi.exceptions import OldFormatError
 from zgoubi.core import zlog
+from zgoubi.common import open_file_or_name
 
 # translate some of the column names for compatibility with old pyzgoubi
 col_name_trans = {
@@ -63,16 +64,6 @@ definition_lookup['cf6325603a7bbd57727637003208af60'] = {'file_mode': 'ascii', '
 definition_lookup['77b763ba233a2cd85ab8e0b77f5db05f'] = {'header_length': 922, 'file_mode': 'binary', 'file_type': 'plt', 'record_length': 347, 'names': ['IEX', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'tof0', 'D-1', 'Y', 'T', 'Z', 'P', 'S', 'tof', 'beta', 'DS', 'KART', 'ID', 'IREP', 'SORT', 'X', 'BX', 'BY', 'BZ', 'RET', 'DPR', 'PS', 'SXo', 'SYo', 'SZo', 'modSo', 'SX', 'SY', 'SZ', 'modS', 'EX', 'EY', 'EZ', 'BORO', 'PASS', 'NOEL', 'element_type', 'element_label1', 'element_label2', 'LET'], 'signature': '77b763ba233a2cd85ab8e0b77f5db05f', 'units': ['int', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'float', 'cm', 'mrd', 'cm', 'mrd', 'cm', 'mu_s', 'v/c', 'cm', 'int', 'int', 'int', 'cm', 'cm', 'kG', 'kG', 'kG', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'V/m', 'V/m', 'V/m', 'kG.cm', 'int', 'int', 'string', 'string', 'string', 'string'], 'types': ['i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'i4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'i4', 'i4', 'a10', 'a8', 'a8', 'a1']}
 
 
-
-def open_file_or_name(forn, mode="r"):
-	"Pass either a filename or file handle like object. Returns a file like object"
-	if hasattr(forn, 'readline'):
-		return forn
-	else:
-		return open(forn, mode)
-
-
-
 def read_fortran_record(fh):
 	"Read 1 record from a fortran file"
 	# length of each record is at start and end of record.
@@ -94,9 +85,9 @@ def write_fortran_record(fh, record):
 	"Write a record, adds record length to start and end"
 	rec_len = len(record)
 	rec_len_r = struct.pack("i", rec_len)
-	fh.write(rec_len_r)
-	fh.write(record)
-	fh.write(rec_len_r)
+	fh.write(rec_len_r+record+rec_len_r)
+	#fh.write(record)
+	#fh.write(rec_len_r)
 
 
 

@@ -1,3 +1,33 @@
+Changes from 0.4.0 -> 0.4.1
+Tue Nov  1 12:15:19 GMT 2011
+
+This release contains a years worth of updates for 0.4. It introduces a few new features, but should not break compatability with 0.4.0
+
+New Features
+Add command to build a binary of Zgoubi, pyzgoubi --install-zgoubi
+New Bunch methods: RMS widths, twiss and emittance. Get raw particle array
+Function to find transfer matrix from start and end bunch, and twiss from transfer matrix
+Adding and multiplication of Lines
+DIPOLE, YMY elements
+Small improvements to zgoubi --help, --version
+Specify tick marks in plot_data_xy_multi
+
+Internal
+Optimise binary file writing
+Allow use of binary files in track_bunch() (requires patch to zgoubi from zgoubi bug tracker)
+
+Fixes
+Warnings for potential problems in a bunch, and other places
+Better handling of lost particle in track bunch
+KV bunch generation
+Some path related fixes and debug info
+Fix spelling of emittance in function names
+
+
+For full changes see http://pyzgoubi.bzr.sf.net/bzr/ or run:
+bzr log --include-merges -r tag:pyzgoubi-0.4.0..tag:pyzgoubi-0.4.1
+
+
 Changes from 0.3.1 -> 0.4.0
 Wed Jun  2 18:09:23 BST 2010
 

@@ -323,17 +323,17 @@ Available Elements
 
 To find the full list of elements available in the current version run::
 
-    pyzgoubi help elements
+    pyzgoubi --help elements
 
 To find the names of the parameters available for an element use::
 
-    pyzgoubi help element_name
+    pyzgoubi --help element_name
 
 e.g.::
 
-    pyzgoubi help MULTIPOL
+    pyzgoubi --help MULTIPOL
 
-Use this in combination with the Zgoubi manual.
+Use this in combination with the Zgoubi manual. Most parameters have the same name. Greek letters in the manual are usually anglicised  (e.g. τ to tau). Subscripts are represented with underscores. When there is a entrance and exit version of a parameter E (entrée) and S (sortie) are used to distinguish.
 
 Running Zgoubi
 --------------
@@ -391,6 +391,12 @@ When you run a |Line| it creates a |Results| object, that can be used to get inf
     print res.get_all('fai')
     print res.get_track('fai', ['Y','T'])
 
+Assuming that you are using a recent Zgoubi version get_all will return a numpy structured array (recarray) which has named columns. To see the names of the columns use::
+
+	fai_data = res.get_all('fai')
+	print fai_data.dtype.names
+
+To find the units look inside a zgoubi.fai file.
 
 Bunch Objects
 -------------
@@ -436,10 +442,12 @@ Note that this method does not allow you to access the Result object.
 If you have a multi-CPU or multi-core CPU, then you can swap |Line.track_bunch| for the multithreaded version |Line.track_bunch_mt|. The multithreaded version also has the advantage that it can track an arbitrarily large bunch (more than Zgoubi's max particles limit).
 
 
-Loops
------
+Complex Lines
+-------------
 
-For making complex |Lines| it can be useful to use python features such as loops, e.g. to put 5 identical FODO cells you could use ::
+It is often useful to break down a complex lattice into sections and cells. This can be done in several ways in PyZgoubi. 
+
+Firstly you can use python features such as loops, e.g. to put 5 identical FODO cells you could use ::
 
     line = Line("example")
 
@@ -465,6 +473,31 @@ If you want to make one iteration different then you can do a test based on the 
         line.add(DRIFT( ... ))
         if (x == 2): #note x counts from zero
             line.add(DIPOLE( ... )
+
+Another method is to make a |Line| for each cell, and then build the full lattice from the cells::
+	
+	cell1 = Line("cell1")
+	cell1.add(...)
+	cell1.add(...)
+
+	cell2 = Line("cell2")
+	cell2.add(...)
+	cell2.add(...)
+
+	full_line = Line("fullline")
+	full_line.add(cell1)
+	full_line.add(cell2)
+	#or
+	full_line.add(cell1, cell2)
+	
+The +, * and - operators are overloaded for the line to add, repeat and reverse them.For example, assuming that you have defined the Lines ``injection``, ``extraction`` and ``ring_cell``::
+
+	full_line = injection + n * ring_cell + extraction
+
+To use a cell with its elements in reverse order::
+
+	full_line.add(-cell1)
+
 
 Command line arguments
 ----------------------
@@ -565,6 +598,7 @@ or start a python shell and run::
 
 Logging levels
 """"""""""""""
+.. _Logging:
 
 The verbosity of PyZgoubi can be adjusted. By default the log_level is set to 'warn', so only warnings and error messages are printed. One can raise the level to 'debug' which will also show debug messages. To do this for a single run use::
 
@@ -638,5 +672,65 @@ sfe: formatted io not allowed::
 
 
 This may mean that you have tried to write output to both ascii and binary files, eg zgoubi.fai and b_zgoubi.fai
+
+
+Troubleshooting
+---------------
+
+There are several levels at which problems can occur. Errors in the input file, bugs in PyZgoubi, bugs in Zgoubi.
+
+Debug mode
+""""""""""
+
+Some useful information is shown when debugging is enabled, for example warnings about common mistakes. See :ref:`Logging`
+
+
+Check the line
+""""""""""""""
+
+Printing the line instance will show what elements it contains::
+	
+	my_line = Line("a line")
+	my_line.add( QUADRUPO( ... ) )
+	my_line.add( DRIFT( ... ) )
+	...
+	print my_line
+
+
+Element output
+""""""""""""""
+
+Check what an element is outputting to the zgoubi.dat file::
+
+	q1 = QUADRUPO( ... )
+	print q1.output()
+
+or the whole line::
+	
+	print my_line.output
+
+If they are not what you expect have a look in PyZgoubi's definition files.
+
+Res file
+""""""""
+
+Read the zgoubi.res file. It shows how Zgoubi interpreted the zgoubi.dat file::
+
+	results = my_line.run()
+	print results.res()
+
+Check all the units, Zgoubi uses a range of different units.
+
+xterm
+"""""
+
+Open an xterm in the temp working folder, and have a look at the files zgoubi has output::
+
+	results = my_line.run(xterm=True)
+
+From here you can modify the zgoubi.dat and run zgoubi again.
+
+
+
 
 

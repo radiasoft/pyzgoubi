@@ -323,6 +323,29 @@ class Line(object):
 		new_line.name = "-"+self.name
 		return new_line
 
+	def __add__(self, rhs):
+		new_line = Line(self.name)
+		for element in self.element_list:
+			new_line.add(element)
+		for element in rhs.element_list:
+			new_line.add(element)
+		return new_line
+
+	def __rmul__(self, lhs):
+		new_line = Line(self.name)
+		for x in xrange(lhs):
+			for element in self.element_list:
+				new_line.add(element)
+		return new_line
+
+	def __mul__(self, rhs):
+		new_line = Line(self.name)
+		for x in xrange(rhs):
+			for element in self.element_list:
+				new_line.add(element)
+		return new_line
+
+
 	def __str__(self, prefix=""):
 		"For printing a line"
 		out = self.name + "\n"
@@ -352,6 +375,40 @@ class Line(object):
 					self.full_line = True
 			except AttributeError:
 				pass
+	
+	def check_line(self):
+		"Check that line has OBJET or MCOBJET at the start, and an END at the end. Gives warnings otherwise. Called by run() if in debug mode."
+		has_end = False
+		line_good = True
+		for n, element in enumerate(self.elements()):
+			if has_end:
+				line_good = False
+				try:
+					zlog.warn("Element (%s) after END" % element._zgoubi_name)
+				except AttributeError:
+					zlog.warn("Element after END")
+
+			isobjet = False
+			try:
+				if 'OBJET' in element._zgoubi_name:
+					isobjet = True
+				if 'END' in element._zgoubi_name:
+					has_end = True
+			except AttributeError:
+				pass
+
+			if n == 0 and not isobjet:
+				zlog.warn("First element in line no OBJET/MCOBJET")
+				line_good = False
+			if n != 0 and isobjet:
+				zlog.warn("OBJET/MCOBJET appears as element number %d. (Should only be first)" % n)
+				line_good = False
+		if not has_end:
+				zlog.warn("No END element found")
+				line_good = False
+
+		return line_good
+				
 	
 	def full_tracking(self, enable=True):
 		"""Enable full tracking on magnetic elements.
@@ -394,6 +451,8 @@ class Line(object):
 		
 	def run(self, xterm=False, tmp_prefix=zgoubi_settings['tmp_dir'], silence=False):
 		"Run zgoubi on line. If break is true, stop after running zgoubi, and open an xterm for the user in the tmp dir. From here zpop can be run."
+		if zlog.isEnabledFor(logging.DEBUG):
+			self.check_line()
 		orig_cwd = os.getcwd()
 		tmpdir = tempfile.mkdtemp("zgoubi", prefix=tmp_prefix)
 		self.tmpdir = tmpdir
@@ -462,14 +521,18 @@ class Line(object):
 
 		return result
 	
-	def track_bunch(self, bunch, **kwargs):
-		"Track a bunch through a Line, and return the bunch. This function will uses the OBJET_bunch object, and so need needs a Line that does not already have a OBJET"
+	def track_bunch(self, bunch, binary=False, **kwargs):
+		"Track a bunch through a Line, and return the bunch. This function will uses the OBJET_bunch object, and so need needs a Line that does not already have a OBJET. If binary is true then particles are sent to zgoubi in binary (needs a version of zgoubi that supports this)"
 		if self.full_line:
 			raise BadLineError("If line already has an OBJET use run()")
 
+		bunch_len = len(bunch)
+		if bunch_len == 0:
+			zlog.error("Bunch has zero particles")
+			raise ValueError
 		#build a line with the bunch OBJET and segment we were passed
 		new_line = Line("bunch_line")
-		new_line.add(OBJET_bunch(bunch, binary=False))
+		new_line.add(OBJET_bunch(bunch, binary=binary))
 		new_line.add(self)
 		#mark the faiscnl that we are interested in
 		new_line.add(MARKER("trackbun"))
@@ -481,6 +544,9 @@ class Line(object):
 		del new_line
 		# return the track bunch
 		done_bunch = result.get_bunch('bfai', end_label="trackbun", old_bunch=bunch)
+		done_bunch_len = len(done_bunch)
+		if bunch_len != done_bunch_len:
+			zlog.warn("Started with %s particles, finished with %s" % (bunch_len, done_bunch_len))
 		result.clean()
 		return done_bunch
 		
@@ -535,6 +601,9 @@ class Line(object):
 		#print "Work done"
 
 		final_bunch = zgoubi.bunch.Bunch(nparticles = len(bunch), rigidity=bunch.get_bunch_rigidity(), mass=bunch.mass, charge=bunch.charge)
+		survive_particles = numpy.zeros(len(bunch),dtype=numpy.bool) # bit map, set true when filling with particles
+
+		# workers may return out of order, so use start_index to put the coords in the correct place
 		for x in xrange(n_tasks):
 			#print "collecting task", x
 			result = out_q.get()
@@ -542,6 +611,7 @@ class Line(object):
 				start_index, done_bunch = result
 			except ValueError:
 				import traceback, time
+				stop_flag.set()
 				time.sleep(2) # give the other threads a couple of seconds, to make output prettier
 				zlog.error("Exception retrieved by main thread")
 				print
@@ -551,6 +621,12 @@ class Line(object):
 				raise result[0](result[1])
 			out_q.task_done()
 			final_bunch.particles()[start_index:start_index+len(done_bunch)] = done_bunch
+			survive_particles[start_index:start_index+len(done_bunch)] = True
+
+		if not numpy.all(survive_particles):
+			final_bunch.coords = final_bunch.particles()[survive_particles]
+			zlog.warn("Started with %s particles, finished with %s" % (len(bunch), len(final_bunch)))
+
 
 		#print "all done"
 		stop_flag.set()
@@ -1210,17 +1286,69 @@ class Results(object):
 			coords.append(this_coord)
 		return coords
 	
-	def get_bunch(self, file, end_label=None, old_bunch=None):
+	def loss_summary(self, coords=None, file='plt'):
+		"""Returns False if no losses, otherwise returns a summery of losses::
+			
+			loss = res.loss_summary(file='plt')
+			#or
+			all = res.get_all('plt')
+			loss = res.loss_summary(all) # if you already have got the coordinates
+
+		"""
+		if coords == None:
+			coords = self.get_all(file)
+	
+		if all(coords["IEX"] == 1):
+			return False
+		
+		loss_types = {-1:"the trajectory happened to wander outside the limits of a field map",
+				-2:"too many integration steps in an optical element",
+				-3:"deviation happened to exceed pi/2in an optical element",
+				-4:"stopped by walls (procedures CHAMBR, COLLIMA)",
+				-5:"too many iterations in subroutine DEPLA",
+				-6:"energy loss exceeds particle energy",
+				-7:"field discontinuities larger than 50% wthin a field map",
+				-8:"reached field limit in an optical element",
+				}
+		loss_res = {}
+		for iexval in loss_types.keys():
+			lossnum = (coords["IEX"] == iexval).sum()
+			if lossnum > 1:
+				loss_res[loss_types[iexval]] = lossnum
+		return loss_res
+
+
+
+
+	def get_bunch(self, file, end_label=None, old_bunch=None, drop_lost=True):
 		""""Get back a bunch object from the fai file. It is recommended that you put a MARKER before the last FAISCNL, and pass its label as end_label, so that only the bunch at the final position will be returned. All but the final lap is ignored automatically.
 		Optionally the an old_bunch can be passed to the function, its mass and charge will be copyed to the new bunch.
 		"""
-		all = self.get_all(file)
+		try:
+			all_c = self.get_all(file)
+		except IOError:
+			zlog.warn("Could not read %s. returning empty bunch" % file)
+			empty_bunch = zgoubi.bunch.Bunch(nparticles=0, rigidity=0)
+			if old_bunch != None:
+				empty_bunch.mass = old_bunch.mass
+				empty_bunch.charge = old_bunch.charge
+			return empty_bunch
 
-		if not (type(all) == type(numpy.zeros(0))):
+		loss_sum = self.loss_summary(all_c)
+		if loss_sum:
+			for k,v in loss_sum.items():
+				zlog.warn("%s particles lost: %s" % (v, k))
+
+			if drop_lost:
+				all_c = all_c[all_c['IEX'] == 1]
+
+
+
+		if not (type(all_c) == type(numpy.zeros(0))):
 			raise OldFormatError("get_bunch() only works with the new fai format")
 		
 		# select only the particles that made it to the last lap
-		last_lap = all[ all['PASS'] == all['PASS'].max() ]
+		last_lap = all_c[ all_c['PASS'] == all_c['PASS'].max() ]
 		# also select only particles at FAISTORE with matching end_label
 		if end_label:
 			end_label = end_label.ljust(8) # pad to match zgoubi
@@ -1240,6 +1368,7 @@ class Results(object):
 		particles['T'] = last_lap['T'] /1000
 		particles['Z'] = last_lap['Z'] /100
 		particles['P'] = last_lap['P'] /1000
+		particles['S'] = last_lap['S'] /100
 		particles['D'] = last_lap['D-1'] +1
 
 		return last_bunch
@@ -1407,15 +1536,6 @@ class Results(object):
 
 
 		"""
-		#has_object5 = False
-		#has_matrix = False
-		#for e in self.line.elements():
-		#	t = str(type(e)).split("'")[1].rpartition(".")[2]
-		#	if t == 'OBJET5':
-		#		has_object5 = True
-		#	if t == 'MATRIX':
-		#		if e.IORD == 1 and e.IFOC>10:
-		#			has_matrix = True
 
 		has_object5 = 'OBJET5' in self.element_types
 		has_matrix = 'MATRIX' in self.element_types
@@ -1444,6 +1564,44 @@ class Results(object):
 						NU_Z = -1 
 					print "Tune: ", (NU_Y, NU_Z)
 					return (NU_Y, NU_Z)
+		raise NoTrackError, "Could not find MATRIX output, maybe beam lost"
+
+	def get_transfer_matrix(self):
+		"""Returns a transfer matrix of the line in (MKSA units).
+		Needs a beam line is an OBJET type 5, and a MATRIX element.
+
+		"""
+
+		has_object5 = 'OBJET5' in self.element_types
+		has_matrix = 'MATRIX' in self.element_types
+				
+		if not (has_object5 and has_matrix):
+			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX element with IORD=1 and IFOC>10 to get tune"
+
+		found_matrix = False
+
+		res_fh = self.res_fh()
+		while True:
+			try:
+				line = res_fh.next()
+			except StopIteration:
+				break
+			if not found_matrix and "MATRIX" in line:
+				bits = line.split()
+				if bits[0].isdigit() and bits[1] == "MATRIX":
+					found_matrix = True
+					continue
+			elif found_matrix and "TRANSFER  MATRIX  ORDRE  1  (MKSA units)" in line:
+				matrix_lines = [res_fh.next() for dummy in xrange(30) ]
+				#print "".join(matrix_lines)
+
+				transfer_matrix = numpy.zeros([6,6])
+				for x in range(6):
+					transfer_matrix[x] = matrix_lines[x+1].split()
+
+				return transfer_matrix
+
+
 		raise NoTrackError, "Could not find MATRIX output, maybe beam lost"
 
 	def get_twiss_parameters(self):
@@ -1496,6 +1654,7 @@ class Results(object):
 				gamma_z = float(row[3])
 				found_row4 = True
 				return (beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z)
+
 
 	def show_particle_info(self):
 		"show the particle info, a good check of energies, mass etc"

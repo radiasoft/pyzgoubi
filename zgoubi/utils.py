@@ -10,10 +10,13 @@ import sys
 import os
 import warnings
 from glob import glob
+from zgoubi.common import *
 from zgoubi.constants import *
 from zgoubi.exceptions import *
+from zgoubi.rel_conv import *
 import itertools
 from zgoubi.core import zlog, dep_warn
+from StringIO import StringIO
 
 # use these to convert things to metres and tesla
 m = 1
@@ -260,6 +263,18 @@ def mom_to_ke(mom, mass):
 	return ke
 
 
+def ke_to_relativistic_beta(ke, mass):
+	"""ke in eV, mass in eV/c^2
+	"""
+	te = ke + mass
+
+	mom = sqrt(te**2 - mass**2) # in eV/c
+
+	beta_rel = mom/te
+
+	return beta_rel
+
+
 def ke_to_relativistic_beta_gamma(ke, mass):
 	"""ke in eV, mass in eV/c^2
 	"""
@@ -291,7 +306,7 @@ def show_file(file_path, mode):
 		command = 'xterm -e "less %s"'% file_path
 		os.system(command)
 
-def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, range_YTZP=None, count_YTZP=None):
+def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, range_YTZP=None, count_YTZP=None, record_fname=None):
 	"""Same as find_closed_orbit, but if init_YTZP is unstable, will generate a bunch or particles, with a spread of range_YTZP, and if any of those are stable will do a closed orbit search with that particle::
 
 		init_YTZP=[5,0,0,0], range_YTZP=[10,0,0,0], count_YTZP[50,0,0,0]
@@ -303,6 +318,7 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 	would create 100 particles in a grid.
 	
 	"""
+	zlog.debug("enter function")
 	if range_YTZP == None:
 		range_YTZP = [10, 10, 10, 10]
 	if init_YTZP == None:
@@ -310,9 +326,17 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 	if count_YTZP == None:
 		count_YTZP = [10, 10, 10, 10]
 	
+	if record_fname:
+		record_fh = open_file_or_name(record_fname, "w", mkdir=True)
+	else:
+		record_fh = None
+	
 	#first check center
-	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
+	if record_fname:
+		record_fh.write("#center\n")
+	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D, record_fname=record_fh)
 	if result != None:
+		zlog.debug("Found a closed orbit without needing range")
 		return result
 
 	# if the init_YTZP is not stable, then send a bunch, and see if any of those are not lost
@@ -341,9 +365,12 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 		else:
 			ranges.append(numpy.linspace(-range_YTZP[x], range_YTZP[x], count_YTZP[x]))
 
+	n_coords = 0
 	for coord in itertools.product(*ranges):
+		n_coords += 1
 		objet.add(Y=current_YTZP[0]+coord[0], T=current_YTZP[1]+coord[1], Z=current_YTZP[2]+coord[2], P=current_YTZP[3]+coord[3], LET='A', D=D)
 
+	zlog.debug("Search for a stable orbit with %s particles"%n_coords)
 	r = line.run(xterm=False)
 
 	if not r.run_success():
@@ -358,20 +385,29 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 		surviving_particles = track[ numpy.logical_and(track['PASS'] == final_lap_n , track['IEX']>0)  ]
 		zlog.debug("%d particles survived"%len(surviving_particles))
 
-		for surviving_particle in surviving_particles:
+		#measure lengths and sort
+		surviving_particles2 = [ [ sqrt((p['Y']-p['Y0'])**2 + (p['T']-p['T0'])**2 + (p['Z']-p['Z0'])**2 + (p['P']-p['P0'])**2),p] for p in surviving_particles ]
+		surviving_particles2.sort()
+
+		if record_fname:
+			record_fh.write("#survivors %s\n"%len(surviving_particles))
+			for length, surviving_particle in surviving_particles2:
+				surviving_coords = (surviving_particle['Y0'], surviving_particle['T0'], surviving_particle['Z0'], surviving_particle['P0'], surviving_particle['Y'], surviving_particle['T'], surviving_particle['Z'], surviving_particle['P'])
+				record_fh.write("%s %s %s %s %s %s %s %s\n"%surviving_coords)
+
+
+		for length, surviving_particle in surviving_particles2[:10]:
 			surviving_init_coord = [surviving_particle['Y0'], surviving_particle['T0'], surviving_particle['Z0'], surviving_particle['P0']]
 		
 			# use stable particle to find closed orbit
-			result = find_closed_orbit(line=line, init_YTZP=surviving_init_coord, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D)
+			result = find_closed_orbit(line=line, init_YTZP=surviving_init_coord, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D, record_fname=record_fh)
 			if result != None:
 				return result
 		zlog.warning("Despite finding surviving particles, none were stable")	
 		return None
 
-	
 
-
-def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1):
+def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, record_fname=None):
 	"""Find a closed orbit for the line. can optionally give a list of initial coordinates, init_YTZP, eg:
 	find_closed_orbit(line, init_YTZP=[1.2,2.1,0,0])
 	otherwise [0,0,0,0] are used.
@@ -380,11 +416,14 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 
 	It is recommend to have a REBELOTE, with several laps. The area of the phase space ellipse is approximated from the coordinates from the FAISCNL (or MARKER with fai_label), and the center is used for the new coordinates. Once the relative variation between iterations is less that the tolerance, the function returns the closed orbit coordinates. If a coordinate is close to zero (less than the tolerance) then it is compared absolutely instead of relatively.
 	
+	record_fname is used to record search details to a file that can be used with plot_find_closed_orbit().
 	"""
 	zlog.debug("enter function")
 	if init_YTZP == None:
 		init_YTZP = [0, 0, 0, 0]
 
+	if record_fname:
+		record_fh = open_file_or_name(record_fname, "w", mkdir=True)
 	#check line has an objet2
 	for e in line.element_list:
 		if ("OBJET2" in str(type(e)).split("'")[1]):
@@ -428,18 +467,23 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 					label = flatten(r.get_track('fai', ['element_label1']))
 					label = [lab.rstrip() for lab in label]
 
-					if len(find_indices(label, fai_label)) != 1:
+					if len(find_indices(label, fai_label)) < 1:
 						zlog.error("number of instances of label "+ str(fai_label) + " not equal 1")
 						return
 
-					fai_index = find_indices(label, fai_label)[0]
-					track = [track[fai_index]]
-				else:
+					fai_index = find_indices(label, fai_label)
+				try:
+					track = numpy.array([track[fi] for fi in fai_index])
+				except:
 					track = [track[fai_index]]
 
 		track_a = numpy.zeros([len(track)+1, len(track[0])])
 		track_a[0] = current_YTZP
 		track_a[1:] = track
+		
+		if record_fname:
+			record_fh.write("#track %s\n"%track_a.shape[0])
+			numpy.savetxt(record_fh, track_a)
 
 		tracks.append(track_a)
 
@@ -450,6 +494,8 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 		area_h = calc_area_simple(track_a[:, 0:2], centre=centre_h)
 		centre_v = find_centre(track_a[:, 2:4])
 		area_v = calc_area_simple(track_a[:, 2:4], centre=centre_v)
+
+		zlog.debug("End iteration: "+str(iteration)+ " final coords "+str(track_a[-1])+", center "+str([centre_h, centre_v])+", area "+str([area_h,area_v]))
 
 
 		areas.append([area_h , area_v])
@@ -488,6 +534,95 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 		return None
 
 
+def plot_find_closed_orbit(data_fname, outfile=None):
+	"""When the closed orbit search fails it can be useful to see what happened. find_closed_orbit() and find_closed_orbit_range() can take an optional argument record_fname. This causes them to write a log file, which can be read by this function and plotted. ::
+
+		closed_orbit =  find_closed_orbit(tline, init_YTZP=[1,20,0,0], record_fname="res/closedorbit.log")
+		plot_find_closed_orbit(data_fname="res/closedorbit.log", outfile="res/closedorbit.png")
+	
+	This will show you the succession of guesses. If using plot_find_closed_orbit_range() it will also show a plot of all the coordinates that survive being tracked through the lattice.
+
+	From the plots it may be clear whether the lattice is unstable, or if the convergence is just too slow. In the latter case it may help to repeat the cell using REBELOTE, or to increase the number of iterations allowed.
+
+	"""
+	import pylab
+	all_data = open(data_fname).readlines()
+	outfile_pre, dummy, outfile_ext = outfile.rpartition(".")
+
+	line_n = 0
+	tracks = []
+	survivors = None
+	while line_n < len(all_data):
+		line = all_data[line_n]
+		if line.startswith("#track"):
+			dummy, track_len = line.split()
+			track_len = int(track_len)
+
+			track_str = "\n".join(all_data[line_n+1: line_n+track_len+1])
+			#print track_str
+			track = numpy.genfromtxt(StringIO(track_str))
+			#print track
+
+			line_n = line_n+track_len
+			tracks.append(track)
+		if line.startswith("#survivors"):
+			dummy, surv_len = line.split()
+			surv_len = int(surv_len)
+
+			surv_str = "\n".join(all_data[line_n+1: line_n+surv_len+1])
+			surv = numpy.genfromtxt(StringIO(surv_str))
+
+			line_n = line_n+surv_len
+			survivors = surv
+
+		line_n += 1
+
+	for axis in ['h', 'v']:
+		pylab.clf()
+		pylab.title("closed orbit searches")
+
+		for track in tracks[:]:
+			if axis=='h':
+				x, y = track[:,0], track[:,1]
+				pylab.xlabel("x")
+				pylab.ylabel("x'")
+			if axis=='v':
+				x, y = track[:,2], track[:,3]
+				pylab.xlabel("y")
+				pylab.ylabel("y'")
+			#print
+			#print x, y
+			pylab.plot(x,y, 'x')
+		
+		
+		if outfile != None:
+			pylab.savefig(outfile_pre+"track_"+axis+"."+outfile_ext)
+		else:
+			pylab.show()
+
+		pylab.clf()
+		pylab.title("surviving particle start and ends")
+
+		if survivors != None:
+			for surv in survivors[:10]:
+				if axis=='h':
+					x, y, x1, y1 = surv[[0,1,4,5]]
+					pylab.xlabel("x")
+					pylab.ylabel("x'")
+				if axis=='v':
+					x, y, x1, y1 = surv[[2,3,6,7]]
+					pylab.xlabel("y")
+					pylab.ylabel("y'")
+				pylab.plot([x], [y], 'x')
+				pylab.plot([x,x1], [y,y1])
+
+
+			if outfile != None:
+				pylab.savefig(outfile_pre+"survivor_"+axis+"."+outfile_ext)
+			else:
+				pylab.show()
+
+
 def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 	""" Calculates the twiss parameters at all points written to zgoubi.plt. 11 particle trajectories are used to calculate the
 	transfer matrix, just as is done in zgoubi. The code mirrors that found in mat1.f, mksa.f. The twiss parameters are first
@@ -501,7 +636,9 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 
 	Requires an OBJET type 5, and a MATRIX element.
 
-	Note - This calculation uses trajectories as measured in the local coordinate system of the magnet."""
+	Note - This calculation uses trajectories as measured in the local coordinate system of the magnet.
+	
+	The table is also writen to file_result"""
 
 	if input_twiss_parameters == None:
 		input_twiss_parameters = [0, 0, 0, 0, 0, 0]
@@ -751,6 +888,10 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 		beta_z_0 = input_twiss_parameters[3]
 		alpha_z_0 = input_twiss_parameters[4]
 		gamma_z_0 = input_twiss_parameters[5]
+	
+	zlog.debug("Initial parameters:\nbeta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0\n%s, %s, %s, %s, %s, %s" % (beta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0))
+	if beta_y_0 == 0 or beta_z_0 == 0:
+		zlog.error("Beam is unstable")
 
 
 #! Calculate twiss parameters at all points in plt file 
@@ -776,55 +917,67 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 	sign_sine_z_old = 1.0
 	n_pi_y = 0
 	n_pi_z = 0
-	for i in range(len(R11_list)):
-		# Horizontal plane
-		#-----------------
-		beta_y = (R11_list[i]**2)*beta_y_0 - 2.0*R11_list[i]*R12_list[i]*alpha_y_0 + (R12_list[i]**2)*gamma_y_0
-		beta_y_list.append(beta_y)
+	try:
+		for i in range(len(R11_list)):
+			# Horizontal plane
+			#-----------------
+			beta_y = (R11_list[i]**2)*beta_y_0 - 2.0*R11_list[i]*R12_list[i]*alpha_y_0 + (R12_list[i]**2)*gamma_y_0
+			beta_y_list.append(beta_y)
 
-		# Horizontal phase advance calculation
-		# To account for range of acos=(0,Pi), check sign of sin(angle) to know when to change from angle to (2*Pi-angle) etc.	
-		sine_angle = R12_list[i]/sqrt(beta_y*beta_y_0)
-		if abs(sine_angle) > 1: 
-			mu_y_list.append(mu_y_list[i-1])
-		else:
-			sign_sine_y = numpy.sign(asin(sine_angle))
-			if sign_sine_y - sign_sine_y_old == -2:
-				n_pi_y = n_pi_y + 1
-			sign_sine_y_old = sign_sine_y
-			if sign_sine_y >= 0:
-				mu_y_list.append(n_pi_y*2*pi+acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+			# Horizontal phase advance calculation
+			# To account for range of acos=(0,Pi), check sign of sin(angle) to know when to change from angle to (2*Pi-angle) etc.	
+			sine_angle = R12_list[i]/sqrt(beta_y*beta_y_0)
+			if abs(sine_angle) > 1: 
+				mu_y_list.append(mu_y_list[i-1])
 			else:
-				mu_y_list.append(n_pi_y*2*pi-acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+				sign_sine_y = numpy.sign(asin(sine_angle))
+				if sign_sine_y - sign_sine_y_old == -2:
+					n_pi_y = n_pi_y + 1
+				sign_sine_y_old = sign_sine_y
+				if sign_sine_y >= 0:
+					mu_y_list.append(n_pi_y*2*pi+acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+				else:
+					mu_y_list.append(n_pi_y*2*pi-acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
 
-		alpha_y_list.append(-R11_list[i]*R21_list[i]*beta_y_0 + (R11_list[i]*R22_list[i]+R12_list[i]*R21_list[i])*alpha_y_0 \
-			- R12_list[i]*R22_list[i]*gamma_y_0)
-		gamma_y_list.append((R21_list[i]**2)*beta_y_0-2*R21_list[i]*R22_list[i]*alpha_y_0+(R22_list[i]**2)*gamma_y_0)
-		# Vertical plane
-		#---------------
-		beta_z = (R33_list[i]**2)*beta_z_0 - 2.0*R33_list[i]*R34_list[i]*alpha_z_0 + (R34_list[i]**2)*gamma_z_0
-		beta_z_list.append(beta_z)
+			alpha_y_list.append(-R11_list[i]*R21_list[i]*beta_y_0 + (R11_list[i]*R22_list[i]+R12_list[i]*R21_list[i])*alpha_y_0 \
+				- R12_list[i]*R22_list[i]*gamma_y_0)
+			gamma_y_list.append((R21_list[i]**2)*beta_y_0-2*R21_list[i]*R22_list[i]*alpha_y_0+(R22_list[i]**2)*gamma_y_0)
+			# Vertical plane
+			#---------------
+			beta_z = (R33_list[i]**2)*beta_z_0 - 2.0*R33_list[i]*R34_list[i]*alpha_z_0 + (R34_list[i]**2)*gamma_z_0
+			beta_z_list.append(beta_z)
 
-		# Vertical phase advance calculation
-		sine_angle = R34_list[i]/sqrt(beta_z*beta_z_0)
-		if abs(sine_angle) > 1:
-			mu_z_list.append(mu_z_list[i-1])
-		else:
-			sign_sine_z = numpy.sign(asin(sine_angle))
-			if sign_sine_z - sign_sine_z_old == -2:
-				n_pi_z = n_pi_z + 1
-			sign_sine_z_old = sign_sine_z
-			if sign_sine_z >= 0:
-				mu_z_list.append(n_pi_z*2*pi+acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
-			else: 
-				mu_z_list.append(n_pi_z*2*pi-acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
+			# Vertical phase advance calculation
+			sine_angle = R34_list[i]/sqrt(beta_z*beta_z_0)
+			if abs(sine_angle) > 1:
+				mu_z_list.append(mu_z_list[i-1])
+			else:
+				sign_sine_z = numpy.sign(asin(sine_angle))
+				if sign_sine_z - sign_sine_z_old == -2:
+					n_pi_z = n_pi_z + 1
+				sign_sine_z_old = sign_sine_z
+				if sign_sine_z >= 0:
+					mu_z_list.append(n_pi_z*2*pi+acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
+				else: 
+					mu_z_list.append(n_pi_z*2*pi-acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
 
-		alpha_z_list.append(-R33_list[i]*R43_list[i]*beta_z_0 + (R33_list[i]*R44_list[i]+R34_list[i]*R43_list[i])*alpha_z_0 \
-			- R34_list[i]*R44_list[i]*gamma_z_0)
-		gamma_z_list.append((R43_list[i]**2)*beta_z_0-2*R43_list[i]*R44_list[i]*alpha_z_0+(R44_list[i]**2)*gamma_z_0)
-		print >> fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], mu_y_list[i], beta_y, alpha_y_list[i], \
-			gamma_y_list[i], mu_z_list[i], beta_z, alpha_z_list[i], gamma_z_list[i])
-
+			alpha_z_list.append(-R33_list[i]*R43_list[i]*beta_z_0 + (R33_list[i]*R44_list[i]+R34_list[i]*R43_list[i])*alpha_z_0 \
+				- R34_list[i]*R44_list[i]*gamma_z_0)
+			gamma_z_list.append((R43_list[i]**2)*beta_z_0-2*R43_list[i]*R44_list[i]*alpha_z_0+(R44_list[i]**2)*gamma_z_0)
+			print >> fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], mu_y_list[i], beta_y, alpha_y_list[i], \
+				gamma_y_list[i], mu_z_list[i], beta_z, alpha_z_list[i], gamma_z_list[i])
+	except (IndexError, ZeroDivisionError, ValueError):
+		print "Error calculating twiss parameters from twiss matrix"
+		print "i=", i, "(", label[i], ")"
+		print "Matrix:"
+		for ai in range(1,7):
+			for aj in range(1,7):
+				if aj == 5 or ai == 6:
+					print "-\t",
+					continue
+				print eval("R%s%s_list[i]"%(ai,aj)),"\t",
+			print
+		raise
 	#put twiss parameters together. Format [s_coord, mu_y, beta_y, alpha_y, gamma_y, mu_z, beta_z, alpha_z, gamma_z]. Units are SI
 	twiss_profiles = [[s*cm for s in S_alltracks[0]], label_ref, mu_y_list, beta_y_list, alpha_y_list, gamma_y_list, mu_z_list, beta_z_list, alpha_z_list, gamma_z_list]
 
@@ -907,18 +1060,24 @@ def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier=False, co
 
 	#plot tunes if desired	
 	if(plot_fourier):
+		pylab.subplot(211)
 		pylab.plot(yampfreq, 'k-')
+		pylab.ylim((0, max(yampfreq[1:-1])))
+		pylab.ylabel("FFT(y)")
+		pylab.subplot(212)
 		pylab.plot(zampfreq, 'b-')
-		pylab.ylim([0, max([max(yampfreq[1:-1]), max(zampfreq[1:-1])])])
+		pylab.ylim((0, max(zampfreq[1:-1])))
+		pylab.ylabel("FFT(z)")
 		pylab.savefig('fspectrum')
 
 	return yfouriertune, zfouriertune
 
-def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_gamma_input = 1, ellipse_coords = 1, twiss_parameters = [], plot_data = False):
+def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass, D_mom, beta_gamma_input = 1, ellipse_coords = 1, coord_pick = 0, twiss_parameters = [], plot_data = False):
 	""" Check a list of emittances (emit_list, units Pi m rad) to see if tracking succeeds. Can be used to establish the dynamic aperture. If the elements in emit_list are increasing then will stop tracking once it finds the lowest emittance where a particle is lost. On the other hand, if the elements in emit_list are decreasing then will stop tracking once it reaches the first point where tracking succeeds without loss. 
 
 	Required input:
-		emit_list - List of emittances to check
+		emit_list_h - List of emittances in horizontal plane to check
+		emit_list_v - List of emittances in vertical plane to check
 
 		closedorb_YTZP - Closed orbit coordinates as returned by find_closed_orbit
 
@@ -927,17 +1086,27 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 		D_mom - Momentum factor p/pref
 
 	Optional input
-		beta_gamma_input - If this is supplied then the emittances supplied in emit_list are assumed to be normalised and a conversion t         o geometrical emittance is made. Otherwise the emittances are assumed to be geometrical.
+		beta_gamma_input - If this is supplied then the emittances supplied in emit_list are assumed to be normalised and a conversion to geometrical emittance is made. Otherwise the emittances supplied are assumed to be geometrical.
+
 
 		ellipse_coords - If greater than 1 will test uniformly distributed set of coordinates around around phase space
-		ellipse. Otherwise will take single point where phase space cuts y (or z) axis.
+		ellipse. The points are generated by emittance_to_coords. ellipse_coords = 1 (or -1) will take single point where phase space cuts either the y, t, z or p axes (decided by coord_pick). ellipse_coords = -1 selects the negative point in the phase space ellipse. The default settings ellipse_coords = 1, coord_pick = 0 selects the point where the phase space ellipse cuts the y, z axis to the outside of the closed orbit point.
+
+		coord_pick - Choose one of ellipse coords, i.e. ellipse_coords[coord_pick] is selected. If ellipse_coords equal 1 or -1, then coords_pick = 0 selects the points where the phase space ellipse crosses the Y, Z axes. If coord_pick = 1 then selects the point where the phase space ellipse crosses the T, P axes. If coord_pick = None, will select all points generated by emittance_to_coords.
+
 		Can also specify ellipse coords = [n,m] -- distribute n points around ellipse but only test point m of these.
 
-                twiss_parameters - Can supply twiss parameters in format [[alpha_y,beta_y,gamma_y],[alpha_z,beta_z,gamma_z]], i.e the output of r.get_twiss_parameters(). If not supplied an attempt will be made to calculate the twiss parameters in this function.
+		twiss_parameters - Can supply twiss parameters in format [beta_y, alpha_y, gamma_y, disp_y, disp_py, beta_z, alpha_z, gamma_z, disp_z, disp_pz], i.e the output of r.get_twiss_parameters(). If not supplied an attempt will be made to calculate the twiss parameters in this function.
 
 		plot_data - If True, creates phase space plots at all emittances scanned in both transverse planes.
 	
-	If a particle is lost, returns index_lost in emit_list where the loss occurs. Otherwise index_lost remains 0.
+		Returns [index_lost, coord_index], fourier_tune_emit, coords_YTZP_ini]  where 
+		index_lost is the index in emit_list where particle is lost (0 if no loss). 
+		coord_index indicates at which coord in ellipse_coords the particle is lost. 
+		fourier_tune_emit is a list of tunes found at each emittance using Fourier analysis. 
+		coords_YTZP_ini_list is a list of all initial coordinates tested. 
+
+		If a particle is lost, returns index_lost in emit_list where the loss occurs. Otherwise index_lost remains 0.
 	"""
 
 	import zgoubi.core as zg
@@ -969,14 +1138,10 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 
 	reb.set(NPASS=npass-1)
 
-	coord_pick = None
-	if type(ellipse_coords) == list:
-		coord_pick = ellipse_coords[1]
-		ellipse_coords = ellipse_coords[0]
 
 	if twiss_parameters != []:
-		betayz = [twiss_parameters[0], twiss_parameters[3]]
-		gammayz = [twiss_parameters[2], twiss_parameters[5]]
+		betayz = [twiss_parameters[0], twiss_parameters[5]]
+		gammayz = [twiss_parameters[2], twiss_parameters[7]]
 	else:
 		#calculate optical parameters on closed orbit. This is required to convert emittances into a coordinate.
 		objet5 = zg.OBJET5()
@@ -989,8 +1154,8 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 		r = line.run(xterm = False)
 		twissparam = r.get_twiss_parameters()
 		#alphayz = [twissparam[1],twissparam[4]]
-		betayz = [twissparam[0], twissparam[3]]
-		gammayz = [twissparam[2], twissparam[5]]
+		betayz = [twissparam[0], twissparam[5]]
+		gammayz = [twissparam[2], twissparam[7]]
 	
 		#revert to objet2 mode with rebelote
 		line.replace(objet5, objet)
@@ -1009,31 +1174,48 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 
 	#if emit_list is a list of decreasing emittances, looking for the first point where particle is not lost
 	reverse_search = False
-	if emit_list[0] > emit_list[-1]:
-		print "decreasing list "
+	if emit_list_h[0] > emit_list_h[-1]:
+		print "decreasing list (emit_list_h) "
 		reverse_search = True
 		
 
-	for emit in emit_list:
-		print "check emit ", emit
+	coords_YTZP_ini_list = []
+	for emit_h, emit_v in zip(emit_list_h, emit_list_v):
+		print "check emit (h/v) ", emit_h, emit_v
+		print "ellipse_coords, coord_pick ",ellipse_coords, coord_pick
+
 		if coord_pick == None:
 			#obtain coordinates on phase space ellipses. Use beta, gamma values found at closed orbit
-			coords_YTZP_ini = emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input, ncoords = ellipse_coords)
+			coords_YTZP_ini = emittance_to_coords(emit_h, emit_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))
 		else:
 			#select one point on phase space ellipse. Use beta, gamma values found at closed orbit
-			coords_YTZP_ini = emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input, ncoords = ellipse_coords)[coord_pick]
+			coords_YTZP_ini = emittance_to_coords(emit_h, emit_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))[coord_pick]
 
 		try:
 			l = len(coords_YTZP_ini[0])
-			coords_YTZP_ini = [map(add, closedorb_YTZP, coords) for coords in coords_YTZP_ini]
+			if ellipse_coords != -1:
+				coords_YTZP_ini = [map(add, closedorb_YTZP, coords) for coords in coords_YTZP_ini]
+			else:
+				coords_YTZP_ini = [[a-b for a,b in zip(closedorb_YTZP, coords)] for coords in coords_YTZP_ini]
 		except TypeError:
-			coords_YTZP_ini = [map(add, closedorb_YTZP, coords_YTZP_ini)] 
-	
+			if ellipse_coords != -1:
+				coords_YTZP_ini = [map(add, closedorb_YTZP, coords_YTZP_ini)]
+			else:
+				coords_YTZP_ini = [[a-b for a,b in zip(closedorb_YTZP,coords_YTZP_ini)]]
+
+
+		coords_YTZP_ini_list.append(coords_YTZP_ini)
+
 		for coord_index, current_YTZP in enumerate(coords_YTZP_ini):
 
 			print "ellipse coord index ", coord_index
+			print "current coords to test ",current_YTZP
+
 			objet.clear()	# remove existing particles
 			objet.add(Y=current_YTZP[0], T=current_YTZP[1], Z=current_YTZP[2], P=current_YTZP[3], LET='A', D=D_mom)
+
+			#pure-x
+			#objet.add(Y=current_YTZP[0], T=current_YTZP[1], Z= 0.0, P= 0.0, LET='A', D=D_mom)
 				
 			#run Zgoubi
 			r = line.run(xterm= False)
@@ -1043,7 +1225,7 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 			lost = not rebelote_completed
     
 			if(lost):
-				print "tracking failed at emit = ", emit
+				print "tracking failed at emit_h, emit_v = ", emit_h, emit_v
 				coord_index_lost = coord_index
 				#break
 				#return [index_lost, coord_index],fourier_tune_emit
@@ -1056,10 +1238,10 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 
 		#condition to end scan
 		if reverse_search and not lost:
-			index_lost = emit_list.index(emit)+1
+			index_lost = emit_list_h.index(emit_h)+1
 			break
 		elif not reverse_search and lost:
-			index_lost = emit_list.index(emit)
+			index_lost = emit_list_h.index(emit_h)
 			break			
 
 
@@ -1067,10 +1249,6 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 		print "Successful tracking in all test cases"
 
 	if plot_data:
-		#obtain coordinates on phase space ellipse using closed orbit twiss parameters
-		coords_YTZP_full = emittance_to_coords(emit, emit, gammayz, betayz, beta_gamma_input, ncoords = 100)
-		coords_YTZP_full = [map(add, closedorb_YTZP, coords) for coords in coords_YTZP_full]
-		coords_YTZP_full.append(coords_YTZP_full[0])
 
 		Y_data = []
 		T_data = []
@@ -1085,11 +1263,46 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 
 		plot_data_xy_multi(Y_data, Z_data, 'yz_space', labels=["YZ coords", "y [cm]", "z [cm]"], style=['k+'])
 
+		#obtain coordinates on phase space ellipse using closed orbit twiss parameters
+		if lost:
+			emit_plot_h = emit_list_h[index_lost-1]
+			emit_plot_v = emit_list_v[index_lost-1]
+		else: 
+			emit_plot_h = emit_list_h[-1]
+			emit_plot_v = emit_list_v[-1]
+
+		coords_YTZP_full = emittance_to_coords(emit_plot_h, emit_plot_v, gammayz, betayz, beta_gamma_input, ncoords = 100)
+		coords_YTZP_full = [map(add, closedorb_YTZP, coords) for coords in coords_YTZP_full]
+		coords_YTZP_full.append(coords_YTZP_full[0])
+
+
+		if coord_pick == None:
+			#obtain coordinates on phase space ellipses. Use beta, gamma values found at closed orbit
+			coords_YTZP_lim = emittance_to_coords(emit_plot_h, emit_plot_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))
+		else:
+			#select one point on phase space ellipse. Use beta, gamma values found at closed orbit
+			coords_YTZP_lim = emittance_to_coords(emit_plot_h, emit_plot_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))[coord_pick]
+
+		try:
+			l = len(coords_YTZP_lim[0])
+			if ellipse_coords != -1:
+				coords_YTZP_lim = [map(add, closedorb_YTZP, coords) for coords in coords_YTZP_lim]
+			else:
+				coords_YTZP_lim = [[a-b for a,b in zip(closedorb_YTZP, coords)] for coords in coords_YTZP_lim]
+		except TypeError:
+			if ellipse_coords != -1:
+				coords_YTZP_lim = [map(add, closedorb_YTZP, coords_YTZP_lim)]
+			else:
+				coords_YTZP_lim = [[a-b for a,b in zip(closedorb_YTZP,coords_YTZP_lim)]]
+
+
+		#coords_YTZP_ini = [map(add, closedorb_YTZP, coords) for coords in coords_YTZP_ini]
+
 		#add points on phase space ellipse actually used to initialise scan above
-		Y_data.insert(0,numpy.transpose(coords_YTZP_ini)[0])
-		T_data.insert(0,numpy.transpose(coords_YTZP_ini)[1])
-		Z_data.insert(0,numpy.transpose(coords_YTZP_ini)[2])
-		P_data.insert(0,numpy.transpose(coords_YTZP_ini)[3])
+		Y_data.insert(0,numpy.transpose(coords_YTZP_lim)[0])
+		T_data.insert(0,numpy.transpose(coords_YTZP_lim)[1])
+		Z_data.insert(0,numpy.transpose(coords_YTZP_lim)[2])
+		P_data.insert(0,numpy.transpose(coords_YTZP_lim)[3])
 
 		#add many coordinates to draw phase space ellipse
 		Y_data.insert(0,numpy.transpose(coords_YTZP_full)[0])
@@ -1097,10 +1310,15 @@ def scan_dynamic_aperture(line, emit_list, closedorb_YTZP, npass, D_mom, beta_ga
 		Z_data.insert(0,numpy.transpose(coords_YTZP_full)[2])
 		P_data.insert(0,numpy.transpose(coords_YTZP_full)[3])
 
-		plot_data_xy_multi(Y_data, T_data, 'yt_phasespace', labels=["Horizontal phase space", "y [cm]", "y' [mrad]"], style=['k-', 'ro', 'b+', 'r+', 'g+', 'm+', 'y+'])
-		plot_data_xy_multi(Z_data, P_data, 'zp_phasespace', labels=["Vertical phase space", "z [cm]", "z' [mrad]"], style=['k-', 'ro', 'b+', 'r+', 'g+', 'm+', 'y+'])
+		style_list =  ['k-', 'ro']
+		style2 = ['b+','r+', 'g+', 'm+', 'y+']
+		for i in range(len(Y_data)-2):
+			style_list.append(style2[i%(len(style2))])
 
-	return [index_lost, coord_index], fourier_tune_emit
+		plot_data_xy_multi(Y_data, T_data, 'yt_phasespace', labels=["Horizontal phase space", "y [cm]", "y' [mrad]"], style=style_list)
+		plot_data_xy_multi(Z_data, P_data, 'zp_phasespace', labels=["Vertical phase space", "z [cm]", "z' [mrad]"], style=style_list)
+
+	return [index_lost, coord_index], fourier_tune_emit, coords_YTZP_ini_list
 
 
 
@@ -1121,8 +1339,8 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 	Emittances in both the horizontal and vertical planes may be supplied. Twiss parameters beta and gamma in 
 	both places may be determined calling get_twiss_parameters beforehand i.e.::
 			twissparam = r.get_twiss_parameters()
-			betayz = [twissparam[0],twissparam[3]]
-			gammayz = [twissparam[2],twissparam[5]]
+			betayz = [twissparam[0],twissparam[5]]
+			gammayz = [twissparam[2],twissparam[7]]
 	"""
 	
 	coords_YTZP = []
@@ -1131,14 +1349,12 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 		#crosses y or z axis at sqrt(emit/gamma). Convert to cm.
 		y_axis = cm_*sqrt(emit_horizontal/(gammayz[0]*beta_gamma_input))       
 		z_axis = cm_*sqrt(emit_vertical/(gammayz[1]*beta_gamma_input))
-		YTZP = [y_axis, 0, z_axis, 0]
-		coords_YTZP.append(YTZP)
+		coords_YTZP.append([y_axis, 0, z_axis, 0])
 
 		#crosses y' or z' axis at sqrt(emit/beta) and convert to mrad (same as scaling by mm)
 		t_axis = mm_*sqrt(emit_horizontal/(betayz[0]*beta_gamma_input))       
 		p_axis = mm_*sqrt(emit_vertical/(betayz[1]*beta_gamma_input))
-		YTZP = [0, t_axis, 0, p_axis]
-		#coords_YTZP.append(YTZP)
+		coords_YTZP.append([0, t_axis, 0, p_axis])
 
 	else:
 		start_angle = 0.0
@@ -1443,8 +1659,6 @@ def tune_diagram(tune_list, order=3, xlim=None, ylim=None):
 	#plot list of tunes
 	pylab.plot(tune_list[0], tune_list[1], 'k+')
 
-	#pylab.xlim( (xlim[0] ,xlim[1]) )
-	#pylab.axis([-0.05,1.05,-0.05,1.05])
 	pylab.axis([xlim[0], xlim[1], ylim[0], ylim[1]])
 
 	pylab.savefig('tune_diagram')
@@ -1473,7 +1687,7 @@ def plot_data_xy(data, filename, labels=None, style='b-', xlim=None, ylim=None):
 	pylab.cla()
 
 
-def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style='', legend=' ', legend_location='best', xlim=None, ylim=None):
+def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style='', legend=' ', legend_location='best', xlim=None, ylim=None, tick_multiple = None):
 	""" Plots multiple sets of data where the X and Y coordinates are each specified in a list of lists. Should also
 	    work if a single set of X, Y data is specified or if one X is supplied with multiple Y data points (as long 
 	    the dimensions of Y equals that of X in all cases). 
@@ -1489,7 +1703,9 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 		legend - Legends can be supplied as a list of strings or as a single string. 
 		legend_location - Default of location of legend box is 'best', otherwise can select 'upper right' or numerical code for position. See matplotlib documentation. 
 		xlim = [lower_value, upper_value] - Limit horizontal axis
-		ylim = [lower_value, upper_value] - Limit vertical axis  """
+		ylim = [lower_value, upper_value] - Limit vertical axis
+		majorLocator = horizontal axis tick marks defined as multiple of majorLocator"""
+
 	import pylab
 
 	if labels == None:
@@ -1519,6 +1735,11 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 		legend = [legend]
 
 
+	if tick_multiple != None:
+		from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+		majorLocator   = MultipleLocator(tick_multiple)
+		ax = pylab.subplot(111)
+
 	if single_y_data:
 		pylab.plot(data_x_list, data_y_list, style[0])
 	else:
@@ -1539,6 +1760,79 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 	if legend != [' ']:
 		pylab.legend(loc=legend_location)
 
+	if tick_multiple != None:
+		ax.xaxis.set_major_locator(majorLocator)
+
 	pylab.savefig(filename)
 	pylab.cla()
 
+
+
+def calc_transfer_matrix(start_bunch, end_bunch):
+	"""Track a bunch generated with OBJET5 through a line, and pass the start and end bunch to this function to calculate the twiss matrix. No unit conversion is done, so units match the passed bunch.
+	NOT COMPLETE:
+	only use cells in top 4 rows
+	"""
+	try:
+		start = start_bunch.particles()
+	except AttributeError:
+		start = start_bunch
+	try:
+		end = end_bunch.particles()
+	except AttributeError:
+		end = end_bunch
+
+	co = list(" DYTZPS") # coordinates
+
+	tm = numpy.zeros([6,6])
+	tm[4,4] = 1
+	tm[5,5] = 1
+
+	IT1 = 0 # offset of particles A to J
+	I10 = IT1+9
+	I11 = IT1+10
+	# FO(1,I10) => start['D'][I10] 
+	DP = (start['D'][I10] - start['D'][I11] ) / 0.5 /( start['D'][I10] + start['D'][I11])
+
+	for j in xrange(2,6):
+		tm[j-2, 5] = (end[co[j]][I10] - end[co[j]][I11]) / DP
+		#print co[j], I10, I11, (end[co[j]][I10] - end[co[j]][I11]) / DP
+
+		for i in xrange(1,5):
+			i2 = 2*i + IT1-1
+			i3 = i2 + 1
+			u0 = start[co[i+1]][i2] - start[co[i+1]][i3]
+			tm[j-2, i-1] = (end[co[j]][i2] - end[co[j]][i3]) / u0
+			#print co[j],i2, i3, (end[co[j]][i2] - end[co[j]][i3]) / u0
+			if (j == 5):
+				tm[4,i-1] = (end[co[6]][i2] - end[co[6]][i3]) /u0
+				#print co[6], i2, i3, (end[co[6]][i2] - end[co[6]][i3]) /u0
+	tm[4,5] = (end[co[6]][I10] - end[co[6]][I11] ) /DP
+
+	if (tm[0,0] + tm[1,1] > 2) or (tm[2,2] + tm[3,3] > 2):
+		zlog.warning("Lattice is unstable")
+	
+	return tm
+
+
+def calc_twiss_from_matrix(trans_matrix):
+	"Calculate the twiss parameters (beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z) from a transfer matrix. Either use Results.get_transfer_matrix() or calc_transfer_matrix() to get matrix."
+	tm = trans_matrix
+
+	mu_y = acos(0.5 * (tm[0,0]+tm[1,1]))
+	beta_y = tm[0,1]/sin(mu_y)
+	alpha_y = (tm[0,0]-cos(mu_y))/sin(mu_y)
+	gamma_y = - tm[1,0]/sin(mu_y)
+
+	mu_z = acos(0.5 * (tm[2,2]+tm[3,3]))
+	beta_z = tm[2,3]/sin(mu_z)
+	alpha_z = (tm[2,2]-cos(mu_z))/sin(mu_z)
+	gamma_z = - tm[3,2]/sin(mu_z)
+	return (beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z)
+
+def calc_phase_ad_from_matrix(trans_matrix):
+	"Calculate the phase advance (mu_y,mu_z) from a transfer matrix. Either use Results.get_transfer_matrix() or calc_transfer_matrix() to get matrix."
+	tm = trans_matrix
+	mu_y = acos(0.5 * (tm[0,0]+tm[1,1]))
+	mu_z = acos(0.5 * (tm[2,2]+tm[3,3]))
+	return (mu_y,mu_z)
