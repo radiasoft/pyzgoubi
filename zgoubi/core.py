@@ -1287,13 +1287,14 @@ class Results(object):
 		return coords
 	
 	def loss_summary(self, coords=None, file='plt'):
-		"""Returns False if no losses, otherwise returns a summery of losses::
-			
+		"""Returns False if no losses, otherwise returns a summery of losses
+		::
+		
 			loss = res.loss_summary(file='plt')
 			#or
 			all = res.get_all('plt')
 			loss = res.loss_summary(all) # if you already have got the coordinates
-
+			
 		"""
 		if coords == None:
 			coords = self.get_all(file)

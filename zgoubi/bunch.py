@@ -105,7 +105,9 @@ class Bunch(object):
 		return self.coords
 
 	def raw_particles(self):
-		"""Returns the numpy array that holds the coordinates, as a 2d numpy array and a list of comumn names. It is possible that the column names may change or reorder, so if you use this you may want to protect against it with something like::
+		"""Returns the numpy array that holds the coordinates, as a 2d numpy array and a list of comumn names. It is possible that the column names may change or reorder, so if you use this you may want to protect against it with something like
+		::
+		
 			assert(pbunch.raw_particles()[1] == ["D","Y","T","Z","P","S","TOF","X"])
 
 		"""
@@ -122,6 +124,7 @@ class Bunch(object):
 			               ke=None, rigidity=0, mass=0, charge=1):
 		"""Generate a halo bunch, i.e. an elipse outline in x-xp (Y-T) and in y-yp (Z-P). S and D are set to 0 and 1 respectively.
 		example::
+		
 			my_bunch = Bunch.gen_halo_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
 		
 		creates a halo bunch called my_bunch with 1000 particles of the given parameters.
@@ -171,6 +174,7 @@ class Bunch(object):
 			               ke=None, rigidity=0, mass=0, charge=1):
 		"""Generate a uniform (KV) bunch, i.e. a surface of a 4D hypershere in x-xp-y-yp (Y-T-Z-P). S and D are set to 0 and 1 respectively.
 		example::
+		
 			my_bunch = Bunch.gen_kv_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
 		
 		creates a KV bunch called my_bunch with 1000 particles of the given parameters.
@@ -225,6 +229,7 @@ class Bunch(object):
 			               ke=None, rigidity=0, mass=0, charge=1):
 		"""Generate a waterbag bunch, i.e. a filled hypersphere in x-xp-y-yp (Y-T-Z-P). S and D are set to 0 and 1 respectively.
 		example::
+		
 			my_bunch = Bunch.gen_waterbag_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
 		
 		creates a waterbag bunch called my_bunch with 1000 particles of the given parameters.
@@ -298,6 +303,7 @@ class Bunch(object):
 			               ke=None, rigidity=0, mass=0, charge=1):
 		"""Generate a Gaussian bunch in x-xp (Y-T) and in y-yp (Z-P). S and D are set to 0 and 1 respectively.
 		example::
+		
 			my_bunch = Bunch.gen_kv_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
 		
 		creates a Gaussian bunch called my_bunch with 1000 particles of the given parameters.

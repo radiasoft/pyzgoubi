@@ -986,10 +986,10 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 
 def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier=False, coords=None):
 	"""Calculate tune using FFT. nfourierturns determines the number of passes through the lattice.
-       Can supply set of horizontal and vertical coordinates in coords = [ycoords,zcoords], otherwise
-         routine will calculate coordinates
+	Can supply set of horizontal and vertical coordinates in coords = [ycoords,zcoords], otherwise
+	routine will calculate coordinates
 
-       Set plot_fourier= True to show Fourier spectrum. Default is False
+	Set plot_fourier= True to show Fourier spectrum. Default is False
 	"""
 	if coords == None:
 		coords = []
@@ -1328,6 +1328,7 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 	If ncoords <= 1 return points where phase space ellipse crosses the y,y' and z,z' axis.
 	
 	If ncoords > 1, will instead give a distribution of points (y,t) around the phase space ellipse uniform in angle theta where::
+	
 		y = a*cos(theta)*cos(phi) - b*sin(theta)*sin(phi)
 		t = a*cos(theta)*sin(phi) + b*sin(theta)*cos(phi)
 	
@@ -1338,9 +1339,10 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 	
 	Emittances in both the horizontal and vertical planes may be supplied. Twiss parameters beta and gamma in 
 	both places may be determined calling get_twiss_parameters beforehand i.e.::
-			twissparam = r.get_twiss_parameters()
-			betayz = [twissparam[0],twissparam[5]]
-			gammayz = [twissparam[2],twissparam[7]]
+	
+		twissparam = r.get_twiss_parameters()
+		betayz = [twissparam[0],twissparam[5]]
+		gammayz = [twissparam[2],twissparam[7]]
 	"""
 	
 	coords_YTZP = []

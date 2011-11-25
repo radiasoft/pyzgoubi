@@ -11,9 +11,9 @@ The latest version of PyZgoubi and this document can be found at http://www.hep.
 Introduction
 ------------
 
-http://sourceforge.net/projects/zgoubi Zgoubi is a particle tracking code maintained by François Méot. PyZgoubi is an interface to Zgoubi writing in python. It aims to make input files that are easy to read and can contain calculations, loops, and any other python program feature.
+`Zgoubi <http://sourceforge.net/projects/zgoubi>`_ is a particle tracking code maintained by François Méot. PyZgoubi is an interface to Zgoubi writing in python. It aims to make input files that are easy to read and can contain calculations, loops, and any other python program feature.
 
-A basic knowledge of http://python.org/ Python is useful to use PyZgoubi. Python is a general purpose, high level, interpreted programming language. I recommend the http://www.python.org/doc/2.5.2/tut/tut.html Official Python Tutorial.
+A basic knowledge of `Python <http://python.org/>`_ is useful to use PyZgoubi. Python is a general purpose, high level, interpreted programming language. I recommend the `Official Python Tutorial <http://docs.python.org/tutorial/>`_.
 
 Quick Start
 -----------
@@ -441,6 +441,19 @@ Note that this method does not allow you to access the Result object.
 
 If you have a multi-CPU or multi-core CPU, then you can swap |Line.track_bunch| for the multithreaded version |Line.track_bunch_mt|. The multithreaded version also has the advantage that it can track an arbitrarily large bunch (more than Zgoubi's max particles limit).
 
+There are a number of generators for standard bunches, e.g Kapchinskij-Vladimirskij (KV), waterbag and Guassian::
+
+    gen_gauss_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None, ke=None, rigidity=0, mass=0, charge=1)
+    gen_gauss_x_xp_y_yp_s_dp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, mom_spread=0, bunch_length=0, disp=0, disp_prime=0, seed=None, ke=None, rigidity=0, mass=0, charge=1)
+    gen_halo_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None, ke=None, rigidity=0, mass=0, charge=1)
+    gen_kv_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None, ke=None, rigidity=0, mass=0, charge=1)
+    gen_waterbag_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None, ke=None, rigidity=0, mass=0, charge=1)
+
+For example to create a KV bunch with 1000 protons::
+
+    my_bunch = Bunch.gen_kv_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
+
+
 
 Complex Lines
 -------------
@@ -596,9 +609,10 @@ or start a python shell and run::
 	>>> p.sort_stats('cumulative').print_stats()
 
 
+.. _Logging:
+
 Logging levels
 """"""""""""""
-.. _Logging:
 
 The verbosity of PyZgoubi can be adjusted. By default the log_level is set to 'warn', so only warnings and error messages are printed. One can raise the level to 'debug' which will also show debug messages. To do this for a single run use::
 
@@ -682,7 +696,7 @@ There are several levels at which problems can occur. Errors in the input file, 
 Debug mode
 """"""""""
 
-Some useful information is shown when debugging is enabled, for example warnings about common mistakes. See :ref:`Logging`
+Some useful information is shown when debugging is enabled, for example warnings about common mistakes. See :ref:`Logging`.
 
 
 Check the line
