@@ -478,16 +478,21 @@ class Bunch(object):
 
 		fh = open(fname, "w")
 		if binary:
+			# this is quite optimised
+			# rather than call the general io.write_fortran_record(), use a fast special case
 			#header
 			for dummy in xrange(4):
 				io.write_fortran_record(fh, "a"*80)
-			#data
+			# record length is always the same
 			rec_len_r = struct.pack("i", 6*8)
-			for p in self.coords:
-				#record = struct.pack("6d", p['Y'], p['T'], p['Z'], p['P'], p['S'], p['D'])
-				record = p.tostring()[8:48] + p.tostring()[:8]
-				#io.write_fortran_record(fh, record)
-				fh.write(rec_len_r+record+rec_len_r)
+			rec_len_r2 = rec_len_r + rec_len_r
+
+			fh.write(rec_len_r) # write length once before, twice after each record, and then truncate one at the end
+			for p in self.coords.view((numpy.float64,8)): #  tostring is slightly faster if we ignore the dtypew
+			#for p in self.coords:
+				ps = p.tostring() # tostring is slow, but quicker than manipulating p and using tofile
+				fh.write(ps[8:48] + ps[:8] +rec_len_r2) # writing YTZPSD even though array is DYTZPStofX
+			fh.seek(-len(rec_len_r),1); fh.truncate()
 
 		else:
 			nparts = len(self.coords)

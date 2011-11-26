@@ -570,7 +570,7 @@ class Line(object):
 					continue
 				#print "Thread", name, "working"
 				try:
-					done_bunch = work_line.track_bunch(work_bunch, **kwargs)
+					done_bunch = work_line.track_bunch(work_bunch, binary=True, **kwargs)
 				except:
 					zlog.error("Exception in track_bunch() thread")
 					out_q.put((sys.exc_info()))
