@@ -626,17 +626,26 @@ def plot_find_closed_orbit(data_fname, outfile=None):
 def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc_dispersion = True):
 	""" Calculates the twiss parameters at all points written to zgoubi.plt. 11 particle trajectories are used to calculate the
 	transfer matrix, just as is done in zgoubi. The code mirrors that found in mat1.f, mksa.f. The twiss parameters are first
-	calculated at the end of the cell using either input_twiss_parameters (format [beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z]) 
-	or, if this is not supplied, it assumes the cell is periodic and uses get_twiss_parameters to find the boundary condition. 
+	calculated at the end of the cell using either input_twiss_parameters (format given below) or, if this is not supplied, 
+	it assumes the cell is periodic and uses get_twiss_parameters to find the boundary condition. 
 
-	The twiss parameters are then mapped to all points in the magnets using the transfer matrix calculated at each point. The results are stored
-	in list twiss_profiles where each column represents a point in the zgoubi.plt file and has format 
+	The optional input_twiss_parameters should be supplied in the form of a numpy structured array containing the following information at
+	the start of the cell
+	[beta_y, alpha_y, gamma_y, disp_y, disp_py, beta_z, alpha_z, gamma_z, disp_z, disp_pz]
+	This is the same format as the output of get_twiss_parameters allowing one to conveniently obtain twiss parameters at the end of one section
+	of beam line and apply them as starting conditions for the next section, i.e. 
 
-	Dispersion and dispersion-prime are also calculated if calc_dispersion is True (default). If TOF can be read from the zgoubi.fai file then phase slip is calculated. If mass and charge can also be read from that file then gamma transition is also output.
+	r = line1.run()
+	twiss_line1 = r.get_twiss_parameters()
+	twiss_profiles = get_twiss_profiles(line2, input_twiss_parameters = twiss_line1)
 
-	[s_coord, label,  mu_y, beta_y, alpha_y, gamma_y, disp_y, disp_py, mu_z, beta_z, alpha_z, gamma_z, disp_z, disp_pz, phase_slip, gamma_transition]
+	Dispersion and dispersion-prime are also calculated if calc_dispersion is True (default). 
+
+	The results are stored a in structured numpy array called twiss_profiles containing the following elements at every point tracked in the magnets 
+	(i.e. a point in zgoubi.plt)
+	[s_coord, label,  mu_y, beta_y, alpha_y, gamma_y, disp_y, disp_py, mu_z, beta_z, alpha_z, gamma_z, disp_z, disp_p]
 	
-	The results are stored in file specified by file_result (optional)
+	The results are also stored in file specified by file_result (optional)
 
 	Requires an OBJET type 5, and a MATRIX element.
 
@@ -676,10 +685,10 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	except:
 		rig  = r.get_track('plt', ['BORO'])[0][0]
 	
-	#Calculate Lorentz factor if mass and charge are known
-	if mass_mev !=None and charge !=None:
-		ke = rigidity_to_ke(mass_mev*1e6, rig*1e-3, charge)
-		gamma_lorentz = ke_to_gamma(mass_mev*1e6, ke)
+	##Calculate Lorentz factor if mass and charge are known
+	#if mass_mev !=None and charge !=None:
+		#ke = rigidity_to_ke(mass_mev*1e6, rig*1e-3, charge)
+		#gamma_lorentz = ke_to_gamma(mass_mev*1e6, ke)
 	
 
 
@@ -919,37 +928,22 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	
 
 #! Get inital twiss paramters. If no input_twiss_parameters supplied, assume cell is periodic and find results using get_twiss_parameters
-
 	if input_twiss_parameters == None:
-		input_twiss_parameters = [0, 0, 0, 0, 0, 0]
-
-	if input_twiss_parameters == [0, 0, 0, 0, 0, 0]:
 		twissparam = r.get_twiss_parameters()
-		beta_y_0 = twissparam[0]
-		alpha_y_0 = twissparam[1]
-		gamma_y_0 = twissparam[2]
-		disp_y_0 = twissparam[3]
-		disp_py_0 = twissparam[4]
-		beta_z_0 = twissparam[5]
-		alpha_z_0 = twissparam[6]
-		gamma_z_0 = twissparam[7]
-		disp_z_0 = twissparam[8]
-		disp_pz_0 = twissparam[9]
 	else:
-		beta_y_0 = input_twiss_parameters[0]
-		alpha_y_0 = input_twiss_parameters[1]
-		gamma_y_0 = input_twiss_parameters[2]
-		disp_y_0 = input_twiss_parameters[3]
-		disp_py_0 = input_twiss_parameters[4]
-		beta_z_0 = input_twiss_parameters[5]
-		alpha_z_0 = input_twiss_parameters[4]
-		gamma_z_0 = input_twiss_parameters[7]
-		#optional input of vertical dispersion terms
-		if len(input_twiss_parameters) == 10:
-			disp_z_0 = input_twiss_parameters[8]
-			disp_pz_0 = input_twiss_parameters[9]			
-	
+		twissparam = input_twiss_parameters
 
+	beta_y_0  = twissparam['beta_y'][0]
+	alpha_y_0 = twissparam['alpha_y'][0]
+	gamma_y_0 = twissparam['gamma_y'][0]
+	disp_y_0  = twissparam['disp_y'][0]
+	disp_py_0 = twissparam['disp_py'][0]
+	beta_z_0  = twissparam['beta_z'][0]
+	alpha_z_0 = twissparam['alpha_z'][0]
+	gamma_z_0 = twissparam['gamma_z'][0]
+	disp_z_0  = twissparam['disp_z'][0]
+	disp_pz_0 = twissparam['disp_pz'][0]
+		
 	zlog.debug("Initial parameters:\nbeta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0\n%s, %s, %s, %s, %s, %s" % (beta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0))
 	if beta_y_0 == 0 or beta_z_0 == 0:
 		zlog.error("Beam is unstable")
@@ -971,7 +965,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 
 		closedorb_YTZP = None
 		#Try to find closed orbit of off-momentum particle, other wise use dispersion to estimate closed orbit
-		if input_twiss_parameters == [0, 0, 0, 0, 0, 0]:
+		if input_twiss_parameters == None:
 			closedorb_YTZP = find_closed_orbit(line, init_YTZP=[0,0,0,0], tol=1e-5, D=(1+ D0[ind0])*(1+del_p))
 
 		if closedorb_YTZP != None:
@@ -1002,23 +996,23 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		disp_z_list = [xd*mm/del_p for xd in map(numpy.subtract, z_disp, Z_alltracks[0])]
 		disp_pz_list = [xd*mm/del_p for xd in map(numpy.subtract, p_disp, P_alltracks[0])]
 			
-		#go on to calculate phase slip and transition gamma if enough information available
-		if tof_ref != None:
-			#calculate off-momentum tof. Assume just one point
-			tof_delp = r.get_track('fai', ['tof'])[0][0]
-			#calculate phase slip factor, often given the symbol eta
-			phase_slip = (tof_delp - tof_ref)/(del_p*tof_ref)
-		
+		##go on to calculate phase slip and transition gamma if enough information available
+		#if tof_ref != None:
+			##calculate off-momentum tof. Assume just one point
+			#tof_delp = r.get_track('fai', ['tof'])[0][0]
+			##calculate phase slip factor, often given the symbol eta
+			#phase_slip = abs((tof_delp - tof_ref)/(del_p*tof_ref))
 
-			#calculate transition gamma if gamma_lorentz is known, i.e. if mass and charge are known
-			if mass_mev != None and charge != None:
-				momentum_compaction = phase_slip + (1/(gamma_lorentz**2))
-				gamma_transition = (1/momentum_compaction)**0.5
-			else:
-				gamma_transition = None
-		else:
-			phase_slip = None
-			gamma_transition = None
+
+			##calculate transition gamma if gamma_lorentz is known, i.e. if mass and charge are known
+			#if mass_mev != None and charge != None:
+				#momentum_compaction = phase_slip + (1/(gamma_lorentz**2))
+				#gamma_transition = (1/momentum_compaction)**0.5
+			#else:
+				#gamma_transition = None
+		#else:
+			#phase_slip = None
+			#gamma_transition = None
 
 		#replace original objet
 		line.replace(ob2,objet)
@@ -1047,6 +1041,9 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
  
 	if file_result != None:
 		fresults = open(file_result, 'w')
+		print >> fresults, '%9s %5s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s' % ("s", "label", \
+			"mu_y", "beta_y", "alpha_y", "gamma_y","disp_y","disp_py",\
+			"mu_z", "beta_z", "alpha_z", "gamma_z","disp_z","disp_pz")
               
 	mu_y_list = []
 	beta_y_list = []
@@ -1109,14 +1106,10 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 			gamma_z_list.append((R43_list[i]**2)*beta_z_0-2*R43_list[i]*R44_list[i]*alpha_z_0+(R44_list[i]**2)*gamma_z_0)
 
 			if file_result != None:
-				if calc_dispersion:
-					print >> fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], \
+				print >> fresults, '%2f %5s %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f' % (S_alltracks[0][i], label_ref[i], \
 					mu_y_list[i], beta_y, alpha_y_list[i], gamma_y_list[i],disp_y_list[i],disp_py_list[i],\
 					mu_z_list[i], beta_z, alpha_z_list[i], gamma_z_list[i],disp_z_list[i],disp_pz_list[i])
-				else:
-					print >> fresults, '%2f %2s %2f %2f %2f %2f %2s %2s %2f %2f %2f %2f %2s %2s' % (S_alltracks[0][i], label_ref[i], \
-					mu_y_list[i], beta_y, alpha_y_list[i], gamma_y_list[i],disp_y_list[i],disp_py_list[i],\
-					mu_z_list[i], beta_z, alpha_z_list[i], gamma_z_list[i],disp_z_list[i],disp_pz_list[i])
+
 
 	except (IndexError, ZeroDivisionError, ValueError):
 		print "Error calculating twiss parameters from twiss matrix"
@@ -1131,18 +1124,69 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 			print
 		raise
 
-	#put twiss parameters together. Format [s_coord, mu_y, beta_y, alpha_y, gamma_y, mu_z, beta_z, alpha_z, gamma_z]. Units are SI
-	twiss_profiles = [[s*cm for s in S_alltracks[0]], label_ref, mu_y_list, beta_y_list, alpha_y_list, gamma_y_list, disp_y_list, disp_py_list,\
-		mu_z_list, beta_z_list, alpha_z_list, gamma_z_list, disp_z_list, disp_pz_list]
 
-	if phase_slip != None:
-		twiss_profiles.extend([phase_slip])
+	if file_result != None:
+		fresults.close()
 
-	if gamma_transition != None:
-		twiss_profiles.extend([gamma_transition])
+	#create structured numpy array to hold twiss profile results
+	twiss_profiles = numpy.zeros(len(label_ref), dtype=[('s','f8'),('label','a10'),('mu_y','f8'),('beta_y','f8'),('alpha_y','f8'),('gamma_y','f8'),\
+						('disp_y','f8'),('disp_py','f8'),('mu_z','f8'),('beta_z','f8'),('alpha_z','f8'),('gamma_z','f8'),('disp_z','f8'),('disp_pz','f8')])
+
+	#fill structured array
+	twiss_profiles['s'] = [s*cm for s in S_alltracks[0]]
+	twiss_profiles['label'] = label_ref
+	twiss_profiles['mu_y'] = mu_y_list
+	twiss_profiles['beta_y'] = beta_y_list
+	twiss_profiles['alpha_y'] = alpha_y_list
+	twiss_profiles['gamma_y'] = gamma_y_list
+	twiss_profiles['disp_y'] = disp_y_list
+	twiss_profiles['disp_py'] = disp_py_list
+	twiss_profiles['mu_z'] = mu_z_list
+	twiss_profiles['beta_z'] = beta_z_list
+	twiss_profiles['alpha_z'] = alpha_z_list
+	twiss_profiles['gamma_z'] = gamma_z_list
+	twiss_profiles['disp_z'] = disp_z_list
+	twiss_profiles['disp_pz'] = disp_pz_list
 	
 	return twiss_profiles
 
+def calc_phase_slip(line, tof_ref, tol_co = 1e-6, D = 1):
+	"""Calculate phase slip at relative momentum D. Reference TOF must be supplied (tof_ref). Optionally set tol_co to adjust tolerance of find_closed_orbit calculation. 
+		"""
+
+	#check line has an objet2
+	for e in line.element_list:
+		if ("OBJET2" in str(type(e)).split("'")[1]):
+			objet = e
+			break
+	else:
+		raise ValueError, "Line has no OBJET2 element"
+
+	del_p = 0.0001 #momentum shift
+
+	closedorb_YTZP = None
+	closedorb_YTZP = find_closed_orbit(line, init_YTZP=[0,0,0,0], tol= tol_co, D= D*(1+del_p))
+
+	phase_slip = None
+	if closedorb_YTZP != None:
+		
+		objet.clear()
+		objet.add(Y=closedorb_YTZP[0], T=closedorb_YTZP[1], Z=0, P=0, D=D*(1+del_p))
+
+		r = line.run(xterm = False) 
+		tof_delp = r.get_track('fai', ['tof'])[0][0]
+		phase_slip = (tof_delp - tof_ref)/(del_p*tof_ref)
+
+	return phase_slip
+
+def calc_momentum_compaction(phase_slip, gamma_lorentz):
+	"""Given a phase slip and Lorentz gamma, find momentum compaction factor and transition gamma """
+
+	momentum_compaction = phase_slip + (1/(gamma_lorentz**2))
+
+	gamma_transition = (1/abs(momentum_compaction))**0.5
+
+	return momentum_compaction, gamma_transition
 
 def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier=False, coords=None):
 	"""Calculate tune using FFT. nfourierturns determines the number of passes through the lattice.
@@ -1313,9 +1357,8 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 		line.replace(reb, matrix)
 		r = line.run(xterm = False)
 		twissparam = r.get_twiss_parameters()
-		#alphayz = [twissparam[1],twissparam[4]]
-		betayz = [twissparam[0], twissparam[5]]
-		gammayz = [twissparam[2], twissparam[7]]
+		betayz = [twissparam['beta_y'][0], twissparam['beta_z'][0]]
+		gammayz = [twissparam['gamma_y'][0], twissparam['gamma_z'][0]]
 	
 		#revert to objet2 mode with rebelote
 		line.replace(objet5, objet)

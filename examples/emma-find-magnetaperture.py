@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #Find magnet aperture assuming a circular beam pipe. The aperture is given by the smallest circle that encloses the beam ellipses in the magnets at various momenta
 print "running emma example"
 
@@ -127,11 +128,10 @@ for index, closedorb_YTZP in enumerate(closedorbs):
 	#calculate relativistic beta*gamma
 	ke_mom = mom_to_ke(D_list[index]*mom_ev,mass_ev)
 	beta_gamma_rel = ke_to_relativistic_beta_gamma(ke_mom, mass_ev)
-	ob5.set(YR=closedorb_YTZP[0],TR=closedorb_YTZP[1],ZR=closedorb_YTZP[2],PR=closedorb_YTZP[3],DR=D_list[index])
-	#get_twiss_profiles has format [s_coord, label, mu_y, beta_y, alpha_y, gamma_y, mu_z,beta_z, alpha_z, gamma_z	
-	twiss_profiles = get_twiss_profiles(emma,'twiss_profiles.txt')
-	beta_y = twiss_profiles[3]
-	beta_z = twiss_profiles[9]
+	ob5.set(YR=closedorb_YTZP[0],TR=closedorb_YTZP[1],ZR=closedorb_YTZP[2],PR=closedorb_YTZP[3],DR=D_list[index])	
+	twiss_profiles = get_twiss_profiles(emma)
+	beta_y = twiss_profiles['beta_y']
+	beta_z = twiss_profiles['beta_z']
 	#convert from beta profile to beam size using assumed emittance. Units converted to cm
 	y_rad = [cm_*sqrt(beta*emittance/beta_gamma_rel) for beta in beta_y]
 	z_rad = [cm_*sqrt(beta*emittance/beta_gamma_rel) for beta in beta_z]
