@@ -766,6 +766,17 @@ class Line(object):
 		for element in elements:
 			self.element_list.insert(index, element)
 
+	def prepend(self, *elements):
+			"Add an elements to the line"
+			for element in elements:
+				self.element_list.insert(0,element)
+
+				try:
+					if 'OBJET' in element._zgoubi_name:
+						self.full_line = True
+				except AttributeError:
+					pass
+			
 	def remove(self, index):
 		"Remove element at index"
 		self.element_list.pop(index)
