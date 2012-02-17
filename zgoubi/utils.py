@@ -933,16 +933,16 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	else:
 		twissparam = input_twiss_parameters
 
-	beta_y_0  = twissparam['beta_y'][0]
-	alpha_y_0 = twissparam['alpha_y'][0]
-	gamma_y_0 = twissparam['gamma_y'][0]
-	disp_y_0  = twissparam['disp_y'][0]
-	disp_py_0 = twissparam['disp_py'][0]
-	beta_z_0  = twissparam['beta_z'][0]
-	alpha_z_0 = twissparam['alpha_z'][0]
-	gamma_z_0 = twissparam['gamma_z'][0]
-	disp_z_0  = twissparam['disp_z'][0]
-	disp_pz_0 = twissparam['disp_pz'][0]
+	beta_y_0  = twissparam['beta_y']
+	alpha_y_0 = twissparam['alpha_y']
+	gamma_y_0 = twissparam['gamma_y']
+	disp_y_0  = twissparam['disp_y']
+	disp_py_0 = twissparam['disp_py']
+	beta_z_0  = twissparam['beta_z']
+	alpha_z_0 = twissparam['alpha_z']
+	gamma_z_0 = twissparam['gamma_z']
+	disp_z_0  = twissparam['disp_z']
+	disp_pz_0 = twissparam['disp_pz']
 		
 	zlog.debug("Initial parameters:\nbeta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0\n%s, %s, %s, %s, %s, %s" % (beta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0))
 	if beta_y_0 == 0 or beta_z_0 == 0:
@@ -1362,8 +1362,8 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 
 
 	if twiss_parameters != []:
-		betayz = [twiss_parameters[0], twiss_parameters[5]]
-		gammayz = [twiss_parameters[2], twiss_parameters[7]]
+		betayz = [twiss_parameters['beta_y'], twiss_parameters['beta_y']]
+		gammayz = [twiss_parameters['gamma_y'], twiss_parameters['gamma_z']]
 	else:
 		#calculate optical parameters on closed orbit. This is required to convert emittances into a coordinate.
 		objet5 = zg.OBJET5()
@@ -1562,6 +1562,8 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 			twissparam = r.get_twiss_parameters()
 			betayz = [twissparam[0],twissparam[5]]
 			gammayz = [twissparam[2],twissparam[7]]
+			
+	Note coords are returned in 'Zgoubi units', i.e. cm and mrad
 	"""
 	
 	coords_YTZP = []
@@ -1593,8 +1595,12 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 			h = 0.5*(betayz[index] + gammayz[index])
 			major_radius = ((emityz[index]/2)**0.5)*( (h+1)**0.5 + (h-1)**0.5 )
 			minor_radius = ((emityz[index]/2)**0.5)*( (h+1)**0.5 - (h-1)**0.5 )
-			phi = 0.5*numpy.arctan(-2*alpha/(betayz[index]-gammayz[index]))
-
+			
+			if betayz[index] != gammayz[index]:
+				phi = 0.5*numpy.arctan(-2*alpha/(betayz[index]-gammayz[index]))
+			else:
+				phi = 0 #untested, only applies if beta is exactly unity.
+			
 			#decide which axis is the major one
 			if betayz[index] >= gammayz[index]:
 				horiz_radius = major_radius
@@ -1908,7 +1914,7 @@ def plot_data_xy(data, filename, labels=None, style='b-', xlim=None, ylim=None):
 	pylab.cla()
 
 
-def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style='', legend=' ', legend_location='best', xlim=None, ylim=None, tick_multiple = None):
+def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style='', legend=' ', legend_location='best', legend_title = None, xlim=None, ylim=None, tick_multiple = None):
 	""" Plots multiple sets of data where the X and Y coordinates are each specified in a list of lists. Should also
 	    work if a single set of X, Y data is specified or if one X is supplied with multiple Y data points (as long 
 	    the dimensions of Y equals that of X in all cases). 
@@ -1968,8 +1974,10 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 			if single_x_data:
 				pylab.plot(data_x_list, data_y, style[index%len(style)], label=legend[index%len(legend)])
 			else:
-				pylab.plot(data_x_list[index], data_y, style[index%len(style)], label= legend[index%len(legend)])
-
+				if legend[index%len(legend)] != ' ':
+					pylab.plot(data_x_list[index], data_y, style[index%len(style)], label= legend[index%len(legend)])
+				else:
+					pylab.plot(data_x_list[index], data_y, style[index%len(style)])
 	pylab.title(labels[0])
 	if xlim != None:
 		pylab.xlim( (xlim[0], xlim[1]) )
@@ -1979,7 +1987,10 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 	pylab.ylabel(labels[2])
 
 	if legend != [' ']:
-		pylab.legend(loc=legend_location)
+		if legend_title != None:
+			pylab.legend(loc=legend_location, title=legend_title)
+		else:
+			pylab.legend(loc=legend_location)
 
 	if tick_multiple != None:
 		ax.xaxis.set_major_locator(majorLocator)
