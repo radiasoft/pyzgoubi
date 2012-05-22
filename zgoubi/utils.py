@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"Various useful functions and utilities"
+#"Various useful functions and utilities"
 
 from __future__ import division
 from math import *
@@ -1475,12 +1475,19 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 		T_data = []
 		Z_data = []
 		P_data = []
-    
+				
+		fout = open("dynamic_aperture_coords.txt","w")
 		for index in range(len(YTZP_list)):
 			Y_data.append(numpy.transpose(YTZP_list[index])[0])
 			T_data.append(numpy.transpose(YTZP_list[index])[1])
 			Z_data.append(numpy.transpose(YTZP_list[index])[2])
 			P_data.append(numpy.transpose(YTZP_list[index])[3])
+			
+		for ia in range(len(Y_data)):
+		    for ib in range(len(Y_data[ia])):
+		        print >>fout, ia, Y_data[ia][ib],T_data[ia][ib],Z_data[ia][ib],Z_data[ia][ib]
+		fout.close()
+		    
 
 		plot_data_xy_multi(Y_data, Z_data, 'yz_space', labels=["YZ coords", "y [cm]", "z [cm]"], style=['k+'])
 
@@ -1518,26 +1525,40 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 
 
 		#coords_YTZP_ini = [map(add, closedorb_YTZP, coords) for coords in coords_YTZP_ini]
+		add_initial = False
+		if add_initial:
 
-		#add points on phase space ellipse actually used to initialise scan above
-		Y_data.insert(0,numpy.transpose(coords_YTZP_lim)[0])
-		T_data.insert(0,numpy.transpose(coords_YTZP_lim)[1])
-		Z_data.insert(0,numpy.transpose(coords_YTZP_lim)[2])
-		P_data.insert(0,numpy.transpose(coords_YTZP_lim)[3])
+		    #add points on phase space ellipse actually used to initialise scan above
+		    Y_data.insert(0,numpy.transpose(coords_YTZP_lim)[0])
+		    T_data.insert(0,numpy.transpose(coords_YTZP_lim)[1])
+		    Z_data.insert(0,numpy.transpose(coords_YTZP_lim)[2])
+		    P_data.insert(0,numpy.transpose(coords_YTZP_lim)[3])
 
-		#add many coordinates to draw phase space ellipse
-		Y_data.insert(0,numpy.transpose(coords_YTZP_full)[0])
-		T_data.insert(0,numpy.transpose(coords_YTZP_full)[1])
-		Z_data.insert(0,numpy.transpose(coords_YTZP_full)[2])
-		P_data.insert(0,numpy.transpose(coords_YTZP_full)[3])
+		    #add many coordinates to draw phase space ellipse
+		    Y_data.insert(0,numpy.transpose(coords_YTZP_full)[0])
+		    T_data.insert(0,numpy.transpose(coords_YTZP_full)[1])
+		    Z_data.insert(0,numpy.transpose(coords_YTZP_full)[2])
+		    P_data.insert(0,numpy.transpose(coords_YTZP_full)[3])
 
-		style_list =  ['k-', 'ro']
-		style2 = ['b+','r+', 'g+', 'm+', 'y+']
-		for i in range(len(Y_data)-2):
+		    style_list =  ['k-', 'ro']
+		    
+		    lenini = 2
+		    
+		else:
+		    style_list = []
+		    lenini = 0
+		    
+		#style2 = ['b+','r+', 'g+', 'm+', 'y+']
+		style2 = ['k.','g.']
+		for i in range(len(Y_data)-lenini):
 			style_list.append(style2[i%(len(style2))])
+		#style_list[0] = 'r.' #custom setting for ipac12
 
 		plot_data_xy_multi(Y_data, T_data, 'yt_phasespace', labels=["Horizontal phase space", "y [cm]", "y' [mrad]"], style=style_list)
 		plot_data_xy_multi(Z_data, P_data, 'zp_phasespace', labels=["Vertical phase space", "z [cm]", "z' [mrad]"], style=style_list)
+		
+		#plot_data_xy_multi(Y_data, T_data, 'yt_phasespace.eps', labels=["", "x [cm]", "x' [mrad]"], style=style_list)
+		#plot_data_xy_multi(Z_data, P_data, 'zp_phasespace.eps', labels=["", "y [cm]", "y' [mrad]"], style=style_list)
 
 	return [index_lost, coord_index], fourier_tune_emit, coords_YTZP_ini_list
 
@@ -1994,7 +2015,7 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 
 	if tick_multiple != None:
 		ax.xaxis.set_major_locator(majorLocator)
-
+		
 	pylab.savefig(filename)
 	pylab.cla()
 
