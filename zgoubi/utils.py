@@ -710,6 +710,14 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		except IOError:
 			plt_track = r.get_track('fai', ['LET', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'D-1', 'Y', 'T', 'Z', 'P', 'S'])
 			track_type = 'fai'
+		
+	incl_theta = False
+	#try to get polar angle theta (e.g. in radial FFAG magnet)
+	try:
+		theta = r.get_track('plt','X')
+		incl_theta = True
+	except IOError:
+		pass
 
 	transpose_plt_track = map(list, zip(*plt_track))
 	track_tag = transpose_plt_track[0]
@@ -724,6 +732,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	Z = transpose_plt_track[9]
 	P = transpose_plt_track[10]	
 	S = transpose_plt_track[11]
+	
 	if track_type == 'plt':
 		#X = transpose_plt_track[13]
 		#read labels
@@ -747,12 +756,15 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	P_alltracks = []
 	P0_alltracks = []		
 	S_alltracks = []
+	theta_alltracks = []
 	label_ref = []
 	Y_track = []
 	T_track = []
 	Z_track = []
 	P_track = []
 	S_track = []
+	if incl_theta:
+		theta_track = []
 	#first add track coords for reference track
 	ref_indices = find_indices(track_tag, 'O')
 	D0_alltracks.append(D0[ref_indices[0]])
@@ -766,12 +778,16 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		Z_track.append(Z[i])
 		P_track.append(P[i])
 		S_track.append(S[i])
+		if incl_theta:
+			theta_track.append(theta[i])
 		label_ref.append(label[i])
 	Y_alltracks.append(Y_track)
 	T_alltracks.append(T_track)
 	Z_alltracks.append(Z_track)
 	P_alltracks.append(P_track)
 	S_alltracks.append(S_track)
+	if incl_theta:
+		theta_alltracks.append(theta_track)
 	#add other tracks
 	for track_tag_name in alphabet:
 		Y_track = []
@@ -779,6 +795,8 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		Z_track = []
 		P_track = []
 		S_track = []
+		if incl_theta:	
+			theta_track = []
 		indices = find_indices(track_tag, track_tag_name)
 		if len(indices) == 0:
 			break
@@ -794,16 +812,23 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 				Z_track.append(Z[i])
 				P_track.append(P[i])
 				S_track.append(S[i])
+				if incl_theta:
+					theta_track.append(theta[i])
 			Y_alltracks.append(Y_track)
 			T_alltracks.append(T_track)
 			Z_alltracks.append(Z_track)
 			P_alltracks.append(P_track)
 			S_alltracks.append(S_track)
+			if incl_theta:
+				theta_alltracks.append(theta_track)
 
 	#check all trajectories have equal number of elements
 	len_trajs = [len(s) for s  in S_alltracks]
 	len_trajs_equal = len_trajs and all(len_trajs[0] == elem for elem in len_trajs)
 
+	import pylab as plt
+
+	
 	if not len_trajs_equal:
 		#interpolate all trajectories onto reference s
 		Y_alltracks_interp = [Y_alltracks[0]]
@@ -815,8 +840,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 			T_alltracks_interp.append(numpy.interp(S_alltracks[0], S_alltracks[index], T_alltracks[index]))
 			Z_alltracks_interp.append(numpy.interp(S_alltracks[0], S_alltracks[index], Z_alltracks[index]))
 			P_alltracks_interp.append(numpy.interp(S_alltracks[0], S_alltracks[index], P_alltracks[index]))
-		#plot_data_xy_multi([S_alltracks[1],S_alltracks[0]],[Y_alltracks[1],Y_alltracks_interp[1]],'test_interp1',labels = ["","",""],style=["k+","r-"])
-		#plot_data_xy_multi([S_alltracks[2],S_alltracks[0]],[Y_alltracks[2],Y_alltracks_interp[2]],'test_interp2',labels = ["","",""],style=["k+","r-"])
+		
 		Y_alltracks = Y_alltracks_interp
 		T_alltracks = T_alltracks_interp
 		Z_alltracks = Z_alltracks_interp
@@ -925,7 +949,6 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	R36_list = [x*unit_list[2]/unit_list[5] for x in R36_list]
 	R46_list = [x*unit_list[3]/unit_list[5] for x in R46_list]
 	R56_list = [x*unit_list[4]/unit_list[5] for x in R56_list]
-	
 
 #! Get inital twiss paramters. If no input_twiss_parameters supplied, assume cell is periodic and find results using get_twiss_parameters
 	if input_twiss_parameters == None:
@@ -1026,9 +1049,6 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		gamma_transition = None
 
 
-	#plot_data_xy_multi([S_alltracks[0],s_disp],[Y_alltracks[0],y_disp], 'Y_disp', labels=["","s [cm]","Y [cm]"],style=['k+','r+'])
-	#plot_data_xy_multi(s_disp,disp_y_list, 'disp_y', labels=["","s [cm]","D [m]"],style=['k+'])
-	#plot_data_xy_multi(s_disp,disp_py_list, 'disp_py', labels=["","s [cm]","D' [rad]"],style=['k+'])
 
 #! Calculate twiss parameters at all points in plt file 
 #!######################################################
@@ -1639,9 +1659,6 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 				else:
 					zdat.append(cm_*y_z)
 					pdat.append(mm_*t_p)
-
-	    #plot_data_xy_multi(ydat,tdat,'ytdat', style = ['k+','b+','r+','g+'])
-	    #plot_data_xy_multi(zdat,pdat,'zpdat', style = ['k+','b+','r+','g+'])
 
 	    #put coords_YTZP together
 		for index in range(ncoords):
