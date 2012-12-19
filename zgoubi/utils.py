@@ -1383,7 +1383,7 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 
 	if twiss_parameters != []:
 		betayz = [twiss_parameters['beta_y'], twiss_parameters['beta_y']]
-		gammayz = [twiss_parameters['gamma_y'], twiss_parameters['gamma_z']]
+		alphayz = [twiss_parameters['alpha_y'], twiss_parameters['alpha_z']]
 	else:
 		#calculate optical parameters on closed orbit. This is required to convert emittances into a coordinate.
 		objet5 = zg.OBJET5()
@@ -1396,7 +1396,7 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 		r = line.run(xterm = False)
 		twissparam = r.get_twiss_parameters()
 		betayz = [twissparam['beta_y'][0], twissparam['beta_z'][0]]
-		gammayz = [twissparam['gamma_y'][0], twissparam['gamma_z'][0]]
+		alphayz = [twissparam['alpha_y'][0], twissparam['alpha_z'][0]]
 	
 		#revert to objet2 mode with rebelote
 		line.replace(objet5, objet)
@@ -1426,11 +1426,11 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 		print "ellipse_coords, coord_pick ",ellipse_coords, coord_pick
 
 		if coord_pick == None:
-			#obtain coordinates on phase space ellipses. Use beta, gamma values found at closed orbit
-			coords_YTZP_ini = emittance_to_coords(emit_h, emit_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))
+			#obtain coordinates on phase space ellipses. Use beta, alpha values found at closed orbit
+			coords_YTZP_ini = emittance_to_coords(emit_h, emit_v, alphayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))
 		else:
-			#select one point on phase space ellipse. Use beta, gamma values found at closed orbit
-			coords_YTZP_ini = emittance_to_coords(emit_h, emit_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))[coord_pick]
+			#select one point on phase space ellipse. Use beta, alpha values found at closed orbit
+			coords_YTZP_ini = emittance_to_coords(emit_h, emit_v, alphayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))[coord_pick]
 
 		try:
 			l = len(coords_YTZP_ini[0])
@@ -1519,17 +1519,17 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 			emit_plot_h = emit_list_h[-1]
 			emit_plot_v = emit_list_v[-1]
 
-		coords_YTZP_full = emittance_to_coords(emit_plot_h, emit_plot_v, gammayz, betayz, beta_gamma_input, ncoords = 100)
+		coords_YTZP_full = emittance_to_coords(emit_plot_h, emit_plot_v, alphayz, betayz, beta_gamma_input, ncoords = 100)
 		coords_YTZP_full = [map(add, closedorb_YTZP, coords) for coords in coords_YTZP_full]
 		coords_YTZP_full.append(coords_YTZP_full[0])
 
 
 		if coord_pick == None:
-			#obtain coordinates on phase space ellipses. Use beta, gamma values found at closed orbit
-			coords_YTZP_lim = emittance_to_coords(emit_plot_h, emit_plot_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))
+			#obtain coordinates on phase space ellipses. Use beta, alpha values found at closed orbit
+			coords_YTZP_lim = emittance_to_coords(emit_plot_h, emit_plot_v, alphayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))
 		else:
-			#select one point on phase space ellipse. Use beta, gamma values found at closed orbit
-			coords_YTZP_lim = emittance_to_coords(emit_plot_h, emit_plot_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))[coord_pick]
+			#select one point on phase space ellipse. Use beta, alpha values found at closed orbit
+			coords_YTZP_lim = emittance_to_coords(emit_plot_h, emit_plot_v, alphayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))[coord_pick]
 
 		try:
 			l = len(coords_YTZP_lim[0])
@@ -1584,7 +1584,7 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 
 
 
-def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_gamma_input = 1, ncoords = 1):
+def emittance_to_coords(emit_horizontal, emit_vertical, alphayz, betayz, beta_gamma_input = 1, ncoords = 1):
 	"""Given some emittance in horizonal and vertical space
 	
 	If ncoords <= 1 return points where phase space ellipse crosses the y,y' and z,z' axis.
@@ -1606,6 +1606,8 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 			
 	Note coords are returned in 'Zgoubi units', i.e. cm and mrad
 	"""
+	
+	gammayz = [(a**2+1)/b for a,b in zip(alphayz, betayz)]
 	
 	coords_YTZP = []
 
@@ -1630,15 +1632,13 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 		zdat = []
 		pdat = []
 		for index in range(2):
-			#calculate twiss parameter alpha
-			alpha = (abs(betayz[index]*gammayz[index]-1))**0.5
 			#calculate major and minor radii in each plane
 			h = 0.5*(betayz[index] + gammayz[index])
 			major_radius = ((emityz[index]/2)**0.5)*( (h+1)**0.5 + (h-1)**0.5 )
 			minor_radius = ((emityz[index]/2)**0.5)*( (h+1)**0.5 - (h-1)**0.5 )
 			
 			if betayz[index] != gammayz[index]:
-				phi = 0.5*numpy.arctan(-2*alpha/(betayz[index]-gammayz[index]))
+				phi = 0.5*numpy.arctan(-2*alphayz[index]/(betayz[index]-gammayz[index]))
 			else:
 				phi = 0 #untested, only applies if beta is exactly unity.
 			
