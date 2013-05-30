@@ -97,6 +97,10 @@ else:
 	elif os.path.basename(os.path.normpath(os.path.join(zgoubi_module_path, '..', '..',))).lower().startswith("lib"):
 		static_defs = os.path.join(zgoubi_module_path, '..', '..', '..', "share", "pyzgoubi", "definitions", "static_defs.py")
 		simple_defs = os.path.join(zgoubi_module_path, '..', '..', '..', "share", "pyzgoubi", "definitions", "simple_elements.defs")
+	elif os.path.basename(os.path.normpath(os.path.join(zgoubi_module_path, '..', '..', '..','..',))).startswith("Library"):
+		python_vers = os.path.normpath(os.path.join(zgoubi_module_path, '..', '..',)).split('/')[3]
+		static_defs = os.path.join("/System", "Library", "Frameworks", "Python.framework","Versions",python_vers,"share","pyzgoubi","definitions","static_defs.py")
+		simple_defs = os.path.join("/System", "Library", "Frameworks", "Python.framework","Versions",python_vers,"share","pyzgoubi","definitions","simple_elements.defs")
 	else:
 		path_info = " zgoubi_module_path: %s\nzgoubi_path: %s\npyzgoubi_egg_path: %s" % (zgoubi_module_path, zgoubi_path, pyzgoubi_egg_path)
 		zlog.error("Could not find 'lib' directory from zgoubi_module_path")
@@ -798,6 +802,17 @@ class Line(object):
 		for element in elements:
 			self.element_list.insert(index, element)
 
+	def prepend(self, *elements):
+			"Add an elements to the line"
+			for element in elements:
+				self.element_list.insert(0,element)
+
+				try:
+					if 'OBJET' in element._zgoubi_name:
+						self.full_line = True
+				except AttributeError:
+					pass
+			
 	def remove(self, index):
 		"Remove element at index"
 		self.element_list.pop(index)
@@ -1606,7 +1621,17 @@ class Results(object):
 		raise NoTrackError, "Could not find MATRIX output, maybe beam lost"
 
 	def get_twiss_parameters(self):
-		"""Returns a tuple (beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z) from the twiss parameter matrix.
+		"""Returns a tuple (beta_y, alpha_y, gamma_y, disp_y, disp_py, beta_z, alpha_z, gamma_z, disp_z, disp_pz) from 
+			the twiss parameter matrix.
+
+		The results are stored a in structured numpy array containing the following elements 
+
+		#Outputs
+		beta_y, alpha_y, gamma_y: horizontal Twiss parameters
+		beta_y, alpha_y, gamma_y: vertical Twiss parameters
+		disp_y, disp_py : horizontal dispersion and dispersion-prime
+		disp_z, disp_pz : vertical dispersion and dispersion-prime
+
 		Needs a beam line is an OBJET type 5, and a MATRIX element.
 
 		"""
@@ -1618,6 +1643,10 @@ class Results(object):
 		#		has_object5 = True
 		#	if t == 'MATRIX':
 		#		has_matrix = True
+
+		tp = numpy.zeros(1,dtype=[('beta_y','f8'),('alpha_y','f8'),('gamma_y','f8'),('disp_y','f8'),('disp_py','f8'),\
+						('beta_z','f8'),('alpha_z','f8'),('gamma_z','f8'),('disp_z','f8'),('disp_pz','f8')])
+
 		has_object5 = 'OBJET5' in self.element_types
 		has_matrix = 'MATRIX' in self.element_types
 		if not (has_object5 and has_matrix):
@@ -1638,24 +1667,28 @@ class Results(object):
 				found_twiss = True
 			elif found_twiss and not found_row1 and len(line) > 1:
 				row = line.split()
-				beta_y = float(row[0])
-				alpha_y = -1*float(row[1])
+				tp['beta_y'] = float(row[0])
+				tp['alpha_y'] = -1*float(row[1])
+				tp['disp_y']  = float(row[5])
 				found_row1 = True
 			elif found_row1 and not found_row2 and len(line) > 1:
 				row = line.split()
-				gamma_y = float(row[1])
+				tp['gamma_y'] = float(row[1])
+				tp['disp_py'] = float(row[5])
 				found_row2 = True
 			elif found_row2 and not found_row3 and len(line) > 1:
 				row = line.split()
-				beta_z = float(row[2])
-				alpha_z = -1*float(row[3])
+				tp['beta_z'] = float(row[2])
+				tp['alpha_z'] = -1*float(row[3])
+				tp['disp_z'] = float(row[5])
 				found_row3 = True
 			elif found_row3 and not found_row4 and len(line) > 1:
 				row = line.split()
-				gamma_z = float(row[3])
+				tp['gamma_z'] = float(row[3])
+				tp['disp_pz'] = float(row[5])
 				found_row4 = True
-				return (beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z)
 
+		return tp
 
 	def show_particle_info(self):
 		"show the particle info, a good check of energies, mass etc"

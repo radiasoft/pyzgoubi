@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"Various useful functions and utilities"
+#"Various useful functions and utilities"
 
 from __future__ import division
 from math import *
@@ -626,13 +626,26 @@ def plot_find_closed_orbit(data_fname, outfile=None):
 def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 	""" Calculates the twiss parameters at all points written to zgoubi.plt. 11 particle trajectories are used to calculate the
 	transfer matrix, just as is done in zgoubi. The code mirrors that found in mat1.f, mksa.f. The twiss parameters are first
-	calculated at the end of the cell using either input_twiss_parameters (format [beta_y, alpha_y, gamma_y, beta_z, alpha_z, gamma_z]) 
-	or, if this is not supplied, it assumes the cell is periodic and uses get_twiss_parameters to find the boundary condition. 
+	calculated at the end of the cell using either input_twiss_parameters (format given below) or, if this is not supplied, 
+	it assumes the cell is periodic and uses get_twiss_parameters to find the boundary condition. 
 
-	The twiss parameters are then mapped to all points in the magnets using the transfer matrix calculated at each point. The results are stored
-	in list twiss_profiles where each row represents a point in the zgoubi.plt file and has format 
+	The optional input_twiss_parameters should be supplied in the form of a numpy structured array containing the following information at
+	the start of the cell
+	[beta_y, alpha_y, gamma_y, disp_y, disp_py, beta_z, alpha_z, gamma_z, disp_z, disp_pz]
+	This is the same format as the output of get_twiss_parameters allowing one to conveniently obtain twiss parameters at the end of one section
+	of beam line and apply them as starting conditions for the next section, i.e. 
 
-	[s_coord, label,  mu_y, beta_y, alpha_y, gamma_y, mu_z, beta_z, alpha_z, gamma_z]
+	r = line1.run()
+	twiss_line1 = r.get_twiss_parameters()
+	twiss_profiles = get_twiss_profiles(line2, input_twiss_parameters = twiss_line1)
+
+	Dispersion and dispersion-prime are also calculated if calc_dispersion is True (default). 
+
+	The results are stored a in structured numpy array called twiss_profiles containing the following elements at every point tracked in the magnets 
+	(i.e. a point in zgoubi.plt)
+	[s_coord, label,  mu_y, beta_y, alpha_y, gamma_y, disp_y, disp_py, mu_z, beta_z, alpha_z, gamma_z, disp_z, disp_p]
+	
+	The results are also stored in file specified by file_result (optional)
 
 	Requires an OBJET type 5, and a MATRIX element.
 
@@ -656,6 +669,31 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 
 	#run Zgoubi
 	r = line.run(xterm = False)
+
+	tof_ref = None
+	mass_mev = None
+	charge = None
+	
+	#extract rigidty from fai or plt file. At least one of these files must be available. 
+	#if fai file present, extract tof_ref, mass and charge.
+	try:
+		#rigidity used in calculation of dispersion
+		rig  = r.get_track('fai', ['BORO'])[0][0]
+		#tof of ref trajectory for later calculation of phase slip
+		tof_ref = r.get_track('fai', ['tof'])[0][0]
+		#mass, charge allows calculation of lorentz gamma
+		mass_mev = r.get_track('fai', ['M'])[0][0]
+		charge= r.get_track('fai', ['Q'])[0][0]
+	except:
+		rig  = r.get_track('plt', ['BORO'])[0][0]
+	
+	##Calculate Lorentz factor if mass and charge are known
+	#if mass_mev !=None and charge !=None:
+		#ke = rigidity_to_ke(mass_mev*1e6, rig*1e-3, charge)
+		#gamma_lorentz = ke_to_gamma(mass_mev*1e6, ke)
+	
+
+
 #!-----------------------------------------------------------------------------------------
 #!  PREPARE DATA FOR CALCULATION
 #!-----------------------------------------------------------------------------------------
@@ -675,6 +713,14 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 		except IOError:
 			plt_track = r.get_track('fai', ['LET', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'D-1', 'Y', 'T', 'Z', 'P', 'S'])
 			track_type = 'fai'
+		
+	incl_theta = False
+	#try to get polar angle theta (e.g. in radial FFAG magnet)
+	try:
+		theta = r.get_track('plt','X')
+		incl_theta = True
+	except IOError:
+		pass
 
 	transpose_plt_track = map(list, zip(*plt_track))
 	track_tag = transpose_plt_track[0]
@@ -683,13 +729,13 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 	T0 = transpose_plt_track[3]
 	Z0 = transpose_plt_track[4]			
 	P0 = transpose_plt_track[5]
-	X0 = transpose_plt_track[6]
-	D = transpose_plt_track[7]
-	Y = transpose_plt_track[8]
-	T = transpose_plt_track[9]
-	Z = transpose_plt_track[10]
-	P = transpose_plt_track[11]	
-	S = transpose_plt_track[12]
+	D = transpose_plt_track[6]
+	Y = transpose_plt_track[7]
+	T = transpose_plt_track[8]
+	Z = transpose_plt_track[9]
+	P = transpose_plt_track[10]	
+	S = transpose_plt_track[11]
+	
 	if track_type == 'plt':
 		X = transpose_plt_track[13]
 		#read labels
@@ -713,12 +759,15 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 	P_alltracks = []
 	P0_alltracks = []		
 	S_alltracks = []
+	theta_alltracks = []
 	label_ref = []
 	Y_track = []
 	T_track = []
 	Z_track = []
 	P_track = []
 	S_track = []
+	if incl_theta:
+		theta_track = []
 	#first add track coords for reference track
 	ref_indices = find_indices(track_tag, 'O')
 	D0_alltracks.append(D0[ref_indices[0]])
@@ -732,12 +781,16 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 		Z_track.append(Y[i])
 		P_track.append(T[i])
 		S_track.append(S[i])
+		if incl_theta:
+			theta_track.append(theta[i])
 		label_ref.append(label[i])
 	Y_alltracks.append(Y_track)
 	T_alltracks.append(T_track)
 	Z_alltracks.append(Z_track)
 	P_alltracks.append(P_track)
 	S_alltracks.append(S_track)
+	if incl_theta:
+		theta_alltracks.append(theta_track)
 	#add other tracks
 	for track_tag_name in alphabet:
 		Y_track = []
@@ -745,6 +798,8 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 		Z_track = []
 		P_track = []
 		S_track = []
+		if incl_theta:	
+			theta_track = []
 		indices = find_indices(track_tag, track_tag_name)
 		if len(indices) == 0:
 			break
@@ -760,12 +815,40 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 				Z_track.append(Z[i])
 				P_track.append(P[i])
 				S_track.append(S[i])
+				if incl_theta:
+					theta_track.append(theta[i])
 			Y_alltracks.append(Y_track)
 			T_alltracks.append(T_track)
 			Z_alltracks.append(Z_track)
 			P_alltracks.append(P_track)
-			S_alltracks.append(S_track)	
-       				
+			S_alltracks.append(S_track)
+			if incl_theta:
+				theta_alltracks.append(theta_track)
+
+	#check all trajectories have equal number of elements
+	len_trajs = [len(s) for s  in S_alltracks]
+	len_trajs_equal = len_trajs and all(len_trajs[0] == elem for elem in len_trajs)
+
+	import pylab as plt
+
+	
+	if not len_trajs_equal:
+		#interpolate all trajectories onto reference s
+		Y_alltracks_interp = [Y_alltracks[0]]
+		T_alltracks_interp = [T_alltracks[0]]
+		Z_alltracks_interp = [Z_alltracks[0]]
+		P_alltracks_interp = [P_alltracks[0]]
+		for index in range(1,len(S_alltracks)):
+			Y_alltracks_interp.append(numpy.interp(S_alltracks[0], S_alltracks[index], Y_alltracks[index]))
+			T_alltracks_interp.append(numpy.interp(S_alltracks[0], S_alltracks[index], T_alltracks[index]))
+			Z_alltracks_interp.append(numpy.interp(S_alltracks[0], S_alltracks[index], Z_alltracks[index]))
+			P_alltracks_interp.append(numpy.interp(S_alltracks[0], S_alltracks[index], P_alltracks[index]))
+		
+		Y_alltracks = Y_alltracks_interp
+		T_alltracks = T_alltracks_interp
+		Z_alltracks = Z_alltracks_interp
+		P_alltracks = P_alltracks_interp
+		S_alltracks = [S_alltracks[0] for s in range(len(S_alltracks))]
 
 	#11 coordinate in Y0_alltracks,T0_alltracks etc correspond to 11 starting conditions required by MATRIX
 
@@ -869,29 +952,105 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 	R36_list = [x*unit_list[2]/unit_list[5] for x in R36_list]
 	R46_list = [x*unit_list[3]/unit_list[5] for x in R46_list]
 	R56_list = [x*unit_list[4]/unit_list[5] for x in R56_list]
-	
 
 #! Get inital twiss paramters. If no input_twiss_parameters supplied, assume cell is periodic and find results using get_twiss_parameters
-
-	if input_twiss_parameters == [0, 0, 0, 0, 0, 0]:
+	if input_twiss_parameters == None:
 		twissparam = r.get_twiss_parameters()
-		beta_y_0 = twissparam[0]
-		alpha_y_0 = twissparam[1]
-		gamma_y_0 = twissparam[2]
-		beta_z_0 = twissparam[3]
-		alpha_z_0 = twissparam[4]
-		gamma_z_0 = twissparam[5]
 	else:
-		beta_y_0 = input_twiss_parameters[0]
-		alpha_y_0 = input_twiss_parameters[1]
-		gamma_y_0 = input_twiss_parameters[2]
-		beta_z_0 = input_twiss_parameters[3]
-		alpha_z_0 = input_twiss_parameters[4]
-		gamma_z_0 = input_twiss_parameters[5]
-	
+		twissparam = input_twiss_parameters
+
+	beta_y_0  = twissparam['beta_y']
+	alpha_y_0 = twissparam['alpha_y']
+	gamma_y_0 = twissparam['gamma_y']
+	disp_y_0  = twissparam['disp_y']
+	disp_py_0 = twissparam['disp_py']
+	beta_z_0  = twissparam['beta_z']
+	alpha_z_0 = twissparam['alpha_z']
+	gamma_z_0 = twissparam['gamma_z']
+	disp_z_0  = twissparam['disp_z']
+	disp_pz_0 = twissparam['disp_pz']
+		
 	zlog.debug("Initial parameters:\nbeta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0\n%s, %s, %s, %s, %s, %s" % (beta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0))
 	if beta_y_0 == 0 or beta_z_0 == 0:
 		zlog.error("Beam is unstable")
+
+#!Calculate horizontal and vertical dispersion. Start tracking at y_co + del_p*disp_y
+#########################################################################
+
+	
+	if calc_dispersion:
+		del_p = 0.0001 #momentum shift
+
+		#need to switch to objet2
+		ob2 = zg.OBJET2()
+		line.replace(objet, ob2)
+		ob2.set(BORO=rig)
+
+		#reference index
+		ind0 = ref_indices[0]
+
+		closedorb_YTZP = None
+		#Try to find closed orbit of off-momentum particle, other wise use dispersion to estimate closed orbit
+		if input_twiss_parameters == None:
+			closedorb_YTZP = find_closed_orbit(line, init_YTZP=[0,0,0,0], tol=1e-5, D=(1+ D0[ind0])*(1+del_p))
+
+		if closedorb_YTZP != None:
+			ob2.clear()
+			ob2.add(Y=closedorb_YTZP[0], T=closedorb_YTZP[1],Z=0,P=0, D=(1+ D0[ind0])*(1+del_p))
+		else:
+			#Closed orbit of off-momentum particle determined by dispersion (for small del_p)
+			ob2.clear()
+			ob2.add(Y=Y0[ind0] + del_p*disp_y_0*cm_, T=T0[ind0] + del_p*disp_py_0*mm_, 
+				Z=Z0[ind0] + del_p*disp_z_0*cm_, P=P0[ind0] + del_p*disp_pz_0*mm_, D=(1+ D0[ind0])*(1+del_p))		
+
+		r = line.run(xterm = False)
+
+		if track_type == 'plt':
+			plt_track_disp = r.get_track('plt', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
+		else:
+			plt_track_disp = r.get_track('fai', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
+
+		transpose_plt_track_disp = map(list, zip(*plt_track_disp))
+		y_disp = transpose_plt_track_disp[1]
+		t_disp = transpose_plt_track_disp[2]
+		z_disp = transpose_plt_track_disp[3]
+		p_disp = transpose_plt_track_disp[4]
+		s_disp = transpose_plt_track_disp[5]
+
+		disp_y_list = [xd*cm/del_p for xd in map(numpy.subtract, y_disp, Y_alltracks[0])]
+		disp_py_list = [xd*mm/del_p for xd in map(numpy.subtract, t_disp, T_alltracks[0])]
+		disp_z_list = [xd*mm/del_p for xd in map(numpy.subtract, z_disp, Z_alltracks[0])]
+		disp_pz_list = [xd*mm/del_p for xd in map(numpy.subtract, p_disp, P_alltracks[0])]
+			
+		##go on to calculate phase slip and transition gamma if enough information available
+		#if tof_ref != None:
+			##calculate off-momentum tof. Assume just one point
+			#tof_delp = r.get_track('fai', ['tof'])[0][0]
+			##calculate phase slip factor, often given the symbol eta
+			#phase_slip = abs((tof_delp - tof_ref)/(del_p*tof_ref))
+
+
+			##calculate transition gamma if gamma_lorentz is known, i.e. if mass and charge are known
+			#if mass_mev != None and charge != None:
+				#momentum_compaction = phase_slip + (1/(gamma_lorentz**2))
+				#gamma_transition = (1/momentum_compaction)**0.5
+			#else:
+				#gamma_transition = None
+		#else:
+			#phase_slip = None
+			#gamma_transition = None
+
+		#replace original objet
+		line.replace(ob2,objet)
+	else:
+		#disp_y_list = [0]*len(Y_alltracks[0])
+		disp_y_list = [None]*len(Y_alltracks[0])
+		disp_py_list = [None]*len(Y_alltracks[0])
+		disp_z_list = [None]*len(Y_alltracks[0])
+		disp_pz_list = [None]*len(Y_alltracks[0])
+		phase_slip = None
+		gamma_transition = None
+
 
 
 #! Calculate twiss parameters at all points in plt file 
@@ -903,7 +1062,11 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 #! - The phase advance can be found by applying a Floquet transformation to the transfer matrix (S.Y.Lee eqn 2.65)
 
  
-	fresults = open(file_result, 'w')
+	if file_result != None:
+		fresults = open(file_result, 'w')
+		print >> fresults, '%9s %5s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s' % ("s", "label", \
+			"mu_y", "beta_y", "alpha_y", "gamma_y","disp_y","disp_py",\
+			"mu_z", "beta_z", "alpha_z", "gamma_z","disp_z","disp_pz")
               
 	mu_y_list = []
 	beta_y_list = []
@@ -919,53 +1082,76 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 	n_pi_z = 0
 	try:
 		for i in range(len(R11_list)):
-			# Horizontal plane
-			#-----------------
-			beta_y = (R11_list[i]**2)*beta_y_0 - 2.0*R11_list[i]*R12_list[i]*alpha_y_0 + (R12_list[i]**2)*gamma_y_0
-			beta_y_list.append(beta_y)
 
-			# Horizontal phase advance calculation
-			# To account for range of acos=(0,Pi), check sign of sin(angle) to know when to change from angle to (2*Pi-angle) etc.	
-			sine_angle = R12_list[i]/sqrt(beta_y*beta_y_0)
-			if abs(sine_angle) > 1: 
-				mu_y_list.append(mu_y_list[i-1])
-			else:
-				sign_sine_y = numpy.sign(asin(sine_angle))
-				if sign_sine_y - sign_sine_y_old == -2:
-					n_pi_y = n_pi_y + 1
-				sign_sine_y_old = sign_sine_y
-				if sign_sine_y >= 0:
-					mu_y_list.append(n_pi_y*2*pi+acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+			#check stability first
+			if beta_y_0 != 0.0:
+				# Horizontal plane
+				#-----------------
+				beta_y = (R11_list[i]**2)*beta_y_0 - 2.0*R11_list[i]*R12_list[i]*alpha_y_0 + (R12_list[i]**2)*gamma_y_0
+				beta_y_list.append(beta_y)
+
+				# Horizontal phase advance calculation
+				# To account for range of acos=(0,Pi), check sign of sin(angle) to know when to change from angle to (2*Pi-angle) etc.	
+				sine_angle = R12_list[i]/sqrt(beta_y*beta_y_0)
+				if abs(sine_angle) > 1: 
+					mu_y_list.append(mu_y_list[i-1])
 				else:
-					mu_y_list.append(n_pi_y*2*pi-acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+					sign_sine_y = numpy.sign(asin(sine_angle))
+					if sign_sine_y - sign_sine_y_old == -2:
+						n_pi_y = n_pi_y + 1
+					sign_sine_y_old = sign_sine_y
+					if sign_sine_y >= 0:
+						mu_y_list.append(n_pi_y*2*pi+acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+					else:
+						mu_y_list.append(n_pi_y*2*pi-acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
 
-			alpha_y_list.append(-R11_list[i]*R21_list[i]*beta_y_0 + (R11_list[i]*R22_list[i]+R12_list[i]*R21_list[i])*alpha_y_0 \
-				- R12_list[i]*R22_list[i]*gamma_y_0)
-			gamma_y_list.append((R21_list[i]**2)*beta_y_0-2*R21_list[i]*R22_list[i]*alpha_y_0+(R22_list[i]**2)*gamma_y_0)
-			# Vertical plane
-			#---------------
-			beta_z = (R33_list[i]**2)*beta_z_0 - 2.0*R33_list[i]*R34_list[i]*alpha_z_0 + (R34_list[i]**2)*gamma_z_0
-			beta_z_list.append(beta_z)
+				alpha_y_list.append(-R11_list[i]*R21_list[i]*beta_y_0 + (R11_list[i]*R22_list[i]+R12_list[i]*R21_list[i])*alpha_y_0 \
+					- R12_list[i]*R22_list[i]*gamma_y_0)
+				gamma_y_list.append((R21_list[i]**2)*beta_y_0-2*R21_list[i]*R22_list[i]*alpha_y_0+(R22_list[i]**2)*gamma_y_0)
 
-			# Vertical phase advance calculation
-			sine_angle = R34_list[i]/sqrt(beta_z*beta_z_0)
-			if abs(sine_angle) > 1:
-				mu_z_list.append(mu_z_list[i-1])
 			else:
-				sign_sine_z = numpy.sign(asin(sine_angle))
-				if sign_sine_z - sign_sine_z_old == -2:
-					n_pi_z = n_pi_z + 1
-				sign_sine_z_old = sign_sine_z
-				if sign_sine_z >= 0:
-					mu_z_list.append(n_pi_z*2*pi+acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
-				else: 
-					mu_z_list.append(n_pi_z*2*pi-acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
+				mu_y_list.append(0.0)
+				beta_y_list.append(0.0)
+				alpha_y_list.append(0.0)
+				gamma_y_list.append(0.0)
 
-			alpha_z_list.append(-R33_list[i]*R43_list[i]*beta_z_0 + (R33_list[i]*R44_list[i]+R34_list[i]*R43_list[i])*alpha_z_0 \
-				- R34_list[i]*R44_list[i]*gamma_z_0)
-			gamma_z_list.append((R43_list[i]**2)*beta_z_0-2*R43_list[i]*R44_list[i]*alpha_z_0+(R44_list[i]**2)*gamma_z_0)
-			print >> fresults, '%2f %2s %2f %2f %2f %2f %2f %2f %2f %2f' % (S_alltracks[0][i], label_ref[i], mu_y_list[i], beta_y, alpha_y_list[i], \
-				gamma_y_list[i], mu_z_list[i], beta_z, alpha_z_list[i], gamma_z_list[i])
+			#check stability first
+			if beta_z_0 != 0.0:
+				# Vertical plane
+				#---------------
+				beta_z = (R33_list[i]**2)*beta_z_0 - 2.0*R33_list[i]*R34_list[i]*alpha_z_0 + (R34_list[i]**2)*gamma_z_0
+				beta_z_list.append(beta_z)
+
+				# Vertical phase advance calculation
+				sine_angle = R34_list[i]/sqrt(beta_z*beta_z_0)
+				if abs(sine_angle) > 1:
+					mu_z_list.append(mu_z_list[i-1])
+				else:
+					sign_sine_z = numpy.sign(asin(sine_angle))
+					if sign_sine_z - sign_sine_z_old == -2:
+						n_pi_z = n_pi_z + 1
+					sign_sine_z_old = sign_sine_z
+					if sign_sine_z >= 0:
+						mu_z_list.append(n_pi_z*2*pi+acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
+					else: 
+						mu_z_list.append(n_pi_z*2*pi-acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
+
+				alpha_z_list.append(-R33_list[i]*R43_list[i]*beta_z_0 + (R33_list[i]*R44_list[i]+R34_list[i]*R43_list[i])*alpha_z_0 \
+					- R34_list[i]*R44_list[i]*gamma_z_0)
+				gamma_z_list.append((R43_list[i]**2)*beta_z_0-2*R43_list[i]*R44_list[i]*alpha_z_0+(R44_list[i]**2)*gamma_z_0)
+
+			else:
+				mu_z_list.append(0.0)
+				beta_z_list.append(0.0)
+				alpha_z_list.append(0.0)
+				gamma_z_list.append(0.0)
+
+			if file_result != None:
+				print >> fresults, '%2f %5s %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f' % (S_alltracks[0][i], label_ref[i], \
+					mu_y_list[i], beta_y_list[i], alpha_y_list[i], gamma_y_list[i],disp_y_list[i],disp_py_list[i],\
+					mu_z_list[i], beta_z_list[i], alpha_z_list[i], gamma_z_list[i],disp_z_list[i],disp_pz_list[i])
+
+
 	except (IndexError, ZeroDivisionError, ValueError):
 		print "Error calculating twiss parameters from twiss matrix"
 		print "i=", i, "(", label[i], ")"
@@ -978,11 +1164,70 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 				print eval("R%s%s_list[i]"%(ai,aj)),"\t",
 			print
 		raise
-	#put twiss parameters together. Format [s_coord, mu_y, beta_y, alpha_y, gamma_y, mu_z, beta_z, alpha_z, gamma_z]. Units are SI
-	twiss_profiles = [[s*cm for s in S_alltracks[0]], label_ref, mu_y_list, beta_y_list, alpha_y_list, gamma_y_list, mu_z_list, beta_z_list, alpha_z_list, gamma_z_list]
 
+
+	if file_result != None:
+		fresults.close()
+
+	#create structured numpy array to hold twiss profile results
+	twiss_profiles = numpy.zeros(len(label_ref), dtype=[('s','f8'),('label','a10'),('mu_y','f8'),('beta_y','f8'),('alpha_y','f8'),('gamma_y','f8'),\
+						('disp_y','f8'),('disp_py','f8'),('mu_z','f8'),('beta_z','f8'),('alpha_z','f8'),('gamma_z','f8'),('disp_z','f8'),('disp_pz','f8')])
+
+	#fill structured array
+	twiss_profiles['s'] = [s*cm for s in S_alltracks[0]]
+	twiss_profiles['label'] = label_ref
+	twiss_profiles['mu_y'] = mu_y_list
+	twiss_profiles['beta_y'] = beta_y_list
+	twiss_profiles['alpha_y'] = alpha_y_list
+	twiss_profiles['gamma_y'] = gamma_y_list
+	twiss_profiles['disp_y'] = disp_y_list
+	twiss_profiles['disp_py'] = disp_py_list
+	twiss_profiles['mu_z'] = mu_z_list
+	twiss_profiles['beta_z'] = beta_z_list
+	twiss_profiles['alpha_z'] = alpha_z_list
+	twiss_profiles['gamma_z'] = gamma_z_list
+	twiss_profiles['disp_z'] = disp_z_list
+	twiss_profiles['disp_pz'] = disp_pz_list
+	
 	return twiss_profiles
 
+def calc_phase_slip(line, tof_ref, tol_co = 1e-6, D = 1):
+	"""Calculate phase slip at relative momentum D. Reference TOF must be supplied (tof_ref). Optionally set tol_co to adjust tolerance of find_closed_orbit calculation. 
+		"""
+
+	#check line has an objet2
+	for e in line.element_list:
+		if ("OBJET2" in str(type(e)).split("'")[1]):
+			objet = e
+			break
+	else:
+		raise ValueError, "Line has no OBJET2 element"
+
+	del_p = 0.0001 #momentum shift
+
+	closedorb_YTZP = None
+	closedorb_YTZP = find_closed_orbit(line, init_YTZP=[0,0,0,0], tol= tol_co, D= D*(1+del_p))
+
+	phase_slip = None
+	if closedorb_YTZP != None:
+		
+		objet.clear()
+		objet.add(Y=closedorb_YTZP[0], T=closedorb_YTZP[1], Z=0, P=0, D=D*(1+del_p))
+
+		r = line.run(xterm = False) 
+		tof_delp = r.get_track('fai', ['tof'])[0][0]
+		phase_slip = (tof_delp - tof_ref)/(del_p*tof_ref)
+
+	return phase_slip
+
+def calc_momentum_compaction(phase_slip, gamma_lorentz):
+	"""Given a phase slip and Lorentz gamma, find momentum compaction factor and transition gamma """
+
+	momentum_compaction = phase_slip + (1/(gamma_lorentz**2))
+
+	gamma_transition = (1/abs(momentum_compaction))**0.5
+
+	return momentum_compaction, gamma_transition
 
 def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier=False, coords=None):
 	"""Calculate tune using FFT. nfourierturns determines the number of passes through the lattice.
@@ -1140,8 +1385,8 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 
 
 	if twiss_parameters != []:
-		betayz = [twiss_parameters[0], twiss_parameters[5]]
-		gammayz = [twiss_parameters[2], twiss_parameters[7]]
+		betayz = [twiss_parameters['beta_y'], twiss_parameters['beta_y']]
+		alphayz = [twiss_parameters['alpha_y'], twiss_parameters['alpha_z']]
 	else:
 		#calculate optical parameters on closed orbit. This is required to convert emittances into a coordinate.
 		objet5 = zg.OBJET5()
@@ -1153,9 +1398,8 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 		line.replace(reb, matrix)
 		r = line.run(xterm = False)
 		twissparam = r.get_twiss_parameters()
-		#alphayz = [twissparam[1],twissparam[4]]
-		betayz = [twissparam[0], twissparam[5]]
-		gammayz = [twissparam[2], twissparam[7]]
+		betayz = [twissparam['beta_y'][0], twissparam['beta_z'][0]]
+		alphayz = [twissparam['alpha_y'][0], twissparam['alpha_z'][0]]
 	
 		#revert to objet2 mode with rebelote
 		line.replace(objet5, objet)
@@ -1185,11 +1429,11 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 		print "ellipse_coords, coord_pick ",ellipse_coords, coord_pick
 
 		if coord_pick == None:
-			#obtain coordinates on phase space ellipses. Use beta, gamma values found at closed orbit
-			coords_YTZP_ini = emittance_to_coords(emit_h, emit_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))
+			#obtain coordinates on phase space ellipses. Use beta, alpha values found at closed orbit
+			coords_YTZP_ini = emittance_to_coords(emit_h, emit_v, alphayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))
 		else:
-			#select one point on phase space ellipse. Use beta, gamma values found at closed orbit
-			coords_YTZP_ini = emittance_to_coords(emit_h, emit_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))[coord_pick]
+			#select one point on phase space ellipse. Use beta, alpha values found at closed orbit
+			coords_YTZP_ini = emittance_to_coords(emit_h, emit_v, alphayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))[coord_pick]
 
 		try:
 			l = len(coords_YTZP_ini[0])
@@ -1254,12 +1498,19 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 		T_data = []
 		Z_data = []
 		P_data = []
-    
+				
+		fout = open("dynamic_aperture_coords.txt","w")
 		for index in range(len(YTZP_list)):
 			Y_data.append(numpy.transpose(YTZP_list[index])[0])
 			T_data.append(numpy.transpose(YTZP_list[index])[1])
 			Z_data.append(numpy.transpose(YTZP_list[index])[2])
 			P_data.append(numpy.transpose(YTZP_list[index])[3])
+			
+		for ia in range(len(Y_data)):
+		    for ib in range(len(Y_data[ia])):
+		        print >>fout, ia, Y_data[ia][ib],T_data[ia][ib],Z_data[ia][ib],Z_data[ia][ib]
+		fout.close()
+		    
 
 		plot_data_xy_multi(Y_data, Z_data, 'yz_space', labels=["YZ coords", "y [cm]", "z [cm]"], style=['k+'])
 
@@ -1271,17 +1522,17 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 			emit_plot_h = emit_list_h[-1]
 			emit_plot_v = emit_list_v[-1]
 
-		coords_YTZP_full = emittance_to_coords(emit_plot_h, emit_plot_v, gammayz, betayz, beta_gamma_input, ncoords = 100)
+		coords_YTZP_full = emittance_to_coords(emit_plot_h, emit_plot_v, alphayz, betayz, beta_gamma_input, ncoords = 100)
 		coords_YTZP_full = [map(add, closedorb_YTZP, coords) for coords in coords_YTZP_full]
 		coords_YTZP_full.append(coords_YTZP_full[0])
 
 
 		if coord_pick == None:
-			#obtain coordinates on phase space ellipses. Use beta, gamma values found at closed orbit
-			coords_YTZP_lim = emittance_to_coords(emit_plot_h, emit_plot_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))
+			#obtain coordinates on phase space ellipses. Use beta, alpha values found at closed orbit
+			coords_YTZP_lim = emittance_to_coords(emit_plot_h, emit_plot_v, alphayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))
 		else:
-			#select one point on phase space ellipse. Use beta, gamma values found at closed orbit
-			coords_YTZP_lim = emittance_to_coords(emit_plot_h, emit_plot_v, gammayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))[coord_pick]
+			#select one point on phase space ellipse. Use beta, alpha values found at closed orbit
+			coords_YTZP_lim = emittance_to_coords(emit_plot_h, emit_plot_v, alphayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))[coord_pick]
 
 		try:
 			l = len(coords_YTZP_lim[0])
@@ -1297,32 +1548,46 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 
 
 		#coords_YTZP_ini = [map(add, closedorb_YTZP, coords) for coords in coords_YTZP_ini]
+		add_initial = False
+		if add_initial:
 
-		#add points on phase space ellipse actually used to initialise scan above
-		Y_data.insert(0,numpy.transpose(coords_YTZP_lim)[0])
-		T_data.insert(0,numpy.transpose(coords_YTZP_lim)[1])
-		Z_data.insert(0,numpy.transpose(coords_YTZP_lim)[2])
-		P_data.insert(0,numpy.transpose(coords_YTZP_lim)[3])
+		    #add points on phase space ellipse actually used to initialise scan above
+		    Y_data.insert(0,numpy.transpose(coords_YTZP_lim)[0])
+		    T_data.insert(0,numpy.transpose(coords_YTZP_lim)[1])
+		    Z_data.insert(0,numpy.transpose(coords_YTZP_lim)[2])
+		    P_data.insert(0,numpy.transpose(coords_YTZP_lim)[3])
 
-		#add many coordinates to draw phase space ellipse
-		Y_data.insert(0,numpy.transpose(coords_YTZP_full)[0])
-		T_data.insert(0,numpy.transpose(coords_YTZP_full)[1])
-		Z_data.insert(0,numpy.transpose(coords_YTZP_full)[2])
-		P_data.insert(0,numpy.transpose(coords_YTZP_full)[3])
+		    #add many coordinates to draw phase space ellipse
+		    Y_data.insert(0,numpy.transpose(coords_YTZP_full)[0])
+		    T_data.insert(0,numpy.transpose(coords_YTZP_full)[1])
+		    Z_data.insert(0,numpy.transpose(coords_YTZP_full)[2])
+		    P_data.insert(0,numpy.transpose(coords_YTZP_full)[3])
 
-		style_list =  ['k-', 'ro']
-		style2 = ['b+','r+', 'g+', 'm+', 'y+']
-		for i in range(len(Y_data)-2):
+		    style_list =  ['k-', 'ro']
+		    
+		    lenini = 2
+		    
+		else:
+		    style_list = []
+		    lenini = 0
+		    
+		#style2 = ['b+','r+', 'g+', 'm+', 'y+']
+		style2 = ['k.','g.']
+		for i in range(len(Y_data)-lenini):
 			style_list.append(style2[i%(len(style2))])
+		#style_list[0] = 'r.' #custom setting for ipac12
 
 		plot_data_xy_multi(Y_data, T_data, 'yt_phasespace', labels=["Horizontal phase space", "y [cm]", "y' [mrad]"], style=style_list)
 		plot_data_xy_multi(Z_data, P_data, 'zp_phasespace', labels=["Vertical phase space", "z [cm]", "z' [mrad]"], style=style_list)
+		
+		#plot_data_xy_multi(Y_data, T_data, 'yt_phasespace.eps', labels=["", "x [cm]", "x' [mrad]"], style=style_list)
+		#plot_data_xy_multi(Z_data, P_data, 'zp_phasespace.eps', labels=["", "y [cm]", "y' [mrad]"], style=style_list)
 
 	return [index_lost, coord_index], fourier_tune_emit, coords_YTZP_ini_list
 
 
 
-def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_gamma_input = 1, ncoords = 1):
+def emittance_to_coords(emit_horizontal, emit_vertical, alphayz, betayz, beta_gamma_input = 1, ncoords = 1):
 	"""Given some emittance in horizonal and vertical space
 	
 	If ncoords <= 1 return points where phase space ellipse crosses the y,y' and z,z' axis.
@@ -1339,11 +1604,14 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 	
 	Emittances in both the horizontal and vertical planes may be supplied. Twiss parameters beta and gamma in 
 	both places may be determined calling get_twiss_parameters beforehand i.e.::
-	
-		twissparam = r.get_twiss_parameters()
-		betayz = [twissparam[0],twissparam[5]]
-		gammayz = [twissparam[2],twissparam[7]]
+			twissparam = r.get_twiss_parameters()
+			betayz = [twissparam[0],twissparam[5]]
+			gammayz = [twissparam[2],twissparam[7]]
+			
+	Note coords are returned in 'Zgoubi units', i.e. cm and mrad
 	"""
+	
+	gammayz = [(a**2+1)/b for a,b in zip(alphayz, betayz)]
 	
 	coords_YTZP = []
 
@@ -1368,14 +1636,16 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 		zdat = []
 		pdat = []
 		for index in range(2):
-			#calculate twiss parameter alpha
-			alpha = (abs(betayz[index]*gammayz[index]-1))**0.5
 			#calculate major and minor radii in each plane
 			h = 0.5*(betayz[index] + gammayz[index])
 			major_radius = ((emityz[index]/2)**0.5)*( (h+1)**0.5 + (h-1)**0.5 )
 			minor_radius = ((emityz[index]/2)**0.5)*( (h+1)**0.5 - (h-1)**0.5 )
-			phi = 0.5*numpy.arctan(-2*alpha/(betayz[index]-gammayz[index]))
-
+			
+			if betayz[index] != gammayz[index]:
+				phi = 0.5*numpy.arctan(-2*alphayz[index]/(betayz[index]-gammayz[index]))
+			else:
+				phi = 0 #untested, only applies if beta is exactly unity.
+			
 			#decide which axis is the major one
 			if betayz[index] >= gammayz[index]:
 				horiz_radius = major_radius
@@ -1393,9 +1663,6 @@ def emittance_to_coords(emit_horizontal, emit_vertical, gammayz, betayz, beta_ga
 				else:
 					zdat.append(cm_*y_z)
 					pdat.append(mm_*t_p)
-
-	    #plot_data_xy_multi(ydat,tdat,'ytdat', style = ['k+','b+','r+','g+'])
-	    #plot_data_xy_multi(zdat,pdat,'zpdat', style = ['k+','b+','r+','g+'])
 
 	    #put coords_YTZP together
 		for index in range(ncoords):
@@ -1689,7 +1956,7 @@ def plot_data_xy(data, filename, labels=None, style='b-', xlim=None, ylim=None):
 	pylab.cla()
 
 
-def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style='', legend=' ', legend_location='best', xlim=None, ylim=None, tick_multiple = None):
+def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style='', legend=' ', legend_location='best', legend_title = None, xlim=None, ylim=None, tick_multiple = None):
 	""" Plots multiple sets of data where the X and Y coordinates are each specified in a list of lists. Should also
 	    work if a single set of X, Y data is specified or if one X is supplied with multiple Y data points (as long 
 	    the dimensions of Y equals that of X in all cases). 
@@ -1749,8 +2016,10 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 			if single_x_data:
 				pylab.plot(data_x_list, data_y, style[index%len(style)], label=legend[index%len(legend)])
 			else:
-				pylab.plot(data_x_list[index], data_y, style[index%len(style)], label= legend[index%len(legend)])
-
+				if legend[index%len(legend)] != ' ':
+					pylab.plot(data_x_list[index], data_y, style[index%len(style)], label= legend[index%len(legend)])
+				else:
+					pylab.plot(data_x_list[index], data_y, style[index%len(style)])
 	pylab.title(labels[0])
 	if xlim != None:
 		pylab.xlim( (xlim[0], xlim[1]) )
@@ -1760,11 +2029,14 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 	pylab.ylabel(labels[2])
 
 	if legend != [' ']:
-		pylab.legend(loc=legend_location)
+		if legend_title != None:
+			pylab.legend(loc=legend_location, title=legend_title)
+		else:
+			pylab.legend(loc=legend_location)
 
 	if tick_multiple != None:
 		ax.xaxis.set_major_locator(majorLocator)
-
+		
 	pylab.savefig(filename)
 	pylab.cla()
 

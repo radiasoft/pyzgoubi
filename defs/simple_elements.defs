@@ -138,6 +138,10 @@ R_1, R_2, R_3, R_4, R_5, R_6, R_7, R_8, R_9, R_10: 10E
 XPAS : X
 KPOS, XCE, YCE, ALE : I,3E
 
+ORDRE
+ORDRE
+IO : I
+
 PARTICUL
 PARTICUL
 M, Q, G, tau, X : 5E

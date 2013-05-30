@@ -54,14 +54,23 @@ emma.add(reb)
 
 emma.add(END())
 
-rigidity = ke_to_rigidity(10e6, 0.51099892e6)
+ke = 10e6 #Kinetic energy 10MeV
+rigidity = ke_to_rigidity(ke, 0.51099892e6)
 ob.set(BORO=-rigidity)
-ob.add(Y=0, T=0, D=1)
-
-r = emma.run(xterm = False)
 
 #first step is to find closed orbit
 closedorb_YTZP = find_closed_orbit(emma, init_YTZP=[1,2,3,4], tol=1e-6)
+
+#find tof, used for phase slip calculation
+ob.add(Y=closedorb_YTZP[0],T=closedorb_YTZP[1],Z=closedorb_YTZP[2],P=closedorb_YTZP[3])
+r = emma.run(xterm = False)
+tof_ref = r.get_track('fai', ['tof'])[0][0] #TOF in ms
+
+gamma_lorentz = ke_to_gamma(ELECTRON_MASS, ke)
+
+#find longitudinal parameters - phase slip, momentum compaction factor and transition gamma
+phase_slip = calc_phase_slip(emma, tof_ref)
+alpha_c, gamma_t = calc_momentum_compaction(phase_slip, gamma_lorentz)
 
 #Change from OBJET2 to OBJET5 so that MATRIX can compute transfer matrix etc
 ob5 = OBJET5()
@@ -79,30 +88,33 @@ tune = r.get_tune()
 
 #get twiss parameters at end of cell, returns [beta_y,alpha_y,gamma_y,disp_y,disp_py,beta_z,alpha_z,gamma_z,disp_z,disp_pz]
 twissparam = r.get_twiss_parameters()
-betayz = [twissparam[0],twissparam[5]]
-alphayz = [twissparam[1],twissparam[6]]
-gammayz = [twissparam[2],twissparam[7]]
+betayz = [twissparam['beta_y'][0],twissparam['beta_z'][0]]
+alphayz = [twissparam['alpha_y'][0],twissparam['alpha_z'][0]]
+gammayz = [twissparam['gamma_y'][0],twissparam['gamma_z'][0]]
 
+#get periodic twiss parameters and dispersion
+twiss_profiles = get_twiss_profiles(emma,'twiss_profiles.txt')
+
+#Note - Could alternatively specify twiss parameters at beginning of cell
+#twiss_profiles = get_twiss_profiles(emma,'twiss_profiles.txt',input_twiss_parameters = twissparam)
+
+print "phase_slip ",phase_slip
+print "momentum compaction factor ",alpha_c
 print "beta Y,Z at end of cell ",betayz
 print "alpha Y,Z at end of cell ",alphayz
 print "gamma Y,Z at end of cell ",gammayz
 
-#get_twiss_profiles has format [s_coord, label, mu_y, beta_y, alpha_y, gamma_y, disp_y, disp_py, mu_z,beta_z, alpha_z, gamma_z, disp_z, disp_pz]
-twiss_profiles = get_twiss_profiles(emma,'twiss_profiles.txt')
-
-#Note - Could specify twiss parameters at beginning of cell
-#twiss_profiles = get_twiss_profiles(emma,'twiss_profiles.txt',input_twiss_parameters = twissparam)
 
 #extract s coordinate and beta_y from twiss_profiles and create figure beta_y_profile.png
-s = twiss_profiles[0]
-beta_y = twiss_profiles[3]
-beta_z = twiss_profiles[9]
+s = twiss_profiles['s']
+beta_y = twiss_profiles['beta_y']
+beta_z = twiss_profiles['beta_z']
 plot_data_xy_multi(s,[beta_y,beta_z], 'beta_profiles', labels=["beta profile","s [m]","beta_y [m]"],style=['k+','b.'],legend=['beta_y','beta_z'])
 
 #plot horizontal phase advance mu_y
-mu_y = twiss_profiles[2]
+mu_y = twiss_profiles['mu_y']
 plot_data_xy_multi(s, mu_y, 'mu_y_profile', labels=["mu_y profile","s [m]","mu_y [rad]"],style='b+')
 
 #plot dispersion in the horizontal plane
-disp_y = twiss_profiles[6]
-plot_data_xy_multi(s, disp_y, 'disp_profile', labels=["D profile","s [m]","D [m]"],style='b+')
+disp_y = twiss_profiles['disp_y']
+plot_data_xy_multi(s, disp_y, 'disp_profile', labels=["Dispersion profile","s [m]","D [m]"],style='b+')

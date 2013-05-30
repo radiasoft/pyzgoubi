@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 head = Line("head")
 ob = OBJET2(BORO=ke_to_rigidity(35e6, PROTON_MASS))
@@ -69,8 +70,8 @@ twissline.add(END())
 twissline.full_tracking(False)
 r = twissline.run(xterm=False)
 twissparam = r.get_twiss_parameters()
-
 print twissparam
+
 twiss_profiles = get_twiss_profiles(twissline,'twiss_profiles.txt')
 
 
@@ -114,7 +115,9 @@ QD3     46.400000   3.573126  -0.577021  15.957381   2.477719  """
 
 chris_data = [x.split() for x in  chris_data_raw.split('\n')]
 
-zgoubi_data = zip(*twiss_profiles)
+zgoubi_data_t = [twiss_profiles['label'],twiss_profiles['s'],twiss_profiles['beta_y'],twiss_profiles['alpha_y'],twiss_profiles['beta_z'],twiss_profiles['alpha_z']]
+zgoubi_data = zip(*zgoubi_data_t)
+
 cd = chris_data
 
 def are_close(a,b,tol):
@@ -126,17 +129,19 @@ def are_close(a,b,tol):
 			return True
 	return False
 
+
 print "#element\tdistance\tbetah\talphah\tbetav\talphav"
 for n, tp in enumerate (zgoubi_data):
 	cd = [chris_data[n][0]] + [float(x) for x in chris_data[n][1:]]
-	print "%s\t%s\t%s\t%s\t%s\t%s" %  (tp[1],tp[0], tp[3], tp[4],tp[7],tp[8])
+
+	print "%s\t%s\t%s\t%s\t%s\t%s" %  (tp[0],tp[1], tp[2], tp[3],tp[4],tp[5])
 	print "%s\t%s\t%s\t%s\t%s\t%s" % tuple(cd)
 
-	assert are_close( tp[0], cd[1],1e-8 )
-	assert are_close( tp[3], cd[2],1e-4 )
-	assert are_close( tp[4], cd[3],1e-4 )
-	assert are_close( tp[7], cd[4],1e-4 )
-	assert are_close( tp[8], cd[5],1e-4 )
+	assert are_close( tp[1], cd[1],1e-8 )
+	assert are_close( tp[2], cd[2],1e-4 )
+	assert are_close( tp[3], cd[3],1e-4 )
+	assert are_close( tp[4], cd[4],1e-4 )
+	assert are_close( tp[5], cd[5],1e-4 )
 	
 
 
