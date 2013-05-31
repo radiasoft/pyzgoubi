@@ -623,7 +623,7 @@ def plot_find_closed_orbit(data_fname, outfile=None):
 				pylab.show()
 
 
-def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
+def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc_dispersion = True):
 	""" Calculates the twiss parameters at all points written to zgoubi.plt. 11 particle trajectories are used to calculate the
 	transfer matrix, just as is done in zgoubi. The code mirrors that found in mat1.f, mksa.f. The twiss parameters are first
 	calculated at the end of the cell using either input_twiss_parameters (format given below) or, if this is not supplied, 
@@ -649,12 +649,9 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 
 	Requires an OBJET type 5, and a MATRIX element.
 
-	Note - This calculation uses trajectories as measured in the local coordinate system of the magnet.
-	
-	The table is also writen to file_result"""
-
-	if input_twiss_parameters == None:
-		input_twiss_parameters = [0, 0, 0, 0, 0, 0]
+	Note - This calculation uses trajectories as measured in the local coordinate system of the magnet."""
+		
+	import zgoubi.core as zg
 
 	has_object5 = False
 	has_matrix = False
@@ -662,9 +659,10 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 		t = str(type(e)).split("'")[1].rpartition(".")[2]
 		if t == 'OBJET5':
 			has_object5 = True
+			objet = e
 		if t == 'MATRIX':
 			has_matrix = True
-	if not (has_object5 and has_matrix):
+	if not (has_object5 and (has_matrix or input_twiss_parameters != None)):
 		raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
 
 	#run Zgoubi
@@ -699,19 +697,18 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 #!-----------------------------------------------------------------------------------------
 	try:
 		try:
-			plt_track = r.get_track('plt', ['LET', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'X0', 'D', 'Y', 'T', 'Z', 'P', 'S', 'X'])
+			plt_track = r.get_track('plt', ['LET', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'D', 'Y', 'T', 'Z', 'P', 'S'])
 			track_type = 'plt'
 		except IOError:
-			plt_track = r.get_track('fai', ['LET', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'X0', 'D', 'Y', 'T', 'Z', 'P', 'S'])
+			plt_track = r.get_track('fai', ['LET', 'D0', 'Y0', 'T0', 'Z0', 'P0', 'D', 'Y', 'T', 'Z', 'P', 'S'])
 			track_type = 'fai'
 	except ValueError:
-		# new file format has no 'X0', now called 'S0' to match zgoubi output
 		# also 'D' is now know as 'D-1'
 		try:
-			plt_track = r.get_track('plt', ['LET', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'D-1', 'Y', 'T', 'Z', 'P', 'X', 'S'])
+			plt_track = r.get_track('plt', ['LET', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'D-1', 'Y', 'T', 'Z', 'P', 'S'])
 			track_type = 'plt'
 		except IOError:
-			plt_track = r.get_track('fai', ['LET', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'S0', 'D-1', 'Y', 'T', 'Z', 'P', 'S'])
+			plt_track = r.get_track('fai', ['LET', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'D-1', 'Y', 'T', 'Z', 'P', 'S'])
 			track_type = 'fai'
 		
 	incl_theta = False
@@ -737,11 +734,11 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 	S = transpose_plt_track[11]
 	
 	if track_type == 'plt':
-		X = transpose_plt_track[13]
+		#X = transpose_plt_track[13]
 		#read labels
 		label = [x[0].strip() for x in r.get_track('plt', ['element_label1'])]
 	else:
-		X = [0 for x in xrange(len(S))]
+		#X = [0 for x in xrange(len(S))]
 		label = [x[0].strip() for x in r.get_track('fai', ['element_label1'])]
 
 
@@ -778,8 +775,8 @@ def get_twiss_profiles(line, file_result, input_twiss_parameters=None):
 	for i in ref_indices:
 		Y_track.append(Y[i])
 		T_track.append(T[i])
-		Z_track.append(Y[i])
-		P_track.append(T[i])
+		Z_track.append(Z[i])
+		P_track.append(P[i])
 		S_track.append(S[i])
 		if incl_theta:
 			theta_track.append(theta[i])
@@ -1231,10 +1228,10 @@ def calc_momentum_compaction(phase_slip, gamma_lorentz):
 
 def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier=False, coords=None):
 	"""Calculate tune using FFT. nfourierturns determines the number of passes through the lattice.
-	Can supply set of horizontal and vertical coordinates in coords = [ycoords,zcoords], otherwise
-	routine will calculate coordinates
+       Can supply set of horizontal and vertical coordinates in coords = [ycoords,zcoords], otherwise
+         routine will calculate coordinates
 
-	Set plot_fourier= True to show Fourier spectrum. Default is False
+       Set plot_fourier= True to show Fourier spectrum. Default is False
 	"""
 	if coords == None:
 		coords = []
@@ -1593,7 +1590,6 @@ def emittance_to_coords(emit_horizontal, emit_vertical, alphayz, betayz, beta_ga
 	If ncoords <= 1 return points where phase space ellipse crosses the y,y' and z,z' axis.
 	
 	If ncoords > 1, will instead give a distribution of points (y,t) around the phase space ellipse uniform in angle theta where::
-	
 		y = a*cos(theta)*cos(phi) - b*sin(theta)*sin(phi)
 		t = a*cos(theta)*sin(phi) + b*sin(theta)*cos(phi)
 	
