@@ -17,12 +17,24 @@ zgoubi_svn_address = "https://zgoubi.svn.sourceforge.net/svnroot/zgoubi/trunk"
 def get_zgoubi_svn():
 	"Download zgoubi from SVN"
 	devnull = open("/dev/null", "w")
-	common.mkdir_p(zgoubi_build_dir)
 	try:
 		ret = subprocess.call(['svn', '--version'], stdout=devnull)
 	except OSError:
 		raise ZgoubiBuildError("svn not found: install subversion")
+	if os.path.isdir(zgoubi_build_dir):
+		print "Zgoubi build folder already exists:", zgoubi_build_dir
+		ret = subprocess.call(['svn', 'info'], cwd=zgoubi_build_dir2)
+		if ret == 0:
+			print "Zgoubi SVN already present at:", zgoubi_build_dir
+			print "Reverting local changes"
+			ret2 = subprocess.call(['svn', 'revert', '-R', '.'], cwd=zgoubi_build_dir2)
+			return
+		
+		if ret != 0 or ret2 != 0:
+			raise ZgoubiBuildError("%s already exists, but does not contain a working checkout")
+
 	print "Downloading Zgoubi SVN:", zgoubi_svn_address
+	common.mkdir_p(zgoubi_build_dir)
 	ret = subprocess.call(['svn', 'co', zgoubi_svn_address, "zgoubi-trunk"], cwd=zgoubi_build_dir)
 	if ret != 0:
 		raise ZgoubiBuildError("SVN download failed")
