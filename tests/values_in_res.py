@@ -14,8 +14,15 @@ add(END())
 
 output_lines =  output().split('\n')
 quad_line = [a.strip() for a in output_lines].index("'QUADRUPO'")
+print "Looking for values in pyzgoubi output"
+print "  ", output_lines[quad_line]
+print "  ", output_lines[quad_line + 1]
+print "  >>>", output_lines[quad_line + 2], " <<<"
+print "  ", output_lines[quad_line + 3]
+print "  ", output_lines[quad_line + 4]
 bits = output_lines[quad_line + 2].split()
 
+print
 for x in xrange(3):
 	error = tv[x]- float(bits[x])
 	print repr(tv[x]), bits[x], error
@@ -25,24 +32,39 @@ for x in xrange(3):
 
 
 run()
-
 res_lines = res().split('\n')
 
 
-# find QUADRUPO output in res file
+# find QUADRUPO output in res file, skipping over the echo section
 for n, l in enumerate(res_lines[quad_line+1:]):
 	if "QUADRUPO" in l:
-		#print l
-		#print n
 		quad_line = n+quad_line+1
 		break
 
-#print '\n'.join(res_lines[quad_line: quad_line+10])
-for x in xrange(3):
-	#print res_lines[quad_line+x+3].split()[-2]
+print "Looking for values in Zgoubi output"
+print "  ", res_lines[quad_line]
+print "  ", res_lines[quad_line + 1]
+print "  ", res_lines[quad_line + 2]
+print "  ", res_lines[quad_line + 3]
+print "  ", res_lines[quad_line + 4]
+print "  ", res_lines[quad_line + 5]
+print "  ", res_lines[quad_line + 6]
+print
 
-	error = tv[x]- float(res_lines[quad_line+x+3].split()[-2])
-	print repr(tv[x]), res_lines[quad_line+x+3].split()[-2], error
+rv=[-1,-1,-1]
+for line in res_lines[quad_line:quad_line + 7]:
+	if "Length  of  element" in line:
+		rv[0] = float(line.split()[-2])
+	if "Bore  radius" in line:
+		rv[1] = float(line.split()[-2])
+	if "B-QUADRUPOLE" in line:
+		rv[2] = float(line.split()[-2])
+
+print rv
+
+for x in xrange(3):
+	error = tv[x]-rv[x]
+	print repr(tv[x]), rv[x], error
 	if error > 1e-3:
 		print "value does not match to 3 decimals"
 		raise ValueError, "error to big: %s"  % error

@@ -12,10 +12,10 @@ def usage():
 	print "Usage:"
 	print sys.argv[0]
 	print sys.argv[0], "[testname [testname2 ...]]"
-	print sys.argv[0], "zgoubi=/path/to/zgoubi"
-	print sys.argv[0], "zgoubi=/path/to/zgoubi1,/path/to/zgoubi2"
-	print sys.argv[0], "zgoubi=~/bin"
-	print sys.argv[0], "logfile=testlog.txt"
+	print sys.argv[0], "--zgoubi=/path/to/zgoubi"
+	print sys.argv[0], "--zgoubi=/path/to/zgoubi1,/path/to/zgoubi2"
+	print sys.argv[0], "--zgoubi=~/bin"
+	print sys.argv[0], "--logfile=testlog.txt"
 
 
 
