@@ -396,7 +396,7 @@ class Line(object):
 			try:
 				if 'OBJET' in element._zgoubi_name:
 					isobjet = True
-				if 'END' in element._zgoubi_name:
+				if element._zgoubi_name == "END":
 					has_end = True
 			except AttributeError:
 				pass
