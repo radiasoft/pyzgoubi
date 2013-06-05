@@ -16,13 +16,24 @@ zgoubi_install_dir = os.path.expanduser("~/.pyzgoubi/bin")
 #zgoubi_svn_address = "http://svn.code.sf.net/p/zgoubi/code/trunk"
 zgoubi_svn_address = "svn://svn.code.sf.net/p/zgoubi/code/trunk"
 
-def get_zgoubi_svn():
-	"Download zgoubi from SVN"
+def check_for_programs():
 	devnull = open("/dev/null", "w")
 	try:
 		ret = subprocess.call(['svn', '--version'], stdout=devnull)
 	except OSError:
 		raise ZgoubiBuildError("svn not found: install subversion")
+	try:
+		ret = subprocess.call(['wget', '--version'], stdout=devnull)
+	except OSError:
+		raise ZgoubiBuildError("wget not found: install wget")
+	try:
+		ret = subprocess.call(['patch', '--version'], stdout=devnull)
+	except OSError:
+		raise ZgoubiBuildError("patch not found: install patch")
+
+
+def get_zgoubi_svn():
+	"Download zgoubi from SVN"
 	if os.path.isdir(zgoubi_build_dir2):
 		print "Zgoubi build folder already exists:", zgoubi_build_dir
 		ret = subprocess.call(['svn', 'info'], cwd=zgoubi_build_dir2)
@@ -108,6 +119,7 @@ patches=[
 
 
 def install_zgoubi_all(version="261+patches"):
+	check_for_programs()
 	"This currently install a version of zgoubi known to work with pyzgoubi"
 	if not zgoubi_versions.has_key(version):
 		raise ZgoubiBuildError("Unknown version: "+ version+ "\nTry "+ " ".join(zgoubi_versions.keys()))
