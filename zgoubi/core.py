@@ -1367,7 +1367,7 @@ class Results(object):
 		last_lap = all_c[ all_c['PASS'] == all_c['PASS'].max() ]
 		# also select only particles at FAISTORE with matching end_label
 		if end_label:
-			end_label = end_label.ljust(8) # pad to match zgoubi
+			end_label = end_label.ljust(last_lap.dtype['element_label1'].itemsize) # pad to match zgoubi, as of Zgoubi SVN r290 this has changed from 8 to 10
 			last_lap = last_lap[ last_lap['element_label1'] == end_label ]
 
 		#print last_lap[:10]['BORO']
