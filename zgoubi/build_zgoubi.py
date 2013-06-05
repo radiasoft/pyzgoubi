@@ -12,7 +12,9 @@ class ZgoubiBuildError(Exception):
 zgoubi_build_dir = os.path.expanduser("~/.pyzgoubi/build")
 zgoubi_build_dir2 = os.path.join(zgoubi_build_dir, "zgoubi-trunk")
 zgoubi_install_dir = os.path.expanduser("~/.pyzgoubi/bin")
-zgoubi_svn_address = "https://zgoubi.svn.sourceforge.net/svnroot/zgoubi/trunk"
+#zgoubi_svn_address = "https://zgoubi.svn.sourceforge.net/svnroot/zgoubi/trunk"
+#zgoubi_svn_address = "http://svn.code.sf.net/p/zgoubi/code/trunk"
+zgoubi_svn_address = "svn://svn.code.sf.net/p/zgoubi/code/trunk"
 
 def get_zgoubi_svn():
 	"Download zgoubi from SVN"
@@ -21,7 +23,7 @@ def get_zgoubi_svn():
 		ret = subprocess.call(['svn', '--version'], stdout=devnull)
 	except OSError:
 		raise ZgoubiBuildError("svn not found: install subversion")
-	if os.path.isdir(zgoubi_build_dir):
+	if os.path.isdir(zgoubi_build_dir2):
 		print "Zgoubi build folder already exists:", zgoubi_build_dir
 		ret = subprocess.call(['svn', 'info'], cwd=zgoubi_build_dir2)
 		if ret == 0:
@@ -47,6 +49,8 @@ def set_zgoubi_version(version=None):
 		ret = subprocess.call(['svn', 'update'], cwd=zgoubi_build_dir2)
 	else:
 		ret = subprocess.call(['svn', 'update', '-r', '%s'%version], cwd=zgoubi_build_dir2)
+	if ret != 0:
+		raise ZgoubiBuildError("SVN update failed")
 
 
 def apply_zgoubi_patches(patches):
@@ -82,24 +86,41 @@ def install_zgoubi(postfix=""):
 	                os.path.join(zgoubi_install_dir, "zpop%s"%postfix )  )
 
 
-def install_zgoubi_all():
-	"This currently install a version of zgoubi known to work with pyzgoubi"
-	get_zgoubi_svn()
-	set_zgoubi_version(261)
-	patches=[
-	"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/mcmodel-fix.diff",
-	"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/zgoubi_parallel_build.diff",
-	"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/objet3.diff",
-	"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/kobj301.diff",
-	]
+zgoubi_versions = {}
+zgoubi_versions["261+patches"] = dict(svnr=261,
+patches=[
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/mcmodel-fix.diff",
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/zgoubi_parallel_build.diff",
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/objet3.diff",
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/kobj301.diff",
+],
+)
 
-	apply_zgoubi_patches(patches)
+zgoubi_versions["312+patches"] = dict(svnr=312,
+patches=[
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/mcmodel-fix2.diff",
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks.diff",
+#"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/zgoubi_parallel_build.diff",
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/objet3_2.diff",
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/kobj301_2.diff",
+],
+)
+
+
+def install_zgoubi_all(version="261+patches"):
+	"This currently install a version of zgoubi known to work with pyzgoubi"
+	if not zgoubi_versions.has_key(version):
+		raise ZgoubiBuildError("Unknown version: "+ version+ "\nTry "+ " ".join(zgoubi_versions.keys()))
+	print "Preparing to install zgoubi:", version
+	get_zgoubi_svn()
+	set_zgoubi_version(zgoubi_versions[version]['svnr'])
+	apply_zgoubi_patches(zgoubi_versions[version]['patches'])
 	make_zgoubi()
 
-	install_zgoubi("_261+patches")
+	install_zgoubi("_"+version)
 	print "\nInstalled zgoubi into ", zgoubi_install_dir
 	print "Add the following line to ~/.pyzgoubi/settings.ini"
-	print "zgoubi_path = %s/zgoubi%s" % (zgoubi_install_dir, "_261+patches")
+	print "zgoubi_path = %s/zgoubi_%s" % (zgoubi_install_dir, version)
 
 
 if __name__ == "__main__":

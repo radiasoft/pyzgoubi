@@ -221,7 +221,10 @@ if __name__ == '__main__':
 			sys.exit(0)
 		if o in ['--install-zgoubi']:
 			from zgoubi import build_zgoubi
-			build_zgoubi.install_zgoubi_all()
+			if args:
+				build_zgoubi.install_zgoubi_all(args[0])
+			else:
+				build_zgoubi.install_zgoubi_all()
 			sys.exit(0)
 
 	try:
