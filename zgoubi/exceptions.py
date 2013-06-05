@@ -14,3 +14,10 @@ class OldFormatError(Exception):
 	"Old file format passed to function that expects new format"
 	pass
 
+class BadFormatError(Exception):
+	"Can't parse file format"
+	pass
+
+class EmptyFileError(Exception):
+	"File contians not records"
+	pass

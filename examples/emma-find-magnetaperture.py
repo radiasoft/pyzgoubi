@@ -81,7 +81,7 @@ Y_co_QD = []
 Y_co_QF = []
 D_list = [0.666,1.0,1.333]
 for D_sel in D_list:
-	closedorb_YTZP = find_closed_orbit(emma, init_YTZP=[0.1,0,0,0], tol=1e-10, D=D_sel)
+	closedorb_YTZP = find_closed_orbit(emma, init_YTZP=[0.1,0,0,0], tol=1e-6, D=D_sel)
 	closedorbs.append(closedorb_YTZP)
 	#find YZ everywhere in magnets along closed orbit
 	qd.set(IL=2)

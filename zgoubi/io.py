@@ -7,7 +7,7 @@ import hashlib
 import os
 import struct
 
-from zgoubi.exceptions import OldFormatError
+from zgoubi.exceptions import OldFormatError, BadFormatError, EmptyFileError
 from zgoubi.core import zlog
 from zgoubi.common import open_file_or_name
 
@@ -51,7 +51,7 @@ col_name_trans = {
 "Y-DY":"Y",
 }
 
-
+# FIXME checksum changed to include record length, so these need updating
 # store some definitions, to speed loading, and to work around some issues
 definition_lookup = {}
 # from zgoubi svn 255 (not changed between 251 and 255)
@@ -91,10 +91,11 @@ def write_fortran_record(fh, record):
 
 
 
-def define_file(fname, allow_lookup=True):
+def define_file(fname, allow_lookup=False):
 	"Read header from a file and determine formating. Returns a dict that describes the file"
 	fh = open_file_or_name(fname)
 	fh.seek(0)
+	file_size = os.path.getsize(fh.name)
 
 	first_bytes = fh.read(30)
 	# zgoubi's ascii files start with '# '
@@ -118,11 +119,21 @@ def define_file(fname, allow_lookup=True):
 	
 	if header[2].startswith("..."):
 		raise OldFormatError, "This is an old format that does not define column headings"
-	
-	signature = file_mode + file_type + header[2] + header[3]
-	signature = hashlib.md5(signature).hexdigest()	
 
 	header_length = sum([len(h) for h in header])
+	if file_size <= header_length+8*4:
+		raise EmptyFileError
+
+	record_len = 0
+	if file_mode == 'binary':
+		header_length += 4*8 # extra bytes from record lengths
+		fh.seek(header_length)
+		record_len = struct.unpack("i", fh.read(4))[0]
+		print "record_len", record_len
+
+	
+	signature = file_mode + file_type + header[2] + header[3] + str(record_len)
+	signature = hashlib.md5(signature).hexdigest()	
 
 	if allow_lookup:
 		try:
@@ -131,8 +142,8 @@ def define_file(fname, allow_lookup=True):
 			zlog.debug("new format, analysing. sig:%s" % signature)
 
 	if file_mode == 'binary':
-		header_length += 4*8 # extra bytes from record lengths
 		#file_length = os.path.getsize(fname)
+		fh.seek(header_length)
 		record_length = len(read_fortran_record(fh)) +8
 
 		#file_length = len(whole_file)
@@ -152,22 +163,30 @@ def define_file(fname, allow_lookup=True):
 	names = []
 	types = []
 	units = []
+	byte_count = 8 # count how long the field lengths add up to
 
 	for rname, rtype in zip(col_names, col_types):
 		#print "#", rname,"#" , rtype,"#"
 		ntype = "f8"
 		nunit = rtype
+		nbytes = 8
 		if rtype == "int":
 			ntype = "i4"
+			nbytes = 4
 		if rtype == "string":
 			if rname == "KLEY":
 				ntype = "a10"
+				nbytes = 10
 			if rname == "LABEL1":
 				ntype = "a8"
+				nbytes = 8
 			if rname == "LABEL2":
 				ntype = "a8"
+				nbytes = 8
 			if rname == "LET":
 				ntype = "a1"
+				nbytes = 1
+		byte_count += nbytes
 
 		nname = col_name_trans.get(rname, rname)
 
@@ -175,6 +194,10 @@ def define_file(fname, allow_lookup=True):
 		types.append(ntype)
 		units.append(nunit)
 	
+	if file_mode == 'binary' and byte_count != record_length:
+		# Zgoubi SVN r290 switch labels from a8 to a10
+		types = ['a10' if t == 'a8' else t  for t in types]
+
 	
 	definition =  {'names':names, 'types':types, 'units':units, 'file_mode':file_mode, 'file_type':file_type, 'signature':signature}
 	if file_mode == 'binary':
@@ -229,11 +252,19 @@ def read_file(fname):
 
 		file_size = os.path.getsize(fname)
 		num_records = (file_size - head_len) / rec_len
+		if num_records == 0:
+			raise EmptyFileError
 	
 		file_data2 = numpy.zeros(num_records, dtype= numpy.dtype(data_type))
 		
 		for n in xrange(num_records):
-			rec = fh.read(rec_len)[4:-4]
+			full_rec = fh.read(rec_len)
+			#FIXME this check wastes some time in a bit of code that should be fast. maybe should only be on if debug is enabled
+			if not ((rec_len-8) == struct.unpack("i", full_rec[:4])[0] == struct.unpack("i", full_rec[-4:])[0]):
+				zlog.error("Record length not correct: header says %s but file contains %s"%(rec_len-8, struct.unpack("i", full_rec[:4])))
+				raise BadFormatError("Can't read records")
+
+			rec = full_rec[4:-4]
 			if rec == "": break
 			file_data2[n] = rec
 

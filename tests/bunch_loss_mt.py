@@ -10,5 +10,5 @@ test_line.add(CHAMBR(IA=1, IFORM=1, ZL=1, YL=50))
 test_line.add(DRIFT(XL=1))
 
 print "These should raise some warnings"
-outbunch = test_line.track_bunch(inbunch)
+outbunch = test_line.track_bunch_mt(inbunch)
 assert (len(outbunch) == 50)

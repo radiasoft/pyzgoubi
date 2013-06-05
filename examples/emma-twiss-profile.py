@@ -59,7 +59,7 @@ rigidity = ke_to_rigidity(ke, 0.51099892e6)
 ob.set(BORO=-rigidity)
 
 #first step is to find closed orbit
-closedorb_YTZP = find_closed_orbit(emma, init_YTZP=[0,0,0,0], tol=1e-10)
+closedorb_YTZP = find_closed_orbit(emma, init_YTZP=[1,2,3,4], tol=1e-6)
 
 #find tof, used for phase slip calculation
 ob.add(Y=closedorb_YTZP[0],T=closedorb_YTZP[1],Z=closedorb_YTZP[2],P=closedorb_YTZP[3])

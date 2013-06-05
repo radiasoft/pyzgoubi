@@ -11,9 +11,9 @@ The latest version of PyZgoubi and this document can be found at http://www.hep.
 Introduction
 ------------
 
-http://sourceforge.net/projects/zgoubi Zgoubi is a particle tracking code maintained by François Méot. PyZgoubi is an interface to Zgoubi writing in python. It aims to make input files that are easy to read and can contain calculations, loops, and any other python program feature.
+`Zgoubi <http://sourceforge.net/projects/zgoubi>`_ is a particle tracking code maintained by François Méot. PyZgoubi is an interface to Zgoubi writing in python. It aims to make input files that are easy to read and can contain calculations, loops, and any other python program feature.
 
-A basic knowledge of http://python.org/ Python is useful to use PyZgoubi. Python is a general purpose, high level, interpreted programming language. I recommend the http://www.python.org/doc/2.5.2/tut/tut.html Official Python Tutorial.
+A basic knowledge of `Python <http://python.org/>`_ is useful to use PyZgoubi. Python is a general purpose, high level, interpreted programming language. I recommend the `Official Python Tutorial <http://docs.python.org/tutorial/>`_.
 
 Quick Start
 -----------
@@ -323,17 +323,17 @@ Available Elements
 
 To find the full list of elements available in the current version run::
 
-    pyzgoubi help elements
+    pyzgoubi --help elements
 
 To find the names of the parameters available for an element use::
 
-    pyzgoubi help element_name
+    pyzgoubi --help element_name
 
 e.g.::
 
-    pyzgoubi help MULTIPOL
+    pyzgoubi --help MULTIPOL
 
-Use this in combination with the Zgoubi manual.
+Use this in combination with the Zgoubi manual. Most parameters have the same name. Greek letters in the manual are usually anglicised  (e.g. τ to tau). Subscripts are represented with underscores. When there is a entrance and exit version of a parameter E (entrée) and S (sortie) are used to distinguish.
 
 Running Zgoubi
 --------------
@@ -391,6 +391,12 @@ When you run a |Line| it creates a |Results| object, that can be used to get inf
     print res.get_all('fai')
     print res.get_track('fai', ['Y','T'])
 
+Assuming that you are using a recent Zgoubi version get_all will return a numpy structured array (recarray) which has named columns. To see the names of the columns use::
+
+	fai_data = res.get_all('fai')
+	print fai_data.dtype.names
+
+To find the units look inside a zgoubi.fai file.
 
 Bunch Objects
 -------------
@@ -434,6 +440,19 @@ This allows tracking a bunch around multiple lattices. Suppose that you create 3
 Note that this method does not allow you to access the Result object.
 
 If you have a multi-CPU or multi-core CPU, then you can swap |Line.track_bunch| for the multithreaded version |Line.track_bunch_mt|. The multithreaded version also has the advantage that it can track an arbitrarily large bunch (more than Zgoubi's max particles limit).
+
+There are a number of generators for standard bunches, e.g Kapchinskij-Vladimirskij (KV), waterbag and Guassian::
+
+    gen_gauss_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None, ke=None, rigidity=0, mass=0, charge=1)
+    gen_gauss_x_xp_y_yp_s_dp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, mom_spread=0, bunch_length=0, disp=0, disp_prime=0, seed=None, ke=None, rigidity=0, mass=0, charge=1)
+    gen_halo_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None, ke=None, rigidity=0, mass=0, charge=1)
+    gen_kv_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None, ke=None, rigidity=0, mass=0, charge=1)
+    gen_waterbag_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None, ke=None, rigidity=0, mass=0, charge=1)
+
+For example to create a KV bunch with 1000 protons::
+
+    my_bunch = Bunch.gen_kv_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
+
 
 
 Complex Lines
@@ -590,6 +609,8 @@ or start a python shell and run::
 	>>> p.sort_stats('cumulative').print_stats()
 
 
+.. _Logging:
+
 Logging levels
 """"""""""""""
 
@@ -665,5 +686,65 @@ sfe: formatted io not allowed::
 
 
 This may mean that you have tried to write output to both ascii and binary files, eg zgoubi.fai and b_zgoubi.fai
+
+
+Troubleshooting
+---------------
+
+There are several levels at which problems can occur. Errors in the input file, bugs in PyZgoubi, bugs in Zgoubi.
+
+Debug mode
+""""""""""
+
+Some useful information is shown when debugging is enabled, for example warnings about common mistakes. See :ref:`Logging`.
+
+
+Check the line
+""""""""""""""
+
+Printing the line instance will show what elements it contains::
+	
+	my_line = Line("a line")
+	my_line.add( QUADRUPO( ... ) )
+	my_line.add( DRIFT( ... ) )
+	...
+	print my_line
+
+
+Element output
+""""""""""""""
+
+Check what an element is outputting to the zgoubi.dat file::
+
+	q1 = QUADRUPO( ... )
+	print q1.output()
+
+or the whole line::
+	
+	print my_line.output
+
+If they are not what you expect have a look in PyZgoubi's definition files.
+
+Res file
+""""""""
+
+Read the zgoubi.res file. It shows how Zgoubi interpreted the zgoubi.dat file::
+
+	results = my_line.run()
+	print results.res()
+
+Check all the units, Zgoubi uses a range of different units.
+
+xterm
+"""""
+
+Open an xterm in the temp working folder, and have a look at the files zgoubi has output::
+
+	results = my_line.run(xterm=True)
+
+From here you can modify the zgoubi.dat and run zgoubi again.
+
+
+
 
 

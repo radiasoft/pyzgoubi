@@ -24,9 +24,11 @@ try:
 except OSError:
 	pass
 
-MAIN_VERSION = '0.4.0'
+MAIN_VERSION = '0.4.1'
 
-if os.path.exists(".bzr") and os.system("bzr version-info --format=python > zgoubi/version.py") == 0:
+if (os.path.exists(".bzr") and
+	os.system("bzr version-info --format=python > zgoubi/version.py") == 0 and
+	"sdist" not in sys.argv):
 	# run from a bzr repo, can use version info
 	print "updated zgoubi/version.py"
 	vfile = open("zgoubi/version.py","a")
@@ -50,6 +52,8 @@ setup(name='pyzgoubi',
 	cmdclass={'build_doc': BuildDoc},
 	author="Sam Tygier",
 	author_email="sam.tygier@hep.manchester.ac.uk",
+	url="http://sourceforge.net/projects/pyzgoubi/",
+	license="GNU GENERAL PUBLIC LICENSE"
 	)
 
 is_cygwin = False

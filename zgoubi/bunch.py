@@ -105,7 +105,9 @@ class Bunch(object):
 		return self.coords
 
 	def raw_particles(self):
-		"""Returns the numpy array that holds the coordinates, as a 2d numpy array and a list of comumn names. It is possible that the column names may change or reorder, so if you use this you may want to protect against it with something like::
+		"""Returns the numpy array that holds the coordinates, as a 2d numpy array and a list of comumn names. It is possible that the column names may change or reorder, so if you use this you may want to protect against it with something like
+		::
+		
 			assert(pbunch.raw_particles()[1] == ["D","Y","T","Z","P","S","TOF","X"])
 
 		"""
@@ -122,6 +124,7 @@ class Bunch(object):
 			               ke=None, rigidity=0, mass=0, charge=1):
 		"""Generate a halo bunch, i.e. an elipse outline in x-xp (Y-T) and in y-yp (Z-P). S and D are set to 0 and 1 respectively.
 		example::
+		
 			my_bunch = Bunch.gen_halo_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
 		
 		creates a halo bunch called my_bunch with 1000 particles of the given parameters.
@@ -171,6 +174,7 @@ class Bunch(object):
 			               ke=None, rigidity=0, mass=0, charge=1):
 		"""Generate a uniform (KV) bunch, i.e. a surface of a 4D hypershere in x-xp-y-yp (Y-T-Z-P). S and D are set to 0 and 1 respectively.
 		example::
+		
 			my_bunch = Bunch.gen_kv_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
 		
 		creates a KV bunch called my_bunch with 1000 particles of the given parameters.
@@ -225,6 +229,7 @@ class Bunch(object):
 			               ke=None, rigidity=0, mass=0, charge=1):
 		"""Generate a waterbag bunch, i.e. a filled hypersphere in x-xp-y-yp (Y-T-Z-P). S and D are set to 0 and 1 respectively.
 		example::
+		
 			my_bunch = Bunch.gen_waterbag_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
 		
 		creates a waterbag bunch called my_bunch with 1000 particles of the given parameters.
@@ -298,6 +303,7 @@ class Bunch(object):
 			               ke=None, rigidity=0, mass=0, charge=1):
 		"""Generate a Gaussian bunch in x-xp (Y-T) and in y-yp (Z-P). S and D are set to 0 and 1 respectively.
 		example::
+		
 			my_bunch = Bunch.gen_kv_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
 		
 		creates a Gaussian bunch called my_bunch with 1000 particles of the given parameters.
@@ -472,16 +478,21 @@ class Bunch(object):
 
 		fh = open(fname, "w")
 		if binary:
+			# this is quite optimised
+			# rather than call the general io.write_fortran_record(), use a fast special case
 			#header
 			for dummy in xrange(4):
 				io.write_fortran_record(fh, "a"*80)
-			#data
+			# record length is always the same
 			rec_len_r = struct.pack("i", 6*8)
-			for p in self.coords:
-				#record = struct.pack("6d", p['Y'], p['T'], p['Z'], p['P'], p['S'], p['D'])
-				record = p.tostring()[8:48] + p.tostring()[:8]
-				#io.write_fortran_record(fh, record)
-				fh.write(rec_len_r+record+rec_len_r)
+			rec_len_r2 = rec_len_r + rec_len_r
+
+			fh.write(rec_len_r) # write length once before, twice after each record, and then truncate one at the end
+			for p in self.coords.view((numpy.float64,8)): #  tostring is slightly faster if we ignore the dtypew
+			#for p in self.coords:
+				ps = p.tostring() # tostring is slow, but quicker than manipulating p and using tofile
+				fh.write(ps[8:48] + ps[:8] +rec_len_r2) # writing YTZPSD even though array is DYTZPStofX
+			fh.seek(-len(rec_len_r),1); fh.truncate()
 
 		else:
 			nparts = len(self.coords)

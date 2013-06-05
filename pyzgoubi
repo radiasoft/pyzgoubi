@@ -136,28 +136,28 @@ def _show_usage():
 	print "pyzgoubi", "--zgoubi /path/to/zgoubi"
 	print "pyzgoubi", "--debug"
 	print "pyzgoubi", "--log_level DEBUG/WARNING/ERROR"
+	print "pyzgoubi", "--install-zgoubi"
 	print "\nFor documentation see http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/"
 
 def show_version():
 	"Output version information"
 	print "Pyzgoubi version: %s" % MAIN_VERSION
 	try:
-		print 'Bzr: %(branch_nick)s rev %(revno)d' % version_info
+		print 'Bzr: %(branch_nick)s rev %(revno)s' % version_info
 	except NameError:
 		pass
 	print "Default Zgoubi path", zgoubi_settings['zgoubi_path']
 	tmpdir = tempfile.mkdtemp()
 	try:
 		output = subprocess.Popen([zgoubi_settings['zgoubi_path']], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tmpdir).communicate()[0]
+		for line in output.split('\n'):
+			if "version" in line.lower():
+				print line.strip()
 	except OSError:
 		print "Failed to run zgoubi"
 		print "[from settings.ini] zgoubi_path:", zgoubi_settings['zgoubi_path']
 		print "$PATH:", os.environ['PATH']
-		raise
 
-	for line in output.split('\n'):
-		if "version" in line.lower():
-			print line.strip()
 	shutil.rmtree(tmpdir)
 
 	import sys
@@ -193,7 +193,7 @@ def show_version():
 
 if __name__ == '__main__':
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "version", "zgoubi=", "debug", "log_level="])
+		opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "version", "zgoubi=", "debug", "log_level=", "install-zgoubi"])
 	except getopt.GetoptError, err:
 		print str(err)
 		_show_usage()
@@ -218,6 +218,13 @@ if __name__ == '__main__':
 			zlog.setLevel(logging._levelNames[a.upper()])
 		if o in ['--version']:
 			show_version()
+			sys.exit(0)
+		if o in ['--install-zgoubi']:
+			from zgoubi import build_zgoubi
+			if args:
+				build_zgoubi.install_zgoubi_all(args[0])
+			else:
+				build_zgoubi.install_zgoubi_all()
 			sys.exit(0)
 
 	try:

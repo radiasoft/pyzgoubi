@@ -380,6 +380,40 @@ class Line(object):
 			except AttributeError:
 				pass
 	
+	def check_line(self):
+		"Check that line has OBJET or MCOBJET at the start, and an END at the end. Gives warnings otherwise. Called by run() if in debug mode."
+		has_end = False
+		line_good = True
+		for n, element in enumerate(self.elements()):
+			if has_end:
+				line_good = False
+				try:
+					zlog.warn("Element (%s) after END" % element._zgoubi_name)
+				except AttributeError:
+					zlog.warn("Element after END")
+
+			isobjet = False
+			try:
+				if 'OBJET' in element._zgoubi_name:
+					isobjet = True
+				if element._zgoubi_name == "END":
+					has_end = True
+			except AttributeError:
+				pass
+
+			if n == 0 and not isobjet:
+				zlog.warn("First element in line no OBJET/MCOBJET")
+				line_good = False
+			if n != 0 and isobjet:
+				zlog.warn("OBJET/MCOBJET appears as element number %d. (Should only be first)" % n)
+				line_good = False
+		if not has_end:
+				zlog.warn("No END element found")
+				line_good = False
+
+		return line_good
+				
+	
 	def full_tracking(self, enable=True):
 		"""Enable full tracking on magnetic elements.
 		This works by setting IL=2 for any element with an IL parameter.
@@ -421,6 +455,8 @@ class Line(object):
 		
 	def run(self, xterm=False, tmp_prefix=zgoubi_settings['tmp_dir'], silence=False):
 		"Run zgoubi on line. If break is true, stop after running zgoubi, and open an xterm for the user in the tmp dir. From here zpop can be run."
+		if zlog.isEnabledFor(logging.DEBUG):
+			self.check_line()
 		orig_cwd = os.getcwd()
 		tmpdir = tempfile.mkdtemp("zgoubi", prefix=tmp_prefix)
 		self.tmpdir = tmpdir
@@ -479,6 +515,10 @@ class Line(object):
 		self.spn_file = tmpdir+"/zgoubi.spn"
 		#output = outfile.read()
 		
+		for n, line in enumerate(open(self.res_file)):
+			if "ERROR" in line or "WARNING" in line or "SBR" in line:
+				print "zgoubi.res:",n,":",line
+
 		#os.chdir(orig_cwd)
 		
 		element_types =  [ str(type(element)).split("'")[1].rpartition(".")[2] for element in self.elements() ]
@@ -538,7 +578,7 @@ class Line(object):
 					continue
 				#print "Thread", name, "working"
 				try:
-					done_bunch = work_line.track_bunch(work_bunch, **kwargs)
+					done_bunch = work_line.track_bunch(work_bunch, binary=True, **kwargs)
 				except:
 					zlog.error("Exception in track_bunch() thread")
 					out_q.put((sys.exc_info()))
@@ -1266,13 +1306,14 @@ class Results(object):
 		return coords
 	
 	def loss_summary(self, coords=None, file='plt'):
-		"""Returns False if no losses, otherwise returns a summery of losses::
-			
+		"""Returns False if no losses, otherwise returns a summery of losses
+		::
+		
 			loss = res.loss_summary(file='plt')
 			#or
 			all = res.get_all('plt')
 			loss = res.loss_summary(all) # if you already have got the coordinates
-
+			
 		"""
 		if coords == None:
 			coords = self.get_all(file)
@@ -1312,6 +1353,13 @@ class Results(object):
 				empty_bunch.mass = old_bunch.mass
 				empty_bunch.charge = old_bunch.charge
 			return empty_bunch
+		except EmptyFileError:
+			zlog.warn("%s empty. returning empty bunch" % file)
+			empty_bunch = zgoubi.bunch.Bunch(nparticles=0, rigidity=0)
+			if old_bunch != None:
+				empty_bunch.mass = old_bunch.mass
+				empty_bunch.charge = old_bunch.charge
+			return empty_bunch
 
 		loss_sum = self.loss_summary(all_c)
 		if loss_sum:
@@ -1330,7 +1378,7 @@ class Results(object):
 		last_lap = all_c[ all_c['PASS'] == all_c['PASS'].max() ]
 		# also select only particles at FAISTORE with matching end_label
 		if end_label:
-			end_label = end_label.ljust(8) # pad to match zgoubi
+			end_label = end_label.ljust(last_lap.dtype['element_label1'].itemsize) # pad to match zgoubi, as of Zgoubi SVN r290 this has changed from 8 to 10
 			last_lap = last_lap[ last_lap['element_label1'] == end_label ]
 
 		#print last_lap[:10]['BORO']
