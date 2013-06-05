@@ -7,7 +7,7 @@ import hashlib
 import os
 import struct
 
-from zgoubi.exceptions import OldFormatError
+from zgoubi.exceptions import OldFormatError, BadFormatError, EmptyFileError
 from zgoubi.core import zlog
 from zgoubi.common import open_file_or_name
 
@@ -95,6 +95,7 @@ def define_file(fname, allow_lookup=False):
 	"Read header from a file and determine formating. Returns a dict that describes the file"
 	fh = open_file_or_name(fname)
 	fh.seek(0)
+	file_size = os.path.getsize(fh.name)
 
 	first_bytes = fh.read(30)
 	# zgoubi's ascii files start with '# '
@@ -120,6 +121,8 @@ def define_file(fname, allow_lookup=False):
 		raise OldFormatError, "This is an old format that does not define column headings"
 
 	header_length = sum([len(h) for h in header])
+	if file_size <= header_length+8*4:
+		raise EmptyFileError
 
 	record_len = 0
 	if file_mode == 'binary':
@@ -249,6 +252,8 @@ def read_file(fname):
 
 		file_size = os.path.getsize(fname)
 		num_records = (file_size - head_len) / rec_len
+		if num_records == 0:
+			raise EmptyFileError
 	
 		file_data2 = numpy.zeros(num_records, dtype= numpy.dtype(data_type))
 		
@@ -257,7 +262,7 @@ def read_file(fname):
 			#FIXME this check wastes some time in a bit of code that should be fast. maybe should only be on if debug is enabled
 			if not ((rec_len-8) == struct.unpack("i", full_rec[:4])[0] == struct.unpack("i", full_rec[-4:])[0]):
 				zlog.error("Record length not correct: header says %s but file contains %s"%(rec_len-8, struct.unpack("i", full_rec[:4])))
-				raise IOError("Can't read records")
+				raise BadFormatError("Can't read records")
 
 			rec = full_rec[4:-4]
 			if rec == "": break

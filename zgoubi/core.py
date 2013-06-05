@@ -515,6 +515,10 @@ class Line(object):
 		self.spn_file = tmpdir+"/zgoubi.spn"
 		#output = outfile.read()
 		
+		for n, line in enumerate(open(self.res_file)):
+			if "ERROR" in line or "WARNING" in line or "SBR" in line:
+				print "zgoubi.res:",n,":",line
+
 		#os.chdir(orig_cwd)
 		
 		element_types =  [ str(type(element)).split("'")[1].rpartition(".")[2] for element in self.elements() ]
@@ -1344,6 +1348,13 @@ class Results(object):
 			all_c = self.get_all(file)
 		except IOError:
 			zlog.warn("Could not read %s. returning empty bunch" % file)
+			empty_bunch = zgoubi.bunch.Bunch(nparticles=0, rigidity=0)
+			if old_bunch != None:
+				empty_bunch.mass = old_bunch.mass
+				empty_bunch.charge = old_bunch.charge
+			return empty_bunch
+		except EmptyFileError:
+			zlog.warn("%s empty. returning empty bunch" % file)
 			empty_bunch = zgoubi.bunch.Bunch(nparticles=0, rigidity=0)
 			if old_bunch != None:
 				empty_bunch.mass = old_bunch.mass
