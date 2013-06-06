@@ -3,6 +3,7 @@ from distutils.core import setup
 from distutils.sysconfig import get_python_lib
 import sys
 import os
+import errno
 from glob import glob
 
 # if sphinx is available add a build_doc option
@@ -25,6 +26,19 @@ except OSError:
 	pass
 
 MAIN_VERSION = '0.4.1'
+
+# check that we have write access to zgoubi/version.py
+try:
+	f = open("zgoubi/version.py","w")
+	f.close()
+	f =open("install.log","w")
+	f.close()
+	f =open("build/lib/zgoubi/version.py","w")
+	f.close()
+except IOError, exc:
+	if exc.errno == errno.EACCES:
+		print "ERROR: Permission denied updating zgoubi/version.py, build and/or install.log.\nIf they are owned by root, due to previously running install as root please remove them (eg. sudo ./setup.py clean --all ; sudo rm install.log zgoubi/version.py)."
+		exit(1)
 
 if (os.path.exists(".bzr") and
 	os.system("bzr version-info --format=python > zgoubi/version.py") == 0 and
