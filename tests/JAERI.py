@@ -1,4 +1,13 @@
 # -*- coding: utf-8 -*-
+def are_close(a,b,tol):
+	if abs(a) < tol or abs(b) < tol:
+		if abs(a-b) < tol:
+			return True
+	else:
+		if (abs(a-b)/a) < tol:
+			return True
+	return False
+
 
 head = Line("head")
 ob = OBJET2(BORO=ke_to_rigidity(35e6, PROTON_MASS))
@@ -69,8 +78,15 @@ twissline.add(MATRIX(IORD=1,IFOC=11))
 twissline.add(END())
 twissline.full_tracking(False)
 r = twissline.run(xterm=False)
+r.parse_matrix()
+
+tune = r.get_tune()
+print "tune", tune
+assert are_close( tune[0], 0.20999960, 1e-6 ) # zgoubi 261 values
+assert are_close( tune[1], 0.19500105, 1e-6 ) # zgoubi 261 values
+
 twissparam = r.get_twiss_parameters()
-print twissparam
+print "twiss params", twissparam
 
 twiss_profiles = get_twiss_profiles(twissline,'twiss_profiles.txt')
 
@@ -119,15 +135,6 @@ zgoubi_data_t = [twiss_profiles['label'],twiss_profiles['s'],twiss_profiles['bet
 zgoubi_data = zip(*zgoubi_data_t)
 
 cd = chris_data
-
-def are_close(a,b,tol):
-	if abs(a) < tol or abs(b) < tol:
-		if abs(a-b) < tol:
-			return True
-	else:
-		if (abs(a-b)/a) < tol:
-			return True
-	return False
 
 
 print "#element\tdistance\tbetah\talphah\tbetav\talphav"
