@@ -20,22 +20,22 @@ dch2 = DRIFT('dch2', XL=10)
 
 bore_rad = 20 * cm
 qf1_b0 = 0.475020 * bore_rad * T # field at tip, T
-qf1 = QUADRUPO('qf1', XL=25, B_0=qf1_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas)
+qf1 = QUADRUPO('qf1', XL=25, B_0=qf1_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas, KPOS=1)
 
 qd1_b0 = -0.497895 * bore_rad * T # field at tip, T
-qd1 = QUADRUPO('qd1', XL=50, B_0=qd1_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas)
+qd1 = QUADRUPO('qd1', XL=50, B_0=qd1_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas, KPOS=1)
 
 qf2_b0 = 0.540764 * bore_rad * T # field at tip, T
-qf2 = QUADRUPO('qf2', XL=25, B_0=qf2_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas)
+qf2 = QUADRUPO('qf2', XL=25, B_0=qf2_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas, KPOS=1)
 
 qd2_b0 = -0.642090 * bore_rad * T # field at tip, T
-qd2 = QUADRUPO('qd2', XL=50, B_0=qd2_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas)
+qd2 = QUADRUPO('qd2', XL=50, B_0=qd2_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas, KPOS=1)
 
 qf3_b0 = 0.474652 * bore_rad * T # field at tip, T
-qf3 = QUADRUPO('qf3', XL=25, B_0=qf3_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas)
+qf3 = QUADRUPO('qf3', XL=25, B_0=qf3_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas, KPOS=1)
 
 qd3_b0 = -0.499856 * bore_rad * T # field at tip, T
-qd3 = QUADRUPO('qd3', XL=50, B_0=qd3_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas)
+qd3 = QUADRUPO('qd3', XL=50, B_0=qd3_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas, KPOS=1)
 
 angle = 2*pi/16
 hbf_xl = 300 * 2* sin(angle/2) / angle
