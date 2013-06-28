@@ -1557,79 +1557,108 @@ class Results(object):
 
 		return crashes, not_crashes, laps, crash_lap
 	
+	def parse_matrix(self):
+		"""Parse data from output of MATRIX element
+		Used by get_tune(), get_transfer_matrix() and get_twiss_parameters()
+		"""
+
+		has_object5 = 'OBJET5' in self.element_types
+		has_matrix = 'MATRIX' in self.element_types
+				
+		if not (has_object5 and has_matrix):
+			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX element with IORD=1 and IFOC>10 to get tune"
+
+		found_output = False
+		in_matrix = False
+
+		parsed_info = dict(matrix1=None, twiss=None, tune=(-1,-1))
+		tp = numpy.zeros(1,dtype=[('beta_y','f8'),('alpha_y','f8'),('gamma_y','f8'),('disp_y','f8'),('disp_py','f8'),
+						('beta_z','f8'),('alpha_z','f8'),('gamma_z','f8'),('disp_z','f8'),('disp_pz','f8')])
+		matrix_lines = []
+		
+		fh = self.res_fh()
+		while True:
+			try: line = fh.next()
+			except StopIteration: break
+			if line.startswith("******"): # find start of an output block
+				found_output = True
+				try: element_line = fh.next()
+				except StopIteration: break
+				if element_line.strip() == "": continue
+
+				# find element type
+				if "Keyword, label(s)" in element_line: # changed somewhere between svn261 and svn312
+					element_type = element_line.split()[4] #new
+				else:
+					element_type = element_line.split()[1] #old
+
+				line = element_line
+				in_matrix = element_type == "MATRIX"
+
+			if not found_output: continue
+			if in_matrix:
+				matrix_lines.append(line.strip())
+
+		if len(matrix_lines) == 0:
+			raise BadLineError, "Could not find MATRIX output in res file. Maybe beam lost."
+
+		for n,line in enumerate(matrix_lines):
+			if line == "TRANSFER  MATRIX  ORDRE  1  (MKSA units)":
+				matrix1 = numpy.zeros([6,6])
+				for x in xrange(6):
+					matrix1[x] = matrix_lines[x+n+2].split()
+				parsed_info['matrix1'] = matrix1
+			if line == "Beam  matrix  (beta/-alpha/-alpha/gamma) and  periodic  dispersion  (MKSA units)":
+				twissmat = numpy.zeros([6,6])
+				for x in xrange(6):
+					twissmat[x] = matrix_lines[x+n+2].split()
+				tp['beta_y'] = twissmat[0,0]
+				tp['alpha_y'] = -twissmat[1,0]
+				tp['gamma_y'] = twissmat[1,1]
+				tp['disp_y'] = twissmat[0,5]
+				tp['disp_py'] = twissmat[1,5]
+
+				tp['beta_z'] = twissmat[2,2]
+				tp['alpha_z'] = -twissmat[3,2]
+				tp['gamma_z'] = twissmat[3,3]
+				tp['disp_z'] = twissmat[2,5]
+				tp['disp_pz'] = twissmat[3,5]
+				parsed_info['twiss'] = tp
+			if line.startswith("NU_Y"):
+				bits = line.split()
+				nu_y = float(bits[2])
+				nu_z = float(bits[5])
+				parsed_info['tune'] = (nu_y, nu_z)
+
+		return parsed_info
+
+
 	def get_tune(self):
 		"""Returns a tuple (NU_Y, NU_Z) of the tunes.
 		Needs a beam line is an OBJET type 5, and a MATRIX element.
 
 
 		"""
+		tune = self.parse_matrix()["tune"]
 
-		has_object5 = 'OBJET5' in self.element_types
-		has_matrix = 'MATRIX' in self.element_types
-				
-		if not (has_object5 and has_matrix):
-			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX element with IORD=1 and IFOC>10 to get tune"
+		if tune[0] == -1 or tune[1] == -1:
+			zlog.error("could not get tune res file setting to -1")
 
-		found_matrix = False
-		for line in self.res_fh():
-			if "MATRIX" in line:
-				bits = line.split()
-				if bits[0].isdigit() and bits[1] == "MATRIX":
-					found_matrix = True
-			elif found_matrix and "NU" in line:
-				bits = line.split()
-				if (bits[0], bits[1], bits[3], bits[4]) == ("NU_Y", "=", "NU_Z", "="):
-					try:
-						NU_Y = float(bits[2])
-					except ValueError:
-						zlog.error("could not get Y tune from:\n" + line +"setting NU_Y to -1")
-						NU_Y = -1 
-					try:
-						NU_Z = float(bits[5])
-					except ValueError:
-						zlog.error("could not get Z tune from:\n" + line +"setting NU_Z to -1")
-						NU_Z = -1 
-					print "Tune: ", (NU_Y, NU_Z)
-					return (NU_Y, NU_Z)
-		raise NoTrackError, "Could not find MATRIX output, maybe beam lost"
+		return tune
+
 
 	def get_transfer_matrix(self):
 		"""Returns a transfer matrix of the line in (MKSA units).
 		Needs a beam line is an OBJET type 5, and a MATRIX element.
 
 		"""
+		tm = self.parse_matrix()["matrix1"]
 
-		has_object5 = 'OBJET5' in self.element_types
-		has_matrix = 'MATRIX' in self.element_types
-				
-		if not (has_object5 and has_matrix):
-			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX element with IORD=1 and IFOC>10 to get tune"
+		if tm == None:
+			zlog.error("could not get matrix from res file")
 
-		found_matrix = False
+		return tm
 
-		res_fh = self.res_fh()
-		while True:
-			try:
-				line = res_fh.next()
-			except StopIteration:
-				break
-			if not found_matrix and "MATRIX" in line:
-				bits = line.split()
-				if bits[0].isdigit() and bits[1] == "MATRIX":
-					found_matrix = True
-					continue
-			elif found_matrix and "TRANSFER  MATRIX  ORDRE  1  (MKSA units)" in line:
-				matrix_lines = [res_fh.next() for dummy in xrange(30) ]
-				#print "".join(matrix_lines)
-
-				transfer_matrix = numpy.zeros([6,6])
-				for x in range(6):
-					transfer_matrix[x] = matrix_lines[x+1].split()
-
-				return transfer_matrix
-
-
-		raise NoTrackError, "Could not find MATRIX output, maybe beam lost"
 
 	def get_twiss_parameters(self):
 		"""Returns a tuple (beta_y, alpha_y, gamma_y, disp_y, disp_py, beta_z, alpha_z, gamma_z, disp_z, disp_pz) from 
@@ -1646,58 +1675,10 @@ class Results(object):
 		Needs a beam line is an OBJET type 5, and a MATRIX element.
 
 		"""
-		#has_object5 = False
-		#has_matrix = False
-		#for e in self.line.elements():
-		#	t = str(type(e)).split("'")[1].rpartition(".")[2]
-		#	if t == 'OBJET5':
-		#		has_object5 = True
-		#	if t == 'MATRIX':
-		#		has_matrix = True
+		tp = self.parse_matrix()["twiss"]
 
-		tp = numpy.zeros(1,dtype=[('beta_y','f8'),('alpha_y','f8'),('gamma_y','f8'),('disp_y','f8'),('disp_py','f8'),\
-						('beta_z','f8'),('alpha_z','f8'),('gamma_z','f8'),('disp_z','f8'),('disp_pz','f8')])
-
-		has_object5 = 'OBJET5' in self.element_types
-		has_matrix = 'MATRIX' in self.element_types
-		if not (has_object5 and has_matrix):
-			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
-
-		found_matrix = False
-		found_twiss = False
-		found_row1 = False
-		found_row2 = False
-		found_row3 = False
-		found_row4 = False
-		for line in self.res_fh():
-			if "MATRIX" in line:
-				bits = line.split()
-				if bits[0].isdigit() and bits[1] == "MATRIX":
-					found_matrix = True
-			elif found_matrix and "beta/-alpha" in line:
-				found_twiss = True
-			elif found_twiss and not found_row1 and len(line) > 1:
-				row = line.split()
-				tp['beta_y'] = float(row[0])
-				tp['alpha_y'] = -1*float(row[1])
-				tp['disp_y']  = float(row[5])
-				found_row1 = True
-			elif found_row1 and not found_row2 and len(line) > 1:
-				row = line.split()
-				tp['gamma_y'] = float(row[1])
-				tp['disp_py'] = float(row[5])
-				found_row2 = True
-			elif found_row2 and not found_row3 and len(line) > 1:
-				row = line.split()
-				tp['beta_z'] = float(row[2])
-				tp['alpha_z'] = -1*float(row[3])
-				tp['disp_z'] = float(row[5])
-				found_row3 = True
-			elif found_row3 and not found_row4 and len(line) > 1:
-				row = line.split()
-				tp['gamma_z'] = float(row[3])
-				tp['disp_pz'] = float(row[5])
-				found_row4 = True
+		if tp == None:
+			zlog.error("could not get twiss parameters from res file")
 
 		return tp
 
@@ -1723,10 +1704,6 @@ class Results(object):
 				if line.strip().startswith("I, AMQ(1,I)"):
 					break
 				print line,
-
-
-
-
 
 
 	def test_rebelote(self):
