@@ -114,13 +114,25 @@ patches=[
 #"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/zgoubi_parallel_build.diff",
 "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/objet3_2.diff",
 "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/kobj301_2.diff",
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/disable_ETparam_test_code.diff",
 ],
 )
 
+zgoubi_versions["315+patches"] = dict(svnr=315,
+patches=[
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/mcmodel-fix2.diff",
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks.diff",
+#"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/zgoubi_parallel_build.diff",
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/objet3_3.diff",
+],
+)
 
 def install_zgoubi_all(version="261+patches"):
 	check_for_programs()
 	"This currently install a version of zgoubi known to work with pyzgoubi"
+	if version in ['list', 'help']:
+		print "Available versions:", " ".join(zgoubi_versions.keys())
+		exit(0)
 	if not zgoubi_versions.has_key(version):
 		raise ZgoubiBuildError("Unknown version: "+ version+ "\nTry "+ " ".join(zgoubi_versions.keys()))
 	print "Preparing to install zgoubi:", version
