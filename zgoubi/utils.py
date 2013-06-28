@@ -956,16 +956,16 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	else:
 		twissparam = input_twiss_parameters
 
-	beta_y_0  = twissparam['beta_y']
-	alpha_y_0 = twissparam['alpha_y']
-	gamma_y_0 = twissparam['gamma_y']
-	disp_y_0  = twissparam['disp_y']
-	disp_py_0 = twissparam['disp_py']
-	beta_z_0  = twissparam['beta_z']
-	alpha_z_0 = twissparam['alpha_z']
-	gamma_z_0 = twissparam['gamma_z']
-	disp_z_0  = twissparam['disp_z']
-	disp_pz_0 = twissparam['disp_pz']
+	beta_y_0  = twissparam['beta_y'][0]
+	alpha_y_0 = twissparam['alpha_y'][0]
+	gamma_y_0 = twissparam['gamma_y'][0]
+	disp_y_0  = twissparam['disp_y'][0]
+	disp_py_0 = twissparam['disp_py'][0]
+	beta_z_0  = twissparam['beta_z'][0]
+	alpha_z_0 = twissparam['alpha_z'][0]
+	gamma_z_0 = twissparam['gamma_z'][0]
+	disp_z_0  = twissparam['disp_z'][0]
+	disp_pz_0 = twissparam['disp_pz'][0]
 		
 	zlog.debug("Initial parameters:\nbeta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0\n%s, %s, %s, %s, %s, %s" % (beta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0))
 	if beta_y_0 == 0 or beta_z_0 == 0:
