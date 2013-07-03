@@ -35,6 +35,7 @@ try:
 	f.close()
 	f =open("build/lib/zgoubi/version.py","w")
 	f.close()
+	os.remove("build/lib/zgoubi/version.py")
 except IOError, exc:
 	if exc.errno == errno.EACCES:
 		print "ERROR: Permission denied updating zgoubi/version.py, build and/or install.log.\nIf they are owned by root, due to previously running install as root please remove them (eg. sudo ./setup.py clean --all ; sudo rm install.log zgoubi/version.py)."
