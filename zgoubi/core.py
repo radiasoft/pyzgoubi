@@ -569,7 +569,7 @@ class Line(object):
 			"A worker function. Gets run in threads"
 			while True:
 				try:
-					start_index, work_bunch = in_q.get(block=True, timeout=1)
+					start_index, work_bunch = in_q.get(block=True, timeout=0.1)
 				except Queue.Empty:
 					#print "get() timed out in thread", name
 					if stop_flag.is_set():
@@ -587,11 +587,16 @@ class Line(object):
 				in_q.task_done()
 				#print "Thread", name, "task done"
 
+		# pre process line output, so it does not have to be done in each thread
+		line_output = self.output()
+		new_line = Line(self.name)
+		new_line.add(FAKE_ELEM(line_output))
+
 		stop_flag = threading.Event()
 		for thread_n in xrange(n_threads):
 			t = threading.Thread(target=worker,
 			                     kwargs={'in_q':in_q, 'out_q':out_q,
-			                     'work_line':self, 'name':thread_n, 'stop_flag':stop_flag})
+			                     'work_line':new_line, 'name':thread_n, 'stop_flag':stop_flag})
 			t.setDaemon(True)
 			t.start()
 			#print "Created thread", x

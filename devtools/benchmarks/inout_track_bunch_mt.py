@@ -24,23 +24,33 @@ for low_overhead in [True, False]:
 	else:
 		line_seg.add(QUADRUPO(XL=1, R_0=5, B_0=0.1, XPAS=(1,1,1)))
 
-	t0 = time.time()
+	itimes = []
+	#t0 = time.time()
 	for rep_x in xrange(rep):
+		ti0 = time.time()
 		st_bunch = line_seg.track_bunch_mt(b_orig, n_threads=1, max_particles=1e3)
-	t1 = time.time()
-	st_time = (t1-t0)/rep
+		ti1 = time.time()
+		itimes.append(ti1 - ti0)
+	#t1 = time.time()
+	#st_time = (t1-t0)/rep
+	st_time = min(itimes)
 	st_end = st_bunch.particles()[['Y', 'P', 'Z', 'T', 'D']].view(float).reshape([-1, 5])
 
 	n_threads = []
 	times = []
 	for x in xrange(1,l_max_cpu + 1):
 		n_thread = 2 ** x
-		t0 = time.time()
+		itimes = []
+		#t0 = time.time()
 		for rep_x in xrange(rep):
+			ti0 = time.time()
 			mt_bunch = line_seg.track_bunch_mt(b_orig, n_threads=n_thread, max_particles=1e3)
-		t1 = time.time()
-		mt_time = (t1-t0) / rep
-		times.append(mt_time)
+			ti1 = time.time()
+			itimes.append(ti1 - ti0)
+		#t1 = time.time()
+		#mt_time = (t1-t0) / rep
+		#times.append(mt_time)
+		times.append(min(itimes))
 		n_threads.append(n_thread)
 
 		mt_end = mt_bunch.particles()[['Y', 'P', 'Z', 'T', 'D']].view(float).reshape([-1, 5])
