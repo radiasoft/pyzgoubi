@@ -2,6 +2,7 @@
 import os
 import shutil
 import subprocess
+import urllib2
 from zgoubi import common
 
 class ZgoubiBuildError(Exception):
@@ -22,10 +23,6 @@ def check_for_programs():
 		ret = subprocess.call(['svn', '--version'], stdout=devnull)
 	except OSError:
 		raise ZgoubiBuildError("svn not found: install subversion")
-	try:
-		ret = subprocess.call(['wget', '--version'], stdout=devnull)
-	except OSError:
-		raise ZgoubiBuildError("wget not found: install wget")
 	try:
 		ret = subprocess.call(['patch', '--version'], stdout=devnull)
 	except OSError:
@@ -69,9 +66,13 @@ def apply_zgoubi_patches(patches):
 	for patch in patches:
 		print "applying", patch
 		patchname = patch.rpartition("/")[2]
-		ret = subprocess.call(['wget', patch, "-O", patchname], cwd=zgoubi_build_dir2)
-		if ret != 0:
-			raise ZgoubiBuildError("Patch download failed: %s" % patch)
+		pf = open(os.path.join(zgoubi_build_dir2, patchname),"w")
+		try:
+			pf.write( urllib2.urlopen(patch).read())
+		except urllib2.HTTPError as e:
+			raise ZgoubiBuildError("Patch download failed (Error %s): %s" % (e.code, patch))
+			
+		pf.close()
 		ret = subprocess.call('patch -p0 < %s' % patchname, cwd=zgoubi_build_dir2, shell=True)
 		if ret != 0:
 			raise ZgoubiBuildError("Patch application failed: %s" % patch)
