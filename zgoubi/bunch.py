@@ -507,7 +507,7 @@ class Bunch(object):
 			dist[:, 4] = self.coords['S']
 			dist[:, 5] = self.coords['D']
 			#dist = dist.reshape(nparts * 2, 3)
-			fh.write("# bunch\n\n\n\n")
+			fh.write("# ASCII bunch coordinates from pyzgoubi\n#Y,T,Z,P,S,D\n\n\n")
 			numpy.savetxt(fh, dist)
 		fh.close()
 
