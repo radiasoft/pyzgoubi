@@ -518,6 +518,8 @@ class Line(object):
 		for n, line in enumerate(open(self.res_file)):
 			if "ERROR" in line or "WARNING" in line or "SBR" in line:
 				print "zgoubi.res:",n,":",line
+				if "SBR OBJ3 -> error in  reading  file" in line:
+					raise ZgoubiRunError(line)
 
 		#os.chdir(orig_cwd)
 		
