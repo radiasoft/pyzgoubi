@@ -1632,7 +1632,7 @@ class Results(object):
 				tp['disp_pz'] = twissmat[3,5]
 				parsed_info['twiss'] = tp
 			if line.startswith("NU_Y"):
-				print "\n# ".join(matrix_lines)
+				#print "\n# ".join(matrix_lines)
 				bits = line.split()
 				if bits[2] == "undefined" or bits[5] == "undefined":
 					zlog.error("Tune is undefined")
