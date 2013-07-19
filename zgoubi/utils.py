@@ -1061,7 +1061,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
  
 	if file_result != None:
 		fresults = open(file_result, 'w')
-		print >> fresults, '%9s %5s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s' % ("s", "label", \
+		print >> fresults, '#%8s %5s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s' % ("s", "label", \
 			"mu_y", "beta_y", "alpha_y", "gamma_y","disp_y","disp_py",\
 			"mu_z", "beta_z", "alpha_z", "gamma_z","disp_z","disp_pz")
               
