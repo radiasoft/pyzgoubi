@@ -1633,13 +1633,21 @@ class Results(object):
 				parsed_info['twiss'] = tp
 			if line.startswith("NU_Y"):
 				#print "\n# ".join(matrix_lines)
+				nu_y = nu_z = -1
 				bits = line.split()
-				if bits[2] == "undefined" or bits[5] == "undefined":
-					zlog.error("Tune is undefined")
-					nu_y = nu_z = -1
-				else:
+				if bits[2] == "undefined":
+					zlog.error("Horizontal tune is undefined")
+				if bits[5] == "undefined":
+					zlog.error("Vertical tune is undefined")
+				try:
 					nu_y = float(bits[2])
+				except ValueError:
+					pass
+				try:
 					nu_z = float(bits[5])
+				except ValueError:
+					pass
+
 				parsed_info['tune'] = (nu_y, nu_z)
 
 		return parsed_info

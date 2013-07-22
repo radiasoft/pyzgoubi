@@ -1352,6 +1352,8 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 	"""
 
 	import zgoubi.core as zg
+	emit_list_h = list(emit_list_h)
+	emit_list_v = list(emit_list_v)
 
 	#create objet so initial phase settings can be set
 	for e in line.element_list:
