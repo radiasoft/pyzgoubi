@@ -1041,10 +1041,10 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		line.replace(ob2,objet)
 	else:
 		#disp_y_list = [0]*len(Y_alltracks[0])
-		disp_y_list = [None]*len(Y_alltracks[0])
-		disp_py_list = [None]*len(Y_alltracks[0])
-		disp_z_list = [None]*len(Y_alltracks[0])
-		disp_pz_list = [None]*len(Y_alltracks[0])
+		disp_y_list = [-1]*len(Y_alltracks[0])
+		disp_py_list = [-1]*len(Y_alltracks[0])
+		disp_z_list = [-1]*len(Y_alltracks[0])
+		disp_pz_list = [-1]*len(Y_alltracks[0])
 		phase_slip = None
 		gamma_transition = None
 
