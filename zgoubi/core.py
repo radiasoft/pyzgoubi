@@ -489,8 +489,9 @@ class Line(object):
 		command = zgoubi_settings['zgoubi_path']
 		if silence:
 			command += " > zgoubi.stdout 2> zgoubi.sdterr"
-		#exe_result = os.system(command)
-		z_proc = subprocess.Popen(command, shell=True, cwd=tmpdir)
+			z_proc = subprocess.Popen(command, shell=True, cwd=tmpdir)
+		else:
+			z_proc = subprocess.Popen(command, shell=False, cwd=tmpdir)
 		exe_result = z_proc.wait()
 
 		if exe_result != 0:
