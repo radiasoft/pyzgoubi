@@ -792,53 +792,70 @@ class Line(object):
 			globbed_files = glob(pattern)
 			file_paths += globbed_files
 		self.input_files += file_paths
+	
+
+	def _find_by_index(self, index):
+		"""Iterate through sub lines to find element as if indexed in a flat list
+		returns [line, index_in_line]"""
+		stack = [[self,-1]]
+		for n in xrange(index+1):
+			if stack[-1][1]+1 >= len(stack[-1][0].element_list):
+				# step back up
+				stack.pop()
+				if len(stack) == 0:
+					raise ValueError("Index %s out of range"%index)
+
+			# step along
+			stack[-1][1] +=1
+
+			if isinstance(stack[-1][0].element_list[stack[-1][1]], Line):
+				# step in
+				stack.append([stack[-1][0].element_list[stack[-1][1]],0])
+		return  stack[-1]
 		
 	def replace(self, elementold, elementnew, select_index=0):
-		"Replace an element in the line. setting select_index to n will replace the nth occurence of that item. If select index is not set, the first occurence is replaced"
+		"""Replace an element in the line. setting select_index to n will replace the nth occurence of that item. If select index is not set, the first occurence is replaced.
+		
+		Note: elementold must be the same instance as an element in the Line"""
 
-		indices = []
-		i = -1
-		try:
-			while 1:
-				i = self.element_list.index(elementold, i+1)
-				indices.append(i)
-		except ValueError:
-			pass
+		indices = self.find_elements(elementold)
+		if len(indices) == 0:
+			raise ValueError("elementold not found in line")
+		if select_index >= len(indices):
+			raise ValueError("only %s instances of elementold in line"%len(indices))
 		index = indices[select_index]
-
-		self.element_list.pop(index)
-		self.element_list.insert(index, elementnew)
+		subline, pos = self._find_by_index(index)
+		subline.element_list[pos] = elementnew
 
 	def insert(self, index, *elements):
-		"Insert elements into the line before position given by index"
+		"Insert elements into the line before position given by index, treats sub lines as linear list"
+		subline, pos = self._find_by_index(index)
 		for element in elements:
-			self.element_list.insert(index, element)
+			subline.element_list.insert(pos, element)
 
 	def prepend(self, *elements):
-			"Add an elements to the line"
-			for element in elements:
-				self.element_list.insert(0,element)
+		"Add a elements to the start of the line"
+		for element in elements:
+			self.element_list.insert(0,element)
 
-				try:
-					if 'OBJET' in element._zgoubi_name:
-						self.full_line = True
-				except AttributeError:
-					pass
+			try:
+				if 'OBJET' in element._zgoubi_name:
+					self.full_line = True
+			except AttributeError:
+				pass
 			
 	def remove(self, index):
-		"Remove element at index"
-		self.element_list.pop(index)
+		"Remove element at index, treats sub lines as linear list"
+		subline, pos = self._find_by_index(index)
+		subline.element_list.pop(pos)
+
 
 	def find_elements(self, element):
-		"Returns all the positions of element in line"
+		"Returns all the positions of element in line, treats sub lines as linear list"
 		indices = []
-		i = -1
-		try:
-			while 1:
-				i = self.element_list.index(element, i+1)
-				indices.append(i)
-		except ValueError:
-			pass	
+		for n, e in enumerate(self.elements()):
+			if e is element:
+				indices.append(n)
 
 		return indices
 			
