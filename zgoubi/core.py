@@ -414,10 +414,11 @@ class Line(object):
 		return line_good
 				
 	
-	def full_tracking(self, enable=True):
+	def full_tracking(self, enable=True, drift_to_multi=False):
 		"""Enable full tracking on magnetic elements.
 		This works by setting IL=2 for any element with an IL parameter.
 		use line.full_tracking(False) to disable tracking
+		drift_to_multi=True replaces drifts with weak (B_1 = 1e-99) multipoles
 
 		"""
 		for element in self.elements():
@@ -435,6 +436,14 @@ class Line(object):
 			#	print element.output()
 			except ValueError:
 				pass
+
+		if drift_to_multi:
+			for element in self.elements():
+				if element._zgoubi_name == "DRIFT" and element.XL != 0:
+					fake_drift = MULTIPOL(element.label1, element.label2,
+					XL=element.XL, XPAS=(10,10,10),
+					B_1=1e-99, IL=2)
+					self.replace(element, fake_drift)
 			
 	def remove_looping(self):
 		"removes any REBELOTE elements from the line"
