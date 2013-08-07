@@ -407,6 +407,10 @@ class Line(object):
 			if n != 0 and isobjet:
 				zlog.warn("OBJET/MCOBJET appears as element number %d. (Should only be first)" % n)
 				line_good = False
+
+			if hasattr(element, 'XPAS'):
+				if element.XPAS == 0:
+					zlog.warn("Element %s type %s has XPAS=0 (integration step)"%(n, element._zgoubi_name))
 		if not has_end:
 				zlog.warn("No END element found")
 				line_good = False
@@ -442,7 +446,7 @@ class Line(object):
 				if element._zgoubi_name == "DRIFT" and element.XL != 0:
 					fake_drift = MULTIPOL(element.label1, element.label2,
 					XL=element.XL, XPAS=(10,10,10),
-					B_1=1e-99, IL=2)
+					B_1=1e-99, IL=2, KPOS=1)
 					self.replace(element, fake_drift)
 			
 	def remove_looping(self):
