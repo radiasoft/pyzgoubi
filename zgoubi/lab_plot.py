@@ -4,21 +4,24 @@ import numpy as np
 from zgoubi.core import zlog
 
 null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL ".split()
-rect_elements = "DRIFT MULTIPOL QUADRUPO".split()
+rect_elements = "DRIFT MULTIPOL QUADRUPO BEND".split()
 
 
 
 class LabPlotElement(object):
-	def __init__(self, z_element, entry_coord, entry_angle):
+	def __init__(self, z_element, prev_coord, prev_angle, boro=None):
 		self.z_element = z_element
-		self.entry_coord = entry_coord
-		self.entry_angle = entry_angle
+		self.prev_coord = prev_coord
+		self.prev_angle = prev_angle
+
+		self.entry_coord = prev_coord # coord of the entry of the ref line (exit of previous element)
+		self.entry_angle = prev_angle # angle of the entry of the ref line
 		self.element_type =  z_element._zgoubi_name
 
-		print "LabPlotElement(",z_element._zgoubi_name, entry_coord, entry_angle, ")"
+		print "LabPlotElement(",z_element._zgoubi_name, prev_coord, prev_angle, ")"
 
-		self.exit_coord = list(self.entry_coord)
-		self.exit_angle = self.entry_angle
+		self.exit_coord = list(self.entry_coord) # coord of the exit of the ref line
+		self.exit_angle = self.entry_angle #  angle of the exit of the ref line
 
 		if self.element_type in null_elements:
 			# does not effect locations
@@ -28,8 +31,34 @@ class LabPlotElement(object):
 			# step by length, no angle change
 			self.length = self.z_element.XL
 			self.exit_coord = self.transform(self.length,0)
-			if self.element_type != 'DRIFT':
-				self.width =  self.z_element.B_0 * 2
+			self.entrance_wedge_angle = 0
+			self.exit_wedge_angle = 0
+
+			if self.element_type in "MULTIPOL QUADRUPO".split():
+				self.width =  self.z_element.R_0
+			else:
+				self.width = 20
+
+			if self.element_type in "MULTIPOL QUADRUPO".split():
+				if self.z_element.KPOS != 1:
+					raise ValueError("Only %s with KPOS=1 is currently implemented"%self.element_type)
+			elif self.element_type in "BEND":
+				if boro == None : raise ValueError("Must set boro for %s"%self.element_type)
+				angle = asin(self.z_element.B1 * self.z_element.XL / 2 / boro)
+				self.entrance_wedge_angle = self.z_element.W_E - angle
+				self.exit_wedge_angle = self.z_element.W_S - angle
+				if self.z_element.KPOS  == 1:
+					pass
+				elif self.z_element.KPOS  == 3:
+					self.entry_angle -= angle
+					self.exit_angle -= 2*angle
+					self.exit_coord = self.transform(self.length,0)
+				else:
+					raise ValueError("Only %s with KPOS=1 or 3 is currently implemented"%self.element_type)
+				print "w angles", self.entrance_wedge_angle, self.exit_wedge_angle
+
+
+
 
 		elif self.element_type == "CHANGREF":
 			# change reference element
@@ -66,17 +95,28 @@ class LabPlotElement(object):
 		t = self.transform
 		if (self.element_type in rect_elements
 			and self.element_type != 'DRIFT'):
+			if self.entrance_wedge_angle == 0 and self.exit_wedge_angle == 0:
+				points = [t(0,self.width/2),
+						  t(0,-self.width/2),
+						  t(self.length,-self.width/2),
+						  t(self.length,self.width/2),
+						  t(0,self.width/2)]
+			elif abs(self.entrance_wedge_angle) > pi/2:
+				raise ValueError("entrance_wedge_angle of %s greater than pi/2"%self.element_type)
+			elif abs(self.exit_wedge_angle) > pi/2:
+				raise ValueError("exit_wedge_angle of %s greater than pi/2"%self.element_type)
+			else:
+				entry_offset = self.width/2 * sin(self.entrance_wedge_angle)
+				exit_offset = self.width/2 * sin(self.exit_wedge_angle)
+				points = [t(0+entry_offset,self.width/2),
+						  t(0-entry_offset,-self.width/2),
+						  t(self.length+exit_offset,-self.width/2),
+						  t(self.length-exit_offset,self.width/2),
+						  t(0+entry_offset,self.width/2)]
 
-			points = [t(0,self.width/2),
-			          t(0,-self.width/2),
-			          t(self.length,-self.width/2),
-			          t(self.length,self.width/2),
-			          t(0,self.width/2)]
 
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, "b-")
-
-
 
 		
 class LabPlotDrawer(object):
@@ -96,6 +136,9 @@ class LabPlotDrawer(object):
 
 	
 	def draw_line(self, xs,ys, style):
+		xs = np.array(xs)
+		ys = np.array(ys)
+		#if np.any(xs < -10): raise ValueError
 		if self.mode == "matplotlib":
 			self.ax.plot(xs, ys, style)
 			
@@ -113,15 +156,13 @@ class LabPlotDrawer(object):
 		else: ValueError("Can't handle mode "+ self.mode)
 
 
-
-
-
 class LabPlot(object):
 	"""A plotter for beam lines and tracks.
 	
 	"""
-	def __init__(self, line):
+	def __init__(self, line, boro=None):
 		"""Creates a new plot from the line.
+		If using an element that adjusts it shape based on BORO, then it must be passed in
 
 		"""
 		
@@ -129,18 +170,15 @@ class LabPlot(object):
 		self.elements = []
 		self.element_label1 = []
 		self.tracks = []
-
+		self.boro = boro
 		
 		self._scan_line()
-
-
 		
 
 	def _scan_line(self):
 		"""Scan through the line, and make a note of where all the elements are.
 		
 		"""
-
 		angle = 0
 		position = [0, 0]
 
@@ -151,7 +189,7 @@ class LabPlot(object):
 					zlog.warn("Repeated label '%s'"%label)
 			else:
 				label = ""
-			lpelem = LabPlotElement(elem, position, angle)
+			lpelem = LabPlotElement(elem, position, angle, boro=self.boro)
 			self.elements.append(lpelem)
 			self.element_label1.append(label)
 			angle = lpelem.exit_angle
@@ -166,7 +204,7 @@ class LabPlot(object):
 
 		for track in self.tracks:
 			xs, ys = zip(*track)
-			self.lpd.draw_line(xs, ys, "r-")
+			self.lpd.draw_line(xs, ys, "r-x")
 
 
 		#self.lpd.show()
@@ -202,9 +240,10 @@ class LabPlot(object):
 		noels = sorted(list(noels))
 
 		# dummy tracks if not passed
-		dummy = np.zeros([0], dtype=[('ID',int),('PASS',int),('NOEL',int)])
+		dummy = np.zeros([0], dtype=[('ID',int),('PASS',int),('NOEL',int),('element_label1','S10')])
 		if ftrack is None: ftrack = dummy
 		if ptrack is None: ptrack = dummy
+
 
 		print pids, passes, noels
 		print np.unique(ftrack['element_label1'])
@@ -240,10 +279,16 @@ class LabPlot(object):
 						x = t['X']
 						xt, yt = self.elements[el_ind].transform(x,y)
 						this_track.append([xt,yt])
+						if xt < -100:
+							print "wide", t
+							print x, y, xt, yt
+							print
 					for t in ftrack_ppn:
 						# fai has no x coord, and takes label from element before it
 						y = t['Y']
 						x = 0
+
+						# index error here may mean plt track passed as fai track, maybe there should be some way to check
 						xt, yt = self.elements[el_ind+1].transform(x,y)
 						this_track.append([xt,yt])
 
