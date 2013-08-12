@@ -11,10 +11,10 @@ rect_elements = "DRIFT MULTIPOL QUADRUPO BEND".split()
 class LabPlotElement(object):
 	def __init__(self, z_element, prev_coord, prev_angle, boro=None):
 		self.z_element = z_element
-		self.prev_coord = prev_coord
+		self.prev_coord = list(prev_coord)
 		self.prev_angle = prev_angle
 
-		self.entry_coord = prev_coord # coord of the entry of the ref line (exit of previous element)
+		self.entry_coord = list(prev_coord) # coord of the entry of the ref line (exit of previous element)
 		self.entry_angle = prev_angle # angle of the entry of the ref line
 		self.element_type =  z_element._zgoubi_name
 
@@ -46,7 +46,7 @@ class LabPlotElement(object):
 				if boro == None : raise ValueError("Must set boro for %s"%self.element_type)
 				angle = asin(self.z_element.B1 * self.z_element.XL / 2 / boro)
 				self.entrance_wedge_angle = self.z_element.W_E - angle
-				self.exit_wedge_angle = self.z_element.W_S - angle
+				self.exit_wedge_angle = self.z_element.W_S - angle 
 				if self.z_element.KPOS  == 1:
 					pass
 				elif self.z_element.KPOS  == 3:
@@ -55,7 +55,6 @@ class LabPlotElement(object):
 					self.exit_coord = self.transform(self.length,0)
 				else:
 					raise ValueError("Only %s with KPOS=1 or 3 is currently implemented"%self.element_type)
-				print "w angles", self.entrance_wedge_angle, self.exit_wedge_angle
 
 
 
@@ -72,15 +71,48 @@ class LabPlotElement(object):
 			self.exit_coord[1] += self.z_element.YCE * cos(self.exit_angle)
 
 
+		elif self.element_type == "DIPOLE":
+			self.dip_at = radians(self.z_element.AT) # sector angle of magnet region
+			self.dip_re = self.z_element.RE # radius at entry
+			self.dip_rs = self.z_element.RS # radius at exit
+			self.dip_te = self.z_element.TE # radius at entry
+			self.dip_ts = self.z_element.TS # radius at exit
+			self.width = self.dip_re
+			if self.dip_te != 0 or self.dip_ts != 0:
+				raise ValueError("Non zero TE or TS not implemented for %s"%self.element_type)
+
+			# assume local coords have origin at entry, with Y in middle of magnet pointing and machine center
+			self.entry_angle += self.dip_at / 2
+			self.exit_angle -= self.dip_at
+			self.sector_center_coord = list(self.entry_coord)
+			self.sector_center_coord[0] += self.dip_re * sin(self.entry_angle - self.dip_at/2)
+			self.sector_center_coord[1] -= self.dip_re * cos(self.entry_angle - self.dip_at/2)
+
+			self.exit_coord[0] = self.sector_center_coord[0] + self.dip_rs * sin(-self.exit_angle)
+			self.exit_coord[1] = self.sector_center_coord[1] + self.dip_rs * cos(-self.exit_angle)
+			
+
+
+
+
+
 		else:
 			raise ValueError("Can't handle element "+ self.element_type)
 	
 	def transform(self, x, y):
-		x0, y0 = self.entry_coord # FIXME how to handle transform in changref
-		a0 = self.entry_angle
+		if self.element_type != "DIPOLE":
+			x0, y0 = self.entry_coord # FIXME how to handle transform in changref
+			a0 = self.entry_angle
 
-		x1 = x0 + x * cos(a0) - y * sin(a0)
-		y1 = y0 + y * cos(a0) + x * sin(a0)
+			x1 = x0 + x * cos(a0) - y * sin(a0)
+			y1 = y0 + y * cos(a0) + x * sin(a0)
+		else:
+			# coords are in polar
+			x0, y0 = self.sector_center_coord
+			a0 = self.prev_angle
+
+			x1 = x0 + y * sin(-a0 + x)
+			y1 = y0 + y * cos(-a0 + x)
 		return [x1, y1]
 
 	def draw_ref_line(self, lpd):
@@ -114,9 +146,26 @@ class LabPlotElement(object):
 						  t(self.length-exit_offset,self.width/2),
 						  t(0+entry_offset,self.width/2)]
 
-
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, "b-")
+
+		if self.element_type == "DIPOLE":
+			# in polar
+			re = self.dip_re
+			w = self.width
+			a = self.dip_at
+			arcsteps = 10
+			points = [ t(0, re - w/2),
+			           t(0, re + w/2)]
+			for a1 in np.linspace(0,a,arcsteps):
+				points.append(t(a1, re + w/2))
+			points.append(t(a, re + w/2))
+			points.append(t(a, re - w/2))
+			for a1 in np.linspace(0,a,arcsteps):
+				points.append(t(a1, re - w/2))
+
+			xs, ys = zip(*points)
+			lpd.draw_line(xs, ys, "b-x")
 
 		
 class LabPlotDrawer(object):
@@ -129,6 +178,7 @@ class LabPlotDrawer(object):
 			from matplotlib.lines import Line2D
 
 			self.fig = plt.figure()
+			self.fig.clf()
 			self.ax = self.fig.add_subplot(111)
 			self.ax.set_aspect('equal', adjustable='datalim')
 		else:
@@ -204,7 +254,7 @@ class LabPlot(object):
 
 		for track in self.tracks:
 			xs, ys = zip(*track)
-			self.lpd.draw_line(xs, ys, "r-x")
+			self.lpd.draw_line(xs, ys, "r-")
 
 
 		#self.lpd.show()
@@ -260,6 +310,8 @@ class LabPlot(object):
 				for noel in noels:
 					ftrack_ppn = ftrack_pp[ftrack_pp['NOEL'] == noel]
 					ptrack_ppn = ptrack_pp[ptrack_pp['NOEL'] == noel]
+					if len(ftrack_ppn) == 0 and len(ptrack_ppn) == 0:
+						continue
 
 					label = ""
 					if len(ftrack_ppn) > 0: label=ftrack_ppn[0]['element_label1']
@@ -267,23 +319,20 @@ class LabPlot(object):
 					else:
 						ValueError("No label at element number %s" % noel)
 					label = label.strip()
-					print label
 
 					try:
 						el_ind = self.element_label1.index(label)
 					except ValueError:
-						raise ValueError("Track contains label '%s' not found in line"%label)
+						raise ValueError("Track contains label '%s' not found in line. NOEL=%s"%(label, noel))
 
 					for t in ptrack_ppn:
+						#if t['IEX'] != 1: break
 						y = t['Y']
 						x = t['X']
 						xt, yt = self.elements[el_ind].transform(x,y)
 						this_track.append([xt,yt])
-						if xt < -100:
-							print "wide", t
-							print x, y, xt, yt
-							print
 					for t in ftrack_ppn:
+						#if t['IEX'] != 1: break
 						# fai has no x coord, and takes label from element before it
 						y = t['Y']
 						x = 0
@@ -293,7 +342,8 @@ class LabPlot(object):
 						this_track.append([xt,yt])
 
 				#print this_track
-				self.tracks.append(this_track)
+				if len(this_track) > 0 :
+					self.tracks.append(this_track)
 
 					
 
