@@ -154,18 +154,18 @@ class LabPlotElement(object):
 			re = self.dip_re
 			w = self.width
 			a = self.dip_at
-			arcsteps = 10
+			arcsteps = 20
 			points = [ t(0, re - w/2),
 			           t(0, re + w/2)]
 			for a1 in np.linspace(0,a,arcsteps):
 				points.append(t(a1, re + w/2))
 			points.append(t(a, re + w/2))
 			points.append(t(a, re - w/2))
-			for a1 in np.linspace(0,a,arcsteps):
+			for a1 in np.linspace(a,0,arcsteps):
 				points.append(t(a1, re - w/2))
 
 			xs, ys = zip(*points)
-			lpd.draw_line(xs, ys, "b-x")
+			lpd.draw_line(xs, ys, "b-")
 
 		
 class LabPlotDrawer(object):
@@ -273,12 +273,10 @@ class LabPlot(object):
 		passes = set()
 		noels = set()
 		if ftrack is not None:
-			print ftrack.dtype.names
 			pids  |= set(np.unique(ftrack['ID']))
 			passes  |= set(np.unique(ftrack['PASS']))
 			noels  |= set(np.unique(ftrack['NOEL']))
 		if ptrack is not None:
-			print ptrack.dtype.names
 			pids |= set(np.unique(ptrack['ID']))
 			passes  |= set(np.unique(ptrack['PASS']))
 			noels  |= set(np.unique(ptrack['NOEL']))
@@ -294,10 +292,6 @@ class LabPlot(object):
 		if ftrack is None: ftrack = dummy
 		if ptrack is None: ptrack = dummy
 
-
-		print pids, passes, noels
-		print np.unique(ftrack['element_label1'])
-		print np.unique(ptrack['element_label1'])
 
 		# per particle, per lap, per element
 		for pid in pids:
