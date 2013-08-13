@@ -251,12 +251,13 @@ def read_file(fname):
 				except ValueError:
 					new_row = []
 					for s in row:
-						print s
 						if len(s)>5 and s[1]=='.' and s[-4] == '-':
-							s = s[:-4] + 'E' + s[-4:]
+							ns = s[:-4] + 'E' + s[-4:]
+							zlog.warn("Replaced %s with %s (%s)"%(s, ns, float(ns)))
+							s = ns
 						new_row.append(s)
 
-					file_data2[n] = numpy.array(new_row, dtype= numpy.dtype(data_type))
+					file_data2[n] = numpy.array(tuple(new_row), dtype= numpy.dtype(data_type))
 
 
 	if file_def["file_mode"] == "binary":
