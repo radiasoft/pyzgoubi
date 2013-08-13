@@ -15,8 +15,10 @@ from zgoubi.constants import *
 from zgoubi.exceptions import *
 from zgoubi.rel_conv import *
 import itertools
-from zgoubi.core import zlog, dep_warn
+from zgoubi.core import zlog, dep_warn, Line
 from StringIO import StringIO
+from collections import Counter
+import copy
 
 # use these to convert things to metres and tesla
 m = 1
@@ -2108,3 +2110,40 @@ def calc_phase_ad_from_matrix(trans_matrix):
 	mu_y = acos(0.5 * (tm[0,0]+tm[1,1]))
 	mu_z = acos(0.5 * (tm[2,2]+tm[3,3]))
 	return (mu_y,mu_z)
+
+def uniquify_labels(line):
+	"""Returns a new line where every element has a unique label.
+	
+	Checks for repeating labels and appends a count to each that repeats. Ignores elements with blank labels.
+	
+	Note: New line contains deep copies of original elements.
+	"""
+	max_label = 10 # FIXME this was 8 in old zgoubi version, but is now 10. probably should be a global option
+	label1s = Counter()
+	dup_names = set()
+
+	# dont need to rename if already unique
+	for e in line.elements():
+		if hasattr(e, 'label1'):
+			lab1 = e.label1.strip()
+			if lab1 != "":
+				label1s[lab1] += 1
+				if label1s[lab1] > 1:
+					dup_names.add(lab1)
+	
+	label1s = Counter() # reset counter
+	# new line with copy of elements
+	# avoids issues if a line contains the same element instance multiple times
+	new_line = Line(line.name)
+	for e in line.elements():
+		new_e = copy.deepcopy(e)
+		if hasattr(new_e, 'label1'):
+			lab1 = new_e.label1.strip()
+			if lab1 != "" and lab1 in dup_names:
+				new_lab1 = lab1 + str(label1s[lab1])
+				if len(new_lab1) > max_label:
+					raise ValueError("Renaming '%s' to '%s' exceeds label length %s"%(lab1, new_lab1, max_label))
+				label1s[lab1] += 1
+				new_e.set(label1 = new_lab1)
+		new_line.add(new_e)
+	return new_line
