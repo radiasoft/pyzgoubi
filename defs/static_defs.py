@@ -7,6 +7,7 @@ class OBJET1(zgoubi_element):
 	"""
 	def __init__(self ,**settings):
 		self._zgoubi_name = "OBJET"
+		self._class_name = "OBJET1"
 		self.label1 = ""
 		self.label2 = ""
 		self._params = {}
@@ -42,6 +43,7 @@ class OBJET2(zgoubi_element):
 	"""
 	def __init__(self ,**settings):
 		self._zgoubi_name = "OBJET"
+		self._class_name = "OBJET2"
 		self.label1 = ""
 		self.label2 = ""
 		self._params = {}
@@ -113,6 +115,7 @@ class OBJET3(zgoubi_element):
 	"""
 	def __init__(self ,**settings):
 		self._zgoubi_name = "OBJET"
+		self._class_name = "OBJET3"
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
@@ -159,6 +162,7 @@ class OBJET3(zgoubi_element):
 class OBJET_bunch(zgoubi_element):
 	def __init__(self,bunch=None, binary=False,**settings):
 		self._zgoubi_name = "OBJET"
+		self._class_name = "OBJET_bunch"
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
@@ -200,6 +204,7 @@ class OBJET5(zgoubi_element):
 	"""
 	def __init__(self ,**settings):
 		self._zgoubi_name = "OBJET"
+		self._class_name = "OBJET5"
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
@@ -230,6 +235,7 @@ class MCOBJET3(zgoubi_element):
 	"""
 	def __init__(self ,**settings):
 		self._zgoubi_name = "MCOBJET"
+		self._class_name = "MCOBJET3"
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
@@ -299,6 +305,7 @@ class ELECTRON(zgoubi_particul):
 		self.label1 = ""
 		self.label2 = ""
 		self._zgoubi_name = "PARTICUL"
+		self._class_name = "ELECTRON"
 		
 	def output(self):
 		f = self.f2s
@@ -315,6 +322,7 @@ class PROTON(zgoubi_particul):
 		self.label1 = ""
 		self.label2 = ""
 		self._zgoubi_name = "PARTICUL"
+		self._class_name = "PROTON"
 		
 	def output(self):
 		f = self.f2s
@@ -331,6 +339,7 @@ class MUON(zgoubi_particul):
 		self.label1 = ""
 		self.label2 = ""
 		self._zgoubi_name = "PARTICUL"
+		self._class_name = "MUON"
                
 	def output(self):
 		f = self.f2s
@@ -348,6 +357,7 @@ class IMMORTAL_MUON(zgoubi_particul):
 		self.label1 = ""
 		self.label2 = ""
 		self._zgoubi_name = "PARTICUL"
+		self._class_name = "IMMORTAL_MUON"
                
 	def output(self):
 		f = self.f2s
@@ -365,6 +375,7 @@ class CHANGREF_NEW(zgoubi_element):
 	"""
 	def __init__(self ,label1=None,**settings):
 		self._zgoubi_name = "CHANGREF"
+		self._class_name = "CHANGREF_NEW"
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
@@ -414,6 +425,7 @@ class SPNTRK(zgoubi_element):
 	"""
 	def __init__(self ,**settings):
 		self._zgoubi_name = "SPNTRK"
+		self._class_name = "SPNTRK"
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
@@ -445,6 +457,7 @@ class FAKE_ELEM(zgoubi_element):
 		self.label2 = ""
 		self._params = {}
 		self._zgoubi_name = "####"
+		self._class_name = "FAKE_ELEM"
 
 	def output(self):
 		return self.data+'\n'
