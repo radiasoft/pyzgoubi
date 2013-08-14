@@ -97,13 +97,16 @@ os.chdir(run_dir)
 
 test_dir = os.path.join(install_dir, 'share', 'pyzgoubi','test')
 
-number_of_tests = len(os.listdir(test_dir))
+tests = os.listdir(test_dir)
+tests.sort()
+
+number_of_tests = len(tests)
 tests_run = 0
 tests_sucess = []
 tests_fail = []
 tot_time = 0
 
-for test_file in os.listdir(test_dir):
+for test_file in tests:
 	print
 	print >>log, "\n", "="*40
 	log.flush()

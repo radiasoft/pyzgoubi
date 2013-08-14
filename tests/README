@@ -1,0 +1,24 @@
+Tests
+
+These can be run by running
+./run_tests.py
+in the top level of source (one above this directory). This will install the current source into a temp folder and run the tests using that version, hence is useful during development. It requires zgoubi to either be on your path, specified in the ~/.pyzgoubi/settings.ini file, or give as an argument
+./run_tests.py --zgoubi=/path/to/zgoubi
+
+They can also spot behaviour changes in zgoubi.
+
+Some tests such as binary input and output require development or patched versions of zgoubi. The command
+pyzgoubi --install-zgoubi
+can be used to build compliant versions.
+
+
+Tests are roughly sorted into a numbered order. Low numbers test basic features, higher numbers more advanced features. If early tests fail, later ones are also likely to fail.
+
+00 - Bits of pyzgoubi internals
+10 - Simple calls to zgoubi
+20 - Input and output between pyzgoubi and zgoubi
+30 - Functions in pyzgoubi that call zgoubi
+40 - More recent code that uses a range of features
+
+
+
