@@ -71,13 +71,13 @@ class LabPlotElement(object):
 			self.exit_coord[1] += self.z_element.YCE * cos(self.exit_angle)
 
 
-		elif self.element_type == "DIPOLE":
+		elif self.element_type in ["DIPOLE", "DIPOLES"]:
 			self.dip_at = radians(self.z_element.AT) # sector angle of magnet region
 			self.dip_re = self.z_element.RE # radius at entry
 			self.dip_rs = self.z_element.RS # radius at exit
 			self.dip_te = self.z_element.TE # radius at entry
 			self.dip_ts = self.z_element.TS # radius at exit
-			self.width = self.dip_re
+			self.width = min(self.dip_re, 500) # FIXME need proper method for setting widths
 			if self.dip_te != 0 or self.dip_ts != 0:
 				raise ValueError("Non zero TE or TS not implemented for %s"%self.element_type)
 
@@ -100,7 +100,7 @@ class LabPlotElement(object):
 			raise ValueError("Can't handle element "+ self.element_type)
 	
 	def transform(self, x, y):
-		if self.element_type != "DIPOLE":
+		if self.element_type not in ["DIPOLE", "DIPOLES"]:
 			x0, y0 = self.entry_coord # FIXME how to handle transform in changref
 			a0 = self.entry_angle
 
@@ -149,7 +149,7 @@ class LabPlotElement(object):
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, "b-")
 
-		if self.element_type == "DIPOLE":
+		if self.element_type in ["DIPOLE", "DIPOLES"]:
 			# in polar
 			re = self.dip_re
 			w = self.width
