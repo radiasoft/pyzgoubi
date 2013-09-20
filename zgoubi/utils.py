@@ -409,7 +409,7 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 		return None
 
 
-def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, record_fname=None):
+def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, record_fname=None, plot_search=False):
 	"""Find a closed orbit for the line. can optionally give a list of initial coordinates, init_YTZP, eg:
 	find_closed_orbit(line, init_YTZP=[1.2,2.1,0,0])
 	otherwise [0,0,0,0] are used.
@@ -439,6 +439,12 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 			break
 	else:
 		raise ValueError, "Line has no FAISCNL element"
+	
+	if plot_search:
+		line.full_tracking(True)
+		ptracks = []
+	else:
+		line.full_tracking(False)
 
 	current_YTZP = numpy.array(init_YTZP)
 	areas = []
@@ -453,12 +459,28 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 
 		r = line.run(xterm=False)
 
+		if plot_search:
+			ptrack = r.get_all('plt')
+			ptracks.append(ptrack)
+
+		try:
+			ftrack = r.get_all('fai')
+			lost_lap = ftrack['PASS'].max()
+		except IOError:
+			lost_lap = 0
+
+
 		if not r.run_success():
+			if plot_search:
+				import matplotlib.pyplot as pyplot
+				for ptrack in ptracks:
+					pyplot.plot(ptrack['S'], ptrack['Y'])
+				pyplot.savefig(plot_search)
 			if iteration == 0:
-				zlog.warning("Not a stable orbit")
+				zlog.warning("Initial orbit unstable. Lost on lap %d"%lost_lap)
 				return None
 			else:
-				zlog.warning("Center of orbit from last iteration, not stable")
+				zlog.warning("Center of orbit from last iteration not stable. Lost on iteration %d, lap %d"%(iteration,lost_lap))
 				return None
 		else:
 			track = r.get_track('fai', ['Y', 'T', 'Z', 'P'])
@@ -516,10 +538,10 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 			close_orbit = current_YTZP
 			break
 
-		#if area_h < tol and area_v < tol:
-		#	close_orbit_found = True
-		#	close_orbit = current_YTZP
-		#	break
+		if area_h < tol and area_v < tol:
+			close_orbit_found = True
+			close_orbit = current_YTZP
+			break
 
 
 	
