@@ -1,4 +1,13 @@
 # -*- coding: utf-8 -*-
+def are_close(a,b,tol):
+	if abs(a) < tol or abs(b) < tol:
+		if abs(a-b) < tol:
+			return True
+	else:
+		if (abs(a-b)/a) < tol:
+			return True
+	return False
+
 
 head = Line("head")
 ob = OBJET2(BORO=ke_to_rigidity(35e6, PROTON_MASS))
@@ -20,22 +29,22 @@ dch2 = DRIFT('dch2', XL=10)
 
 bore_rad = 20 * cm
 qf1_b0 = 0.475020 * bore_rad * T # field at tip, T
-qf1 = QUADRUPO('qf1', XL=25, B_0=qf1_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas)
+qf1 = QUADRUPO('qf1', XL=25, B_0=qf1_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas, KPOS=1)
 
 qd1_b0 = -0.497895 * bore_rad * T # field at tip, T
-qd1 = QUADRUPO('qd1', XL=50, B_0=qd1_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas)
+qd1 = QUADRUPO('qd1', XL=50, B_0=qd1_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas, KPOS=1)
 
 qf2_b0 = 0.540764 * bore_rad * T # field at tip, T
-qf2 = QUADRUPO('qf2', XL=25, B_0=qf2_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas)
+qf2 = QUADRUPO('qf2', XL=25, B_0=qf2_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas, KPOS=1)
 
 qd2_b0 = -0.642090 * bore_rad * T # field at tip, T
-qd2 = QUADRUPO('qd2', XL=50, B_0=qd2_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas)
+qd2 = QUADRUPO('qd2', XL=50, B_0=qd2_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas, KPOS=1)
 
 qf3_b0 = 0.474652 * bore_rad * T # field at tip, T
-qf3 = QUADRUPO('qf3', XL=25, B_0=qf3_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas)
+qf3 = QUADRUPO('qf3', XL=25, B_0=qf3_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas, KPOS=1)
 
 qd3_b0 = -0.499856 * bore_rad * T # field at tip, T
-qd3 = QUADRUPO('qd3', XL=50, B_0=qd3_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas)
+qd3 = QUADRUPO('qd3', XL=50, B_0=qd3_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas, KPOS=1)
 
 angle = 2*pi/16
 hbf_xl = 300 * 2* sin(angle/2) / angle
@@ -69,8 +78,15 @@ twissline.add(MATRIX(IORD=1,IFOC=11))
 twissline.add(END())
 twissline.full_tracking(False)
 r = twissline.run(xterm=False)
+r.parse_matrix()
+
+tune = r.get_tune()
+print "tune", tune
+assert are_close( tune[0], 0.20999960, 1e-6 ) # zgoubi 261 values
+assert are_close( tune[1], 0.19500105, 1e-6 ) # zgoubi 261 values
+
 twissparam = r.get_twiss_parameters()
-print twissparam
+print "twiss params", twissparam
 
 twiss_profiles = get_twiss_profiles(twissline,'twiss_profiles.txt')
 
@@ -119,15 +135,6 @@ zgoubi_data_t = [twiss_profiles['label'],twiss_profiles['s'],twiss_profiles['bet
 zgoubi_data = zip(*zgoubi_data_t)
 
 cd = chris_data
-
-def are_close(a,b,tol):
-	if abs(a) < tol or abs(b) < tol:
-		if abs(a-b) < tol:
-			return True
-	else:
-		if (abs(a-b)/a) < tol:
-			return True
-	return False
 
 
 print "#element\tdistance\tbetah\talphah\tbetav\talphav"

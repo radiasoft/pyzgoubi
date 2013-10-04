@@ -956,16 +956,16 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	else:
 		twissparam = input_twiss_parameters
 
-	beta_y_0  = twissparam['beta_y']
-	alpha_y_0 = twissparam['alpha_y']
-	gamma_y_0 = twissparam['gamma_y']
-	disp_y_0  = twissparam['disp_y']
-	disp_py_0 = twissparam['disp_py']
-	beta_z_0  = twissparam['beta_z']
-	alpha_z_0 = twissparam['alpha_z']
-	gamma_z_0 = twissparam['gamma_z']
-	disp_z_0  = twissparam['disp_z']
-	disp_pz_0 = twissparam['disp_pz']
+	beta_y_0  = twissparam['beta_y'][0]
+	alpha_y_0 = twissparam['alpha_y'][0]
+	gamma_y_0 = twissparam['gamma_y'][0]
+	disp_y_0  = twissparam['disp_y'][0]
+	disp_py_0 = twissparam['disp_py'][0]
+	beta_z_0  = twissparam['beta_z'][0]
+	alpha_z_0 = twissparam['alpha_z'][0]
+	gamma_z_0 = twissparam['gamma_z'][0]
+	disp_z_0  = twissparam['disp_z'][0]
+	disp_pz_0 = twissparam['disp_pz'][0]
 		
 	zlog.debug("Initial parameters:\nbeta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0\n%s, %s, %s, %s, %s, %s" % (beta_y_0, alpha_y_0, gamma_y_0, beta_z_0, alpha_z_0, gamma_z_0))
 	if beta_y_0 == 0 or beta_z_0 == 0:
@@ -1041,10 +1041,10 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		line.replace(ob2,objet)
 	else:
 		#disp_y_list = [0]*len(Y_alltracks[0])
-		disp_y_list = [None]*len(Y_alltracks[0])
-		disp_py_list = [None]*len(Y_alltracks[0])
-		disp_z_list = [None]*len(Y_alltracks[0])
-		disp_pz_list = [None]*len(Y_alltracks[0])
+		disp_y_list = [-1]*len(Y_alltracks[0])
+		disp_py_list = [-1]*len(Y_alltracks[0])
+		disp_z_list = [-1]*len(Y_alltracks[0])
+		disp_pz_list = [-1]*len(Y_alltracks[0])
 		phase_slip = None
 		gamma_transition = None
 
@@ -1061,7 +1061,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
  
 	if file_result != None:
 		fresults = open(file_result, 'w')
-		print >> fresults, '%9s %5s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s' % ("s", "label", \
+		print >> fresults, '#%8s %5s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s' % ("s", "label", \
 			"mu_y", "beta_y", "alpha_y", "gamma_y","disp_y","disp_py",\
 			"mu_z", "beta_z", "alpha_z", "gamma_z","disp_z","disp_pz")
               
@@ -1352,6 +1352,8 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 	"""
 
 	import zgoubi.core as zg
+	emit_list_h = list(emit_list_h)
+	emit_list_v = list(emit_list_v)
 
 	#create objet so initial phase settings can be set
 	for e in line.element_list:

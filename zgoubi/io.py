@@ -235,7 +235,29 @@ def read_file(fname):
 			vals = [e for e in row if e ]
 			file_data.append(tuple(vals))
 		# use the data_type info to set the fields right, and convert to numpy array
-		file_data2 = numpy.array(file_data, dtype= numpy.dtype(data_type))
+		try:
+			file_data2 = numpy.array(file_data, dtype= numpy.dtype(data_type))
+		except ValueError:
+			# FIXME
+			# sometimes zgoubi outputs floats as
+			# 1.5741247399232311-101 instead of 1.5741247399232311E-101
+			# try to catch as repair these
+			# first, try again row by row, and repair on broken rows
+			# should probably try to fix in zgoubi
+			file_data2 = numpy.zeros(len(file_data), dtype= numpy.dtype(data_type))
+			for n, row in enumerate(file_data):
+				try:
+					file_data2[n] = numpy.array(row, dtype= numpy.dtype(data_type))
+				except ValueError:
+					new_row = []
+					for s in row:
+						print s
+						if len(s)>5 and s[1]=='.' and s[-4] == '-':
+							s = s[:-4] + 'E' + s[-4:]
+						new_row.append(s)
+
+					file_data2[n] = numpy.array(new_row, dtype= numpy.dtype(data_type))
+
 
 	if file_def["file_mode"] == "binary":
 		rec_len = file_def["record_length"]

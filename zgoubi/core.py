@@ -407,6 +407,10 @@ class Line(object):
 			if n != 0 and isobjet:
 				zlog.warn("OBJET/MCOBJET appears as element number %d. (Should only be first)" % n)
 				line_good = False
+
+			if hasattr(element, 'XPAS'):
+				if element.XPAS == 0:
+					zlog.warn("Element %s type %s has XPAS=0 (integration step)"%(n, element._zgoubi_name))
 		if not has_end:
 				zlog.warn("No END element found")
 				line_good = False
@@ -414,10 +418,11 @@ class Line(object):
 		return line_good
 				
 	
-	def full_tracking(self, enable=True):
+	def full_tracking(self, enable=True, drift_to_multi=False):
 		"""Enable full tracking on magnetic elements.
 		This works by setting IL=2 for any element with an IL parameter.
 		use line.full_tracking(False) to disable tracking
+		drift_to_multi=True replaces drifts with weak (B_1 = 1e-99) multipoles
 
 		"""
 		for element in self.elements():
@@ -435,6 +440,14 @@ class Line(object):
 			#	print element.output()
 			except ValueError:
 				pass
+
+		if drift_to_multi:
+			for element in self.elements():
+				if element._zgoubi_name == "DRIFT" and element.XL != 0:
+					fake_drift = MULTIPOL(element.label1, element.label2,
+					XL=element.XL, XPAS=(10,10,10),
+					B_1=1e-99, IL=2, KPOS=1)
+					self.replace(element, fake_drift)
 			
 	def remove_looping(self):
 		"removes any REBELOTE elements from the line"
@@ -489,8 +502,9 @@ class Line(object):
 		command = zgoubi_settings['zgoubi_path']
 		if silence:
 			command += " > zgoubi.stdout 2> zgoubi.sdterr"
-		#exe_result = os.system(command)
-		z_proc = subprocess.Popen(command, shell=True, cwd=tmpdir)
+			z_proc = subprocess.Popen(command, shell=True, cwd=tmpdir)
+		else:
+			z_proc = subprocess.Popen(command, shell=False, cwd=tmpdir)
 		exe_result = z_proc.wait()
 
 		if exe_result != 0:
@@ -518,6 +532,8 @@ class Line(object):
 		for n, line in enumerate(open(self.res_file)):
 			if "ERROR" in line or "WARNING" in line or "SBR" in line:
 				print "zgoubi.res:",n,":",line
+				if "SBR OBJ3 -> error in  reading  file" in line:
+					raise ZgoubiRunError(line)
 
 		#os.chdir(orig_cwd)
 		
@@ -569,7 +585,7 @@ class Line(object):
 			"A worker function. Gets run in threads"
 			while True:
 				try:
-					start_index, work_bunch = in_q.get(block=True, timeout=1)
+					start_index, work_bunch = in_q.get(block=True, timeout=0.1)
 				except Queue.Empty:
 					#print "get() timed out in thread", name
 					if stop_flag.is_set():
@@ -587,11 +603,16 @@ class Line(object):
 				in_q.task_done()
 				#print "Thread", name, "task done"
 
+		# pre process line output, so it does not have to be done in each thread
+		line_output = self.output()
+		new_line = Line(self.name)
+		new_line.add(FAKE_ELEM(line_output))
+
 		stop_flag = threading.Event()
 		for thread_n in xrange(n_threads):
 			t = threading.Thread(target=worker,
 			                     kwargs={'in_q':in_q, 'out_q':out_q,
-			                     'work_line':self, 'name':thread_n, 'stop_flag':stop_flag})
+			                     'work_line':new_line, 'name':thread_n, 'stop_flag':stop_flag})
 			t.setDaemon(True)
 			t.start()
 			#print "Created thread", x
@@ -784,53 +805,70 @@ class Line(object):
 			globbed_files = glob(pattern)
 			file_paths += globbed_files
 		self.input_files += file_paths
+	
+
+	def _find_by_index(self, index):
+		"""Iterate through sub lines to find element as if indexed in a flat list
+		returns [line, index_in_line]"""
+		stack = [[self,-1]]
+		for n in xrange(index+1):
+			if stack[-1][1]+1 >= len(stack[-1][0].element_list):
+				# step back up
+				stack.pop()
+				if len(stack) == 0:
+					raise ValueError("Index %s out of range"%index)
+
+			# step along
+			stack[-1][1] +=1
+
+			if isinstance(stack[-1][0].element_list[stack[-1][1]], Line):
+				# step in
+				stack.append([stack[-1][0].element_list[stack[-1][1]],0])
+		return  stack[-1]
 		
 	def replace(self, elementold, elementnew, select_index=0):
-		"Replace an element in the line. setting select_index to n will replace the nth occurence of that item. If select index is not set, the first occurence is replaced"
+		"""Replace an element in the line. setting select_index to n will replace the nth occurence of that item. If select index is not set, the first occurence is replaced.
+		
+		Note: elementold must be the same instance as an element in the Line"""
 
-		indices = []
-		i = -1
-		try:
-			while 1:
-				i = self.element_list.index(elementold, i+1)
-				indices.append(i)
-		except ValueError:
-			pass
+		indices = self.find_elements(elementold)
+		if len(indices) == 0:
+			raise ValueError("elementold not found in line")
+		if select_index >= len(indices):
+			raise ValueError("only %s instances of elementold in line"%len(indices))
 		index = indices[select_index]
-
-		self.element_list.pop(index)
-		self.element_list.insert(index, elementnew)
+		subline, pos = self._find_by_index(index)
+		subline.element_list[pos] = elementnew
 
 	def insert(self, index, *elements):
-		"Insert elements into the line before position given by index"
+		"Insert elements into the line before position given by index, treats sub lines as linear list"
+		subline, pos = self._find_by_index(index)
 		for element in elements:
-			self.element_list.insert(index, element)
+			subline.element_list.insert(pos, element)
 
 	def prepend(self, *elements):
-			"Add an elements to the line"
-			for element in elements:
-				self.element_list.insert(0,element)
+		"Add a elements to the start of the line"
+		for element in elements:
+			self.element_list.insert(0,element)
 
-				try:
-					if 'OBJET' in element._zgoubi_name:
-						self.full_line = True
-				except AttributeError:
-					pass
+			try:
+				if 'OBJET' in element._zgoubi_name:
+					self.full_line = True
+			except AttributeError:
+				pass
 			
 	def remove(self, index):
-		"Remove element at index"
-		self.element_list.pop(index)
+		"Remove element at index, treats sub lines as linear list"
+		subline, pos = self._find_by_index(index)
+		subline.element_list.pop(pos)
+
 
 	def find_elements(self, element):
-		"Returns all the positions of element in line"
+		"Returns all the positions of element in line, treats sub lines as linear list"
 		indices = []
-		i = -1
-		try:
-			while 1:
-				i = self.element_list.index(element, i+1)
-				indices.append(i)
-		except ValueError:
-			pass	
+		for n, e in enumerate(self.elements()):
+			if e is element:
+				indices.append(n)
 
 		return indices
 			
@@ -1557,79 +1595,121 @@ class Results(object):
 
 		return crashes, not_crashes, laps, crash_lap
 	
+	def parse_matrix(self):
+		"""Parse data from output of MATRIX element
+		Used by get_tune(), get_transfer_matrix() and get_twiss_parameters()
+		"""
+
+		has_object5 = 'OBJET5' in self.element_types
+		has_matrix = 'MATRIX' in self.element_types
+				
+		if not (has_object5 and has_matrix):
+			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX element with IORD=1 and IFOC>10 to get tune"
+
+		found_output = False
+		in_matrix = False
+
+		parsed_info = dict(matrix1=None, twiss=None, tune=(-1,-1))
+		tp = numpy.zeros(1,dtype=[('beta_y','f8'),('alpha_y','f8'),('gamma_y','f8'),('disp_y','f8'),('disp_py','f8'),
+						('beta_z','f8'),('alpha_z','f8'),('gamma_z','f8'),('disp_z','f8'),('disp_pz','f8')])
+		matrix_lines = []
+		
+		fh = self.res_fh()
+		while True:
+			try: line = fh.next()
+			except StopIteration: break
+			if line.startswith("******"): # find start of an output block
+				found_output = True
+				try: element_line = fh.next()
+				except StopIteration: break
+				if element_line.strip() == "": continue
+
+				# find element type
+				if "Keyword, label(s)" in element_line: # changed somewhere between svn261 and svn312
+					element_type = element_line.split()[4] #new
+				else:
+					element_type = element_line.split()[1] #old
+
+				line = element_line
+				in_matrix = element_type == "MATRIX"
+
+			if not found_output: continue
+			if in_matrix:
+				matrix_lines.append(line.strip())
+
+		if len(matrix_lines) == 0:
+			raise BadLineError, "Could not find MATRIX output in res file. Maybe beam lost."
+
+		for n,line in enumerate(matrix_lines):
+			if line == "TRANSFER  MATRIX  ORDRE  1  (MKSA units)":
+				matrix1 = numpy.zeros([6,6])
+				for x in xrange(6):
+					matrix1[x] = matrix_lines[x+n+2].split()
+				parsed_info['matrix1'] = matrix1
+			if line == "Beam  matrix  (beta/-alpha/-alpha/gamma) and  periodic  dispersion  (MKSA units)":
+				twissmat = numpy.zeros([6,6])
+				for x in xrange(6):
+					twissmat[x] = matrix_lines[x+n+2].split()
+				tp['beta_y'] = twissmat[0,0]
+				tp['alpha_y'] = -twissmat[1,0]
+				tp['gamma_y'] = twissmat[1,1]
+				tp['disp_y'] = twissmat[0,5]
+				tp['disp_py'] = twissmat[1,5]
+
+				tp['beta_z'] = twissmat[2,2]
+				tp['alpha_z'] = -twissmat[3,2]
+				tp['gamma_z'] = twissmat[3,3]
+				tp['disp_z'] = twissmat[2,5]
+				tp['disp_pz'] = twissmat[3,5]
+				parsed_info['twiss'] = tp
+			if line.startswith("NU_Y"):
+				#print "\n# ".join(matrix_lines)
+				nu_y = nu_z = -1
+				bits = line.split()
+				if bits[2] == "undefined":
+					zlog.error("Horizontal tune is undefined")
+				if bits[5] == "undefined":
+					zlog.error("Vertical tune is undefined")
+				try:
+					nu_y = float(bits[2])
+				except ValueError:
+					pass
+				try:
+					nu_z = float(bits[5])
+				except ValueError:
+					pass
+
+				parsed_info['tune'] = (nu_y, nu_z)
+
+		return parsed_info
+
+
 	def get_tune(self):
 		"""Returns a tuple (NU_Y, NU_Z) of the tunes.
 		Needs a beam line is an OBJET type 5, and a MATRIX element.
 
 
 		"""
+		tune = self.parse_matrix()["tune"]
 
-		has_object5 = 'OBJET5' in self.element_types
-		has_matrix = 'MATRIX' in self.element_types
-				
-		if not (has_object5 and has_matrix):
-			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX element with IORD=1 and IFOC>10 to get tune"
+		if tune[0] == -1 or tune[1] == -1:
+			zlog.error("could not get tune res file setting to -1")
 
-		found_matrix = False
-		for line in self.res_fh():
-			if "MATRIX" in line:
-				bits = line.split()
-				if bits[0].isdigit() and bits[1] == "MATRIX":
-					found_matrix = True
-			elif found_matrix and "NU" in line:
-				bits = line.split()
-				if (bits[0], bits[1], bits[3], bits[4]) == ("NU_Y", "=", "NU_Z", "="):
-					try:
-						NU_Y = float(bits[2])
-					except ValueError:
-						zlog.error("could not get Y tune from:\n" + line +"setting NU_Y to -1")
-						NU_Y = -1 
-					try:
-						NU_Z = float(bits[5])
-					except ValueError:
-						zlog.error("could not get Z tune from:\n" + line +"setting NU_Z to -1")
-						NU_Z = -1 
-					print "Tune: ", (NU_Y, NU_Z)
-					return (NU_Y, NU_Z)
-		raise NoTrackError, "Could not find MATRIX output, maybe beam lost"
+		return tune
+
 
 	def get_transfer_matrix(self):
 		"""Returns a transfer matrix of the line in (MKSA units).
 		Needs a beam line is an OBJET type 5, and a MATRIX element.
 
 		"""
+		tm = self.parse_matrix()["matrix1"]
 
-		has_object5 = 'OBJET5' in self.element_types
-		has_matrix = 'MATRIX' in self.element_types
-				
-		if not (has_object5 and has_matrix):
-			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX element with IORD=1 and IFOC>10 to get tune"
+		if tm == None:
+			zlog.error("could not get matrix from res file")
 
-		found_matrix = False
+		return tm
 
-		res_fh = self.res_fh()
-		while True:
-			try:
-				line = res_fh.next()
-			except StopIteration:
-				break
-			if not found_matrix and "MATRIX" in line:
-				bits = line.split()
-				if bits[0].isdigit() and bits[1] == "MATRIX":
-					found_matrix = True
-					continue
-			elif found_matrix and "TRANSFER  MATRIX  ORDRE  1  (MKSA units)" in line:
-				matrix_lines = [res_fh.next() for dummy in xrange(30) ]
-				#print "".join(matrix_lines)
-
-				transfer_matrix = numpy.zeros([6,6])
-				for x in range(6):
-					transfer_matrix[x] = matrix_lines[x+1].split()
-
-				return transfer_matrix
-
-
-		raise NoTrackError, "Could not find MATRIX output, maybe beam lost"
 
 	def get_twiss_parameters(self):
 		"""Returns a tuple (beta_y, alpha_y, gamma_y, disp_y, disp_py, beta_z, alpha_z, gamma_z, disp_z, disp_pz) from 
@@ -1646,58 +1726,10 @@ class Results(object):
 		Needs a beam line is an OBJET type 5, and a MATRIX element.
 
 		"""
-		#has_object5 = False
-		#has_matrix = False
-		#for e in self.line.elements():
-		#	t = str(type(e)).split("'")[1].rpartition(".")[2]
-		#	if t == 'OBJET5':
-		#		has_object5 = True
-		#	if t == 'MATRIX':
-		#		has_matrix = True
+		tp = self.parse_matrix()["twiss"]
 
-		tp = numpy.zeros(1,dtype=[('beta_y','f8'),('alpha_y','f8'),('gamma_y','f8'),('disp_y','f8'),('disp_py','f8'),\
-						('beta_z','f8'),('alpha_z','f8'),('gamma_z','f8'),('disp_z','f8'),('disp_pz','f8')])
-
-		has_object5 = 'OBJET5' in self.element_types
-		has_matrix = 'MATRIX' in self.element_types
-		if not (has_object5 and has_matrix):
-			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
-
-		found_matrix = False
-		found_twiss = False
-		found_row1 = False
-		found_row2 = False
-		found_row3 = False
-		found_row4 = False
-		for line in self.res_fh():
-			if "MATRIX" in line:
-				bits = line.split()
-				if bits[0].isdigit() and bits[1] == "MATRIX":
-					found_matrix = True
-			elif found_matrix and "beta/-alpha" in line:
-				found_twiss = True
-			elif found_twiss and not found_row1 and len(line) > 1:
-				row = line.split()
-				tp['beta_y'] = float(row[0])
-				tp['alpha_y'] = -1*float(row[1])
-				tp['disp_y']  = float(row[5])
-				found_row1 = True
-			elif found_row1 and not found_row2 and len(line) > 1:
-				row = line.split()
-				tp['gamma_y'] = float(row[1])
-				tp['disp_py'] = float(row[5])
-				found_row2 = True
-			elif found_row2 and not found_row3 and len(line) > 1:
-				row = line.split()
-				tp['beta_z'] = float(row[2])
-				tp['alpha_z'] = -1*float(row[3])
-				tp['disp_z'] = float(row[5])
-				found_row3 = True
-			elif found_row3 and not found_row4 and len(line) > 1:
-				row = line.split()
-				tp['gamma_z'] = float(row[3])
-				tp['disp_pz'] = float(row[5])
-				found_row4 = True
+		if tp == None:
+			zlog.error("could not get twiss parameters from res file")
 
 		return tp
 
@@ -1723,10 +1755,6 @@ class Results(object):
 				if line.strip().startswith("I, AMQ(1,I)"):
 					break
 				print line,
-
-
-
-
 
 
 	def test_rebelote(self):
@@ -1758,363 +1786,6 @@ class Results(object):
 				return True
 		return False
 		
-class Plotter(object):
-	"""A plotter for beam lines and tracks.
-	
-	"""
-	def __init__(self, line):
-		"""Creates a new plot from the line.
-
-		"""
-		try:
-			dummy = cairo.version
-		except NameError:
-			raise StandardError, "Cairo python bindings not found\nFor Debian/Ubuntu systems please install python-cairo"
-		
-		self.line = line
-		
-		self.sections = {}
-		self.elements = {}
-		#self.pipes = {}
-		self.tracks = []
-		
-		self.line_length = 0
-
-		self.width = 100 # physical size of canvas in cm
-		self.height = 100 
-		#self.last_added_elem = None
-		self.pretty_names = {}
-		self.magnet_width = {}
-		self._scan_line()
-		#self.save_pdf('test.pdf')
-	
-	def _calc_physial_size(self):
-		"finds a bounding box"
-		self.min_x = 1e6
-		self.min_y = 1e6
-		self.max_x = -1e6
-		self.max_y = -1e6
-		
-		points = [] # list of points we want to fit on canvas
-		
-		for e in self.elements.values():
-			if e['type'] == "box":
-				points += e['box']
-
-		for t in self.tracks:
-			points += t['points']
-
-		for x, y in points:
-			self.min_x = min(self.min_x, x)
-			self.max_x = max(self.max_x, x)
-			self.min_y = min(self.min_y, y)
-			self.max_y = max(self.max_y, y)
-		
-		#add a 5% margin
-		self.min_x -= 0.05 * (self.max_x - self.min_x)
-		self.max_x += 0.05 * (self.max_x - self.min_x)
-		self.min_y -= 0.05 * (self.max_y - self.min_y) + 11# and a bit more for labels
-		self.max_y += 0.05 * (self.max_y - self.min_y)
-		
-		self.aspect = (self.max_x - self.min_x)/(self.max_y - self.min_y)
-		
-
-	def _scan_line(self):
-		"""Scan through the line, and make a note of where all the elements are.
-		
-		"""
-		count = 0
-		angle = 0
-		position = [0, 0]
-		self.elements = {}
-		for elem in self.line.elements():
-			classtype =  str(type(elem))
-			classtype = classtype.split("'")[-2]
-			classtype = classtype.split(".")[-1]
-			#print classtype
-
-			if (classtype=='DRIFT'):
-				section = {}
-				section['label'] = elem.label1.strip()
-				if section['label'] == "":
-					print classtype, "in line with no label"
-					section['label'] = str(count)
-					count += 1
-				section['len'] = elem.XL
-				section['start'] = position
-				section['ang'] = angle
-
-				self.sections[section['label']] = section
-				section['end'] = self.transform(section['label'], (section['len'], 0))		
-				position = section['end']
-				#print section
-			elif(classtype=='CHANGREF'):
-				x = elem.XCE
-				y = elem.YCE
-				position[0] += x * cos(angle) - y * sin(angle)
-				position[1] += x * sin(angle) + y * cos(angle)
-				angle += radians(elem.ALE)
-				#print "changref", elem.XCE,elem.YCE,elem.ALE
-				#print "new coord, angle", position, angle
-			elif(classtype in ['MULTIPOL','QUADRUPO']):
-				section = {}
-				section['label'] = elem.label1
-				if section['label'] == "":
-					print classtype, "in line with no label"
-					section['label'] = str(count)
-					count += 1
-				section['len'] = elem.XL
-				section['start'] = position
-				section['ang'] = angle
-
-				self.sections[section['label']] = section
-				section['end'] = self.transform(section['label'], (section['len'], 0))		
-				position = section['end']
-				#print section
-				element = {}
-				width = 5* elem.R_0
-				if self.magnet_width.has_key(section['label']):
-					width = self.magnet_width[section['label']]
-					length = elem.XL
-					a = self.transform(section['label'],(0, width/2))
-					b = self.transform(section['label'],(length, width/2))
-					c = self.transform(section['label'],(length, -width/2))
-					d = self.transform(section['label'],(0, -width/2))
-					element['box'] = (a, b, c, d)
-					element['type'] = "box"
-				else:
-					element['type'] = "rec"
-					element['min_y'] = 0
-					element['max_y'] = 0
-					element['len'] = section['len']
-				self.elements[section['label']] = element
-
-	def transform(self, section, point):
-		"""transform a point relative to a section into global coords.
-
-		"""
-		x0, y0 = self.sections[section]['start']
-		ang = self.sections[section]['ang']
-		
-		x, y = point
-		if x == None: # adjustment for FAI files
-			x = self.sections[section]['len']
-		
-		#if (cum_len):
-		#	x -= self.sections[section]['prev_cum_len']
-		#print ang, x0, y0	
-		xp = x * cos(ang) - y * sin(ang) + x0
-		yp = x * sin(ang) + y * cos(ang) + y0
-		
-		return [xp, yp]
-		
-	def add_results(self, results, colour=None):
-		"""Add a results object to the plot. All tracks will be extracted.
-		Multiple passes made with REBELOTE will be nicely draw ontop of each other. Multiple particles will make a mess
-		Colour is optional, pass a tuple of (red, blue, green) with values from 0 off, to 1 on.
-
-		"""
-		raw_track = []
-		try:
-			raw_track += results.get_track('plt', ['X', 'Y', 'element_label1', 'PASS', 'tof'])
-		except IOError, e:
-			print "No PLT file for tracks:", e
-		try:
-			raw_tr = results.get_track('fai', ['Y', 'Y', 'element_label1', 'PASS', 'tof'])
-			for t in raw_tr:
-				t[0] = None
-				t[4] *= 100000
-			raw_track += raw_tr
-
-		except IOError, e:
-			print "No FAI file for tracks:", e
-		if len(raw_track) == 0:
-			raise NoTrackError, "No tracks to plot"
-		#for t in raw_track:
-		#	print t
-		raw_track.sort(key=itemgetter(4)) # sort points by time of flight
-		passes = set([x[3] for x in raw_track])
-		for thispass in passes: # deal with one lap at a time
-			track = []
-			for raw_p in [x for x in raw_track if x[3] == thispass]:
-				p = self.transform(raw_p[2].strip(), raw_p[0:2]) # transform to element coordinates
-				#print raw_p[2], self.sections[raw_p[2]], raw_p[0:2], p
-				track.append(p)
-				if self.elements.has_key(raw_p[2].strip()):
-					if self.elements[raw_p[2].strip()].has_key('min_y'):
-						self.elements[raw_p[2].strip()]['min_y'] = min(raw_p[1]*1.1, self.elements[raw_p[2].strip()]['min_y'])
-						self.elements[raw_p[2].strip()]['max_y'] = max(raw_p[1]*1.1, self.elements[raw_p[2].strip()]['max_y'])
-			self.tracks.append(dict(points=track, colour=colour))
-
-
-	def save_pdf(self, fname, canv_width=None, canv_height=None):
-		"""Write plot to a PDF file.
-		canv_width or canv_height can be specified in points (1/72 inch)
-		"""
-		self._calc_physial_size()
-		if (canv_width != None):
-			canv_height = canv_width/self.aspect
-		elif (canv_height != None):
-			canv_width = canv_height*self.aspect
-		else:
-			canv_width = 595
-			canv_height = canv_width/self.aspect
-			
-		pdf_surf = cairo.PDFSurface(fname, canv_width, canv_height)
-		cr = cairo.Context(pdf_surf)
-		self.draw(cr, canv_width, canv_height, line_width=1)
-	
-	def save_png(self, fname, canv_width=None, canv_height=None):
-		"""Write plot to a png file.
-		canv_width or canv_height can be specified in pixels
-		"""
-		self._calc_physial_size()
-		if (canv_width != None):
-			canv_height = canv_width/self.aspect
-		elif (canv_height != None):
-			canv_width = canv_height*self.aspect
-		else:
-			canv_width = 800
-			canv_height = canv_width/self.aspect
-			
-		img_surf = cairo.ImageSurface(cairo.FORMAT_RGB24, int(canv_width), int(canv_height))
-		cr = cairo.Context(img_surf)
-		self.draw(cr, canv_width, canv_height, line_width=1)
-		img_surf.write_to_png(fname)
-		
-	def save_ps(self, fname, eps=False, canv_width=None, canv_height=None):
-		"""Write plot to a PDF file.
-		canv_width or canv_height can be specified in points (1/72 inch)
-		"""
-		self._calc_physial_size()
-		if (canv_width != None):
-			canv_height = canv_width/self.aspect
-		elif (canv_height != None):
-			canv_width = canv_height*self.aspect
-		else:
-			canv_width = 595
-			canv_height = canv_width/self.aspect
-			
-		ps_surf = cairo.PSSurface(fname, canv_width, canv_height)
-		if eps:  # needs a hot new version of cairo, so not implemented yet
-			ps_surf.set_eps(True)
-		cr = cairo.Context(ps_surf)
-		self.draw(cr, canv_width, canv_height, line_width=1)
-
-	def set_pretty_names(self, pretty_names):
-		self.pretty_names = pretty_names
-	
-	def set_magnet_width(self, magwidth):
-		self.magnet_width = magwidth
-		self._scan_line() # need to go through the line again with the new widths
-		
-	def draw(self, cr, canv_width, canv_height, line_width=1):
-		"""Draw plot to a cairo surface.
-
-		"""
-		cr.set_font_size(18)
-		#self._calc_physial_size()
-		#self.width = self.max_x - self.min_x
-		self.width = (self.max_x - self.min_x)
-		self.height = (self.max_y - self.min_y)
-		scale_fac = min(canv_width/self.width, canv_height/self.height)
-
-		cr.scale(scale_fac, -scale_fac)
-
-		#cr.translate(0,-self.height/2)	
-		cr.translate(-self.min_x, -self.max_y)	
-
-		cr.set_source_rgb(1, 1, 1)
-		cr.rectangle(0, -self.height/2, self.width, self.height)
-		cr.fill()
-		
-		
-		cr.set_line_width(max(cr.device_to_user_distance(line_width, line_width)))
-
-
-		cr.set_source_rgb(0.5, 0.5, 0.5)
-		#draw line sections
-		for name, l in self.sections.items():
-			cr.move_to(*l['start'])
-			cr.line_to(*l['end'])
-			
-		cr.stroke()
-		
-		cr.set_source_rgb(0.5, 0.5, 0.5)
-		# draw_elements
-		for name, e in self.elements.items():
-			if e['type'] == 'box':
-				corners = e['box']
-			elif e['type'] == 'rec':
-				a = self.transform(name,(0, e['max_y']))
-				b = self.transform(name,(e['len'], e['max_y']))
-				c = self.transform(name,(e['len'], e['min_y']))
-				d = self.transform(name,(0, e['min_y']))
-				corners = [a, b, c, d]	
-
-			cr.move_to(corners[0][0], corners[0][1])
-			for corner in corners[1:]:
-				cr.line_to(corner[0], corner[1])
-			cr.line_to(corners[0][0], corners[0][1])
-
-		
-			cr.stroke()
-			box_min_y = box_min_x = 10000
-			box_max_x = -10000
-			for p in corners:
-				box_min_y = min(box_min_y, p[1])
-				box_min_x = min(box_min_x, p[0])
-				box_max_x = max(box_max_x, p[0])
-			
-			pname = self.pretty_names.get(name, name)
-			#this is ugly. need to draw in name coordinate space, because the real space coords are upside down
-			x_bearing, y_bearing, extent_width, extent_height = cr.text_extents(pname)[:4]
-			cr.move_to((box_min_x+box_max_x)/2-extent_width/2/scale_fac, box_min_y-extent_height/scale_fac)
-			cr.identity_matrix()
-			cr.show_text(pname)
-			cr.scale(scale_fac, -scale_fac)
-			cr.translate(-self.min_x, -self.max_y)	
-
-		#draw tracks
-		cr.set_source_rgb(0, 0, 0)
-		for track in self.tracks:
-			if track['colour'] != None:
-				cr.set_source_rgb(*track['colour'])
-			cr.move_to(*track['points'][0])
-			for p in track['points']:
-				cr.line_to(*p)
-			cr.stroke()
-
-		
-		#draw scale
-		scale_start = 0
-		scale_end = 100
-		x_bearing, y_bearing, extent_width, extent_height = cr.text_extents('1')[:4]
-		scale_pos = self.min_y + 2.1 + extent_height*2/scale_fac
-		cr.set_source_rgb(0, 0, 0)
-		cr.move_to(scale_start, scale_pos)
-		cr.line_to(scale_end, scale_pos)
-		cr.stroke()
-		for x in xrange(11):
-			x_pos = (scale_end - scale_start)/10*x + scale_start
-			cr.move_to(x_pos, scale_pos)
-			cr.line_to(x_pos, scale_pos-1)
-			cr.stroke()
-			if (x%5 ==0):
-				x_bearing, y_bearing, extent_width, extent_height = cr.text_extents(str((scale_end - scale_start)/10*x/100))[:4]
-				cr.move_to(x_pos-extent_width/2/scale_fac, scale_pos-extent_height/scale_fac-1.5)
-				cr.identity_matrix()
-				cr.show_text(str((scale_end - scale_start)/10*x/100))
-				cr.scale(scale_fac, -scale_fac)
-				cr.translate(-self.min_x, -self.max_y)
-
-			if (x ==0):
-				x_bearing, y_bearing, extent_width, extent_height = cr.text_extents(str((scale_end - scale_start)/10*x))[:4]
-				cr.move_to(x_pos-extent_width/2/scale_fac, scale_pos-extent_height/scale_fac*2-2)
-				cr.identity_matrix()
-				cr.show_text("m")
-				cr.scale(scale_fac, -scale_fac)
-				cr.translate(-self.min_x, -self.max_y)
 
 
 

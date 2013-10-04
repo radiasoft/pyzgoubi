@@ -2,6 +2,7 @@
 import os
 import shutil
 import subprocess
+import urllib2
 from zgoubi import common
 
 class ZgoubiBuildError(Exception):
@@ -16,13 +17,20 @@ zgoubi_install_dir = os.path.expanduser("~/.pyzgoubi/bin")
 #zgoubi_svn_address = "http://svn.code.sf.net/p/zgoubi/code/trunk"
 zgoubi_svn_address = "svn://svn.code.sf.net/p/zgoubi/code/trunk"
 
-def get_zgoubi_svn():
-	"Download zgoubi from SVN"
+def check_for_programs():
 	devnull = open("/dev/null", "w")
 	try:
 		ret = subprocess.call(['svn', '--version'], stdout=devnull)
 	except OSError:
 		raise ZgoubiBuildError("svn not found: install subversion")
+	try:
+		ret = subprocess.call(['patch', '--version'], stdout=devnull)
+	except OSError:
+		raise ZgoubiBuildError("patch not found: install patch")
+
+
+def get_zgoubi_svn():
+	"Download zgoubi from SVN"
 	if os.path.isdir(zgoubi_build_dir2):
 		print "Zgoubi build folder already exists:", zgoubi_build_dir
 		ret = subprocess.call(['svn', 'info'], cwd=zgoubi_build_dir2)
@@ -58,9 +66,13 @@ def apply_zgoubi_patches(patches):
 	for patch in patches:
 		print "applying", patch
 		patchname = patch.rpartition("/")[2]
-		ret = subprocess.call(['wget', patch, "-O", patchname], cwd=zgoubi_build_dir2)
-		if ret != 0:
-			raise ZgoubiBuildError("Patch download failed: %s" % patch)
+		pf = open(os.path.join(zgoubi_build_dir2, patchname),"w")
+		try:
+			pf.write( urllib2.urlopen(patch).read())
+		except urllib2.HTTPError as e:
+			raise ZgoubiBuildError("Patch download failed (Error %s): %s" % (e.code, patch))
+			
+		pf.close()
 		ret = subprocess.call('patch -p0 < %s' % patchname, cwd=zgoubi_build_dir2, shell=True)
 		if ret != 0:
 			raise ZgoubiBuildError("Patch application failed: %s" % patch)
@@ -103,12 +115,25 @@ patches=[
 #"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/zgoubi_parallel_build.diff",
 "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/objet3_2.diff",
 "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/kobj301_2.diff",
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/disable_ETparam_test_code.diff",
 ],
 )
 
+zgoubi_versions["315+patches"] = dict(svnr=315,
+patches=[
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/mcmodel-fix2.diff",
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks.diff",
+#"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/zgoubi_parallel_build.diff",
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/objet3_3.diff",
+],
+)
 
 def install_zgoubi_all(version="261+patches"):
+	check_for_programs()
 	"This currently install a version of zgoubi known to work with pyzgoubi"
+	if version in ['list', 'help']:
+		print "Available versions:", " ".join(zgoubi_versions.keys())
+		exit(0)
 	if not zgoubi_versions.has_key(version):
 		raise ZgoubiBuildError("Unknown version: "+ version+ "\nTry "+ " ".join(zgoubi_versions.keys()))
 	print "Preparing to install zgoubi:", version

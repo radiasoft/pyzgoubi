@@ -62,9 +62,10 @@ class Bunch(object):
 		if ceil(len(self.coords) / n_slices) > max_particles:
 			n_slices = ceil(len(self.coords)/max_particles)
 
+		rigidity=self.get_bunch_rigidity()
 		for pslice in numpy.array_split(self.coords, n_slices):
 			if pslice.size != 0:
-				yield Bunch(rigidity=self.get_bunch_rigidity(), mass=self.mass, charge=self.charge,
+				yield Bunch(rigidity=rigidity, mass=self.mass, charge=self.charge,
 			            particles=pslice)
 
 	def __str__(self):
@@ -481,8 +482,10 @@ class Bunch(object):
 			# this is quite optimised
 			# rather than call the general io.write_fortran_record(), use a fast special case
 			#header
-			for dummy in xrange(4):
-				io.write_fortran_record(fh, "a"*80)
+			io.write_fortran_record(fh, "Binary bunch coordinates from pyzgoubi".ljust(80))
+			io.write_fortran_record(fh, "Y,T,Z,P,S,D".ljust(80))
+			io.write_fortran_record(fh, " "*80)
+			io.write_fortran_record(fh, " "*80)
 			# record length is always the same
 			rec_len_r = struct.pack("i", 6*8)
 			rec_len_r2 = rec_len_r + rec_len_r
@@ -504,7 +507,7 @@ class Bunch(object):
 			dist[:, 4] = self.coords['S']
 			dist[:, 5] = self.coords['D']
 			#dist = dist.reshape(nparts * 2, 3)
-			fh.write("# bunch\n\n\n\n")
+			fh.write("# ASCII bunch coordinates from pyzgoubi\n#Y,T,Z,P,S,D\n\n\n")
 			numpy.savetxt(fh, dist)
 		fh.close()
 

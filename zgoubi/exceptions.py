@@ -21,3 +21,7 @@ class BadFormatError(Exception):
 class EmptyFileError(Exception):
 	"File contians not records"
 	pass
+
+class ZgoubiRunError(Exception):
+	"Zgoubi hit a fatal erro"
+	pass

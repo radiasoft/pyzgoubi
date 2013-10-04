@@ -72,15 +72,15 @@ for line in install_res.communicate()[0].split('\n'):
 	if line.startswith('alias pyzgoubi='):
 		pyzgoubi_cmd = line.partition('=')[2]
 		pyzgoubi_cmd = pyzgoubi_cmd.strip('"')
-
-pyzgoubi_cmd += " --debug"
 		
 if install_res.returncode != 0:
 	print "ERROR: install failed"
 	print >> log, "ERROR: install failed"
-	print "If there were permission errors, try running 'sudo ./setup clean --all' and 'sudo rm install.log'"
-	print >> log,"If there were permission errors, try running 'sudo ./setup clean --all' and 'sudo rm install.log'"
+	print "If there were permission errors, try running 'sudo ./setup.py clean --all' and 'sudo rm install.log zgoubi/version.py'"
+	print >> log,"If there were permission errors, try running 'sudo ./setup.py clean --all' and 'sudo rm install.log zgoubi/version.py'"
 	sys.exit(1)
+
+pyzgoubi_cmd += " --debug"
 
 print
 print >>log
