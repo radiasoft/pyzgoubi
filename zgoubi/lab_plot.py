@@ -193,6 +193,11 @@ class LabPlotDrawer(object):
 			self.ax.plot(xs, ys, style)
 			
 		else: ValueError("Can't handle mode "+ self.mode)
+	
+	def draw_label(self, x, y, l, marker=""):
+		if marker != "":
+			self.ax.plot([x],[y], marker)
+		self.ax.annotate(str(l), (x,y))
 
 
 	def show(self):
@@ -246,15 +251,32 @@ class LabPlot(object):
 			position = lpelem.exit_coord
 
 
-	def draw(self):
+	def draw(self, draw_tracks=True, draw_field_points=False, field_component='z'):
 		self.lpd = LabPlotDrawer()
+
+		if draw_field_points:
+			for track in self.tracks:
+				for p in track:
+					xs, ys, by, bz, bx = p
+					if by is None: continue
+					if field_component == 'y':
+						self.lpd.draw_label(xs, ys, "%.3g"%by, 'rx')
+					elif field_component == 'z':
+						self.lpd.draw_label(xs, ys, "%.3g"%bz, 'rx')
+					elif field_component == 'x':
+						self.lpd.draw_label(xs, ys, "%.3g"%bx, 'rx')
+					else:
+						raise ValueError("field_component should be 'y', 'z' or 'x'")
+
+
 		for elem in self.elements:
 			elem.draw_ref_line(self.lpd)
 			elem.draw_outline(self.lpd)
 
-		for track in self.tracks:
-			xs, ys = zip(*track)
-			self.lpd.draw_line(xs, ys, "r-")
+		if draw_tracks:
+			for track in self.tracks:
+				xs, ys, dummy, dummy, dummy = zip(*track)
+				self.lpd.draw_line(xs, ys, "r-")
 
 
 		#self.lpd.show()
@@ -320,20 +342,23 @@ class LabPlot(object):
 						raise ValueError("Track contains label '%s' not found in line. NOEL=%s"%(label, noel))
 
 					for t in ptrack_ppn:
-						#if t['IEX'] != 1: break
+						if t['IEX'] != 1: break
 						y = t['Y']
 						x = t['X']
+						by, bz, bx = t['BY'], t['BZ'], t['BX']
+						if abs(by) < 1e-50 and abs(bz) < 1e-50 and abs(bx) < 1e-50:
+							by, bz, bx = 0, 0, 0 # ignore tiny fields
 						xt, yt = self.elements[el_ind].transform(x,y)
-						this_track.append([xt,yt])
+						this_track.append([xt,yt, by, bz, bx])
 					for t in ftrack_ppn:
-						#if t['IEX'] != 1: break
+						if t['IEX'] != 1: break
 						# fai has no x coord, and takes label from element before it
 						y = t['Y']
 						x = 0
 
 						# index error here may mean plt track passed as fai track, maybe there should be some way to check
 						xt, yt = self.elements[el_ind+1].transform(x,y)
-						this_track.append([xt,yt])
+						this_track.append([xt,yt,None,None,None])
 
 				#print this_track
 				if len(this_track) > 0 :

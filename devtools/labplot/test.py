@@ -5,6 +5,7 @@ import numpy as np
 l = Line("lp test")
 
 if 0:
+	# changref
 	l.add(OBJET2())
 	for x in xrange(2):
 		l.add(DRIFT("d1", XL=10))
@@ -12,8 +13,11 @@ if 0:
 		l.add(CHANGREF("d1", XCE=0, YCE=0, ALE=-360/8))
 		l.add(CHANGREF("d1", XCE=0, YCE=1, ALE=0))
 		l.add(DRIFT("d1", XL=10))
-if 1:
+if 0:
+	# BENDS
 	for x in xrange(1):
+		l.add(DRIFT("start", XL=0))
+		l.add(FAISCNL("start", FNAME='zgoubi.fai'))
 		l.add(DRIFT("d1", XL=5))
 		l.add(BEND("b1", XPAS=(10,10,10), XL=5, B1=-4, KPOS=3, W_E = radians(0), W_S = radians(0)))
 		l.add(DRIFT("d2", XL=5))
@@ -23,8 +27,50 @@ if 1:
 		l.add(DRIFT("d4", XL=5))
 		l.add(BEND("b3", XPAS=(10,10,10), XL=5, B1=-4, KPOS=1, W_E = radians(0), W_S = radians(0)))
 		l.add(DRIFT("d5", XL=5))
-
+		l.add(DRIFT("end",XL=0))
+		l.add(FAISCNL("end", FNAME='zgoubi.fai'))
 if 0:
+	# DIPOLE
+	ref_rid = -ke_to_rigidity(10e6, ELECTRON_MASS)
+	dipole_angle = 2*pi/36
+	dipole_field = -0.1*T
+	dipole_bend_radius  = abs(ref_rid / (dipole_field *kgauss_ ) *cm)
+	ad = abs(degrees(dipole_angle))
+	for x in xrange(1):
+		l.add(DRIFT("start", XL=0))
+		l.add(FAISCNL("start", FNAME='zgoubi.fai'))
+		l.add(DRIFT("d1", XL=5))
+		#l.add(BEND("b1", XPAS=(10,10,10), XL=5, B1=-4, KPOS=3, W_E = radians(0), W_S = radians(0)))
+		l.add(DIPOLE("b1", AT=ad, RM=dipole_bend_radius*cm_, ACN=ad/2, B_0=dipole_field*kgauss_,
+			OMEGA_E=ad/2, OMEGA_S=-ad/2,
+			R1_E=1e9, R2_E=1e9, R1_S=1e9, R2_S=1e9, R1_L=1e9, R2_L=1e9,R3=1e9,
+			U1_E=-1e9, U2_E=1e9, U1_S=-1e9, U2_S=1e9, U1_L=-1e9, U2_L=1e9,
+			IORDRE=2, Resol=10,
+			LAM_E=1,NCE=2,CE_0=0.1,CE_1=2, XI_E=1,SHIFT_E=1,
+			LAM_S=0.1,
+			KPOS=2, RE=dipole_bend_radius*cm_, RS=dipole_bend_radius*cm_,
+			XPAS=1
+			))
+
+
+		l.add(DRIFT("d2", XL=5))
+		l.add(DRIFT("d3", XL=5))
+		l.add(DIPOLE("b2", AT=ad, RM=dipole_bend_radius*cm_, ACN=ad/2, B_0=-dipole_field*kgauss_,
+			OMEGA_E=ad/2, OMEGA_S=-ad/2,
+			R1_E=1e9, R2_E=1e9, R1_S=1e9, R2_S=1e9, R1_L=1e9, R2_L=1e9,R3=1e9,
+			U1_E=-1e9, U2_E=1e9, U1_S=-1e9, U2_S=1e9, U1_L=-1e9, U2_L=1e9,
+			IORDRE=2, Resol=10,
+			LAM_E=1,NCE=2,CE_0=0.1,CE_1=2, XI_E=1,SHIFT_E=1,
+			LAM_S=0.1,
+			KPOS=2, RE=dipole_bend_radius*cm_, RS=dipole_bend_radius*cm_,
+			XPAS=1
+			))
+
+		l.add(DRIFT("d4", XL=5))
+		l.add(FAISCNL("end", FNAME='zgoubi.fai'))
+
+if 1:
+	# EMMA, quads and change refs
 	emma = Line('emma')
 	xpas = (2,20,2)
 	cells = 42
@@ -58,7 +104,7 @@ if 0:
 	emma.add(DRIFT("end", XL=0* cm_))
 	emma.add(FAISCNL("end", FNAME='zgoubi.fai'))
 
-	l = emma * 2 
+	l = emma * 2
 
 
 from collections import Counter
@@ -119,8 +165,13 @@ closed_orbit = [0,0,0,0]
 ob.clear()
 Y,T,Z,P = closed_orbit
 #ob.add(Y=Y, T=T, Z=Z, P=P, D=1)
-for dy in np.linspace(-4,4,10):
-	ob.add(Y=Y+dy, T=T, Z=Z, P=P, D=1)
+if 0:
+	for dy in np.linspace(-4,4,10):
+		ob.add(Y=Y+dy, T=T, Z=Z, P=P, D=1)
+
+if 1:
+	for dd in np.linspace(0.1,1.5,10):
+		ob.add(Y=Y, T=T, Z=Z, P=P, D=dd)
 
 #ob.add(Y=Y+1, T=T, Z=Z, P=P, D=1)
 #ob.add(Y=Y+1, T=T, Z=Z, P=P, D=2)
@@ -132,8 +183,8 @@ print tline
 #tline.full_tracking()
 tline.full_tracking(drift_to_multi=True)
 print tline
-res= tline.run()
-#ftrack = res.get_all('fai')
+res= tline.run(xterm=0)
+ftrack = res.get_all('fai')
 ptrack = res.get_all('plt')
 
 fh = open("zgoubi.plt.csv", "w")
@@ -148,11 +199,12 @@ print l
 
 lp = LabPlot(l, boro=-ke_to_rigidity(10e6,ELECTRON_MASS))
 #lp.add_tracks(ftrack=ftrack)
-lp.add_tracks(ptrack=ptrack)
-#lp.add_tracks(ftrack, ptrack)
+#lp.add_tracks(ptrack=ptrack)
+lp.add_tracks(ftrack, ptrack)
 
 #exit()
-lp.draw()
+#lp.draw()
+lp.draw(draw_field_points=True, field_component='z')
 #lp.save("emma.pdf")
 #lp.save("emma.svg")
 lp.show()
