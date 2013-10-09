@@ -19,7 +19,7 @@ class LabPlotElement(object):
 		self.entry_angle = prev_angle # angle of the entry of the ref line
 		self.element_type =  z_element._zgoubi_name
 
-		print "LabPlotElement(",z_element._zgoubi_name, prev_coord, prev_angle, ")"
+		zlog.debug("LabPlotElement(%s %s %s)"%(z_element._zgoubi_name, prev_coord, prev_angle))
 
 		self.exit_coord = list(self.entry_coord) # coord of the exit of the ref line
 		self.exit_angle = self.entry_angle #  angle of the exit of the ref line
@@ -235,6 +235,7 @@ class LabPlot(object):
 		self.tracks = []
 		self.field_map_data = []
 		self.boro = boro
+		self.duped_labels = []
 		
 		self._scan_line()
 		
@@ -250,7 +251,8 @@ class LabPlot(object):
 			if hasattr(elem, 'label1'):
 				label = elem.label1
 				if label in self.element_label1:
-					zlog.warn("Repeated label '%s'"%label)
+					self.duped_labels.append(label)
+					#zlog.warn("Repeated label '%s'"%label)
 			else:
 				label = ""
 			lpelem = LabPlotElement(elem, position, angle, boro=self.boro)
@@ -375,6 +377,10 @@ class LabPlot(object):
 						el_ind = self.element_label1.index(label)
 					except ValueError:
 						raise ValueError("Track contains label '%s' not found in line. NOEL=%s"%(label, noel))
+
+					if label in self.duped_labels:
+						zlog.warn("Track point at element with duplicated label '%s'. Points may be drawn in wrong element"%label)
+
 
 					for t in ptrack_ppn:
 						if t['IEX'] != 1: break

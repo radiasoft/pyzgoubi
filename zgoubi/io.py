@@ -253,7 +253,7 @@ def read_file(fname):
 					for s in row:
 						if len(s)>5 and (s[1]=='.'or s[2]=='.') and s[-4] == '-':
 							ns = s[:-4] + 'E' + s[-4:]
-							zlog.warn("Replaced %s with %s (%s)"%(s, ns, float(ns)))
+							zlog.debug("Replaced %s with %s (%s)"%(s, ns, float(ns)))
 							s = ns
 						new_row.append(s)
 
