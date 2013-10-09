@@ -174,7 +174,8 @@ class LabPlotDrawer(object):
 		self.mode = mode
 		
 		if self.mode == "matplotlib":
-			global plt, Line2D
+			global matplotlib,plt, Line2D
+			import matplotlib
 			import matplotlib.pyplot as plt
 			from matplotlib.lines import Line2D
 
@@ -207,6 +208,13 @@ class LabPlotDrawer(object):
 			if colorbar_label:
 				cbar.ax.set_ylabel(colorbar_label)
 
+	def finish(self):
+		if self.mode == "matplotlib":
+			plt.xlabel("Lab x (cm)")
+			plt.ylabel("Lab y (cm)")
+			version = matplotlib.__version__.split(".")
+			if int(version[0]) >= 1 and int(version[1]) >= 1:
+				plt.tight_layout()
 
 	def show(self):
 		if self.mode == "matplotlib":
@@ -316,7 +324,7 @@ class LabPlot(object):
 					elif field_component == 'x':
 						self.lpd.draw_label(xs, ys, "%.3g"%bx, 'rx')
 
-		#self.lpd.show()
+		self.lpd.finish()
 	
 	def show(self):
 		self.lpd.show()
