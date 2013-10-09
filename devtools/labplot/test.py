@@ -169,9 +169,14 @@ if 0:
 	for dy in np.linspace(-4,4,10):
 		ob.add(Y=Y+dy, T=T, Z=Z, P=P, D=1)
 
-if 1:
+if 0:
 	for dd in np.linspace(0.1,1.5,10):
 		ob.add(Y=Y, T=T, Z=Z, P=P, D=dd)
+
+# for magnet field scan
+if 1:
+	for dy in np.linspace(-30,30,100):
+		ob.add(Y=Y+dy, T=T, Z=Z, P=P, D=1000)
 
 #ob.add(Y=Y+1, T=T, Z=Z, P=P, D=1)
 #ob.add(Y=Y+1, T=T, Z=Z, P=P, D=2)
@@ -204,7 +209,8 @@ lp.add_tracks(ftrack, ptrack)
 
 #exit()
 #lp.draw()
-lp.draw(draw_field_points=True, field_component='z')
+#lp.draw(draw_field_points=True, field_component='z')
+lp.draw(draw_tracks=False, draw_field_midplane=True, field_component='z')
 #lp.save("emma.pdf")
 #lp.save("emma.svg")
 lp.show()

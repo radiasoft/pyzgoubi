@@ -2,6 +2,7 @@ from __future__ import division
 from math import *
 import numpy as np
 from zgoubi.core import zlog
+import scipy.interpolate
 
 null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL ".split()
 rect_elements = "DRIFT MULTIPOL QUADRUPO BEND".split()
@@ -198,6 +199,13 @@ class LabPlotDrawer(object):
 		if marker != "":
 			self.ax.plot([x],[y], marker)
 		self.ax.annotate(str(l), (x,y))
+	
+	def draw_im(self, im, extent, cm, vmin, vmax, colorbar=True, colorbar_label=""):
+		i = self.ax.imshow(im, extent=extent, origin='lower', cmap=plt.get_cmap(cm),vmin=vmin, vmax=vmax)
+		if colorbar:
+			cbar = self.fig.colorbar(i)
+			if colorbar_label:
+				cbar.ax.set_ylabel(colorbar_label)
 
 
 	def show(self):
@@ -225,6 +233,7 @@ class LabPlot(object):
 		self.elements = []
 		self.element_label1 = []
 		self.tracks = []
+		self.field_map_data = []
 		self.boro = boro
 		
 		self._scan_line()
@@ -251,8 +260,47 @@ class LabPlot(object):
 			position = lpelem.exit_coord
 
 
-	def draw(self, draw_tracks=True, draw_field_points=False, field_component='z'):
+	def draw(self, draw_tracks=True, draw_field_points=False, draw_field_midplane=False, field_component='z'):
 		self.lpd = LabPlotDrawer()
+
+		if field_component not in ['x','y','z']:
+			raise ValueError("field_component should be 'y', 'z' or 'x'")
+
+		if draw_field_midplane:
+			label = r"$B_%s$ (kG)"%field_component
+			field_map_data = np.array(self.field_map_data)
+			points = field_map_data[:,0:3:2]
+			if field_component == 'y':
+				values = field_map_data[:,3].reshape([-1])
+			elif field_component == 'z':
+				values = field_map_data[:,4].reshape([-1])
+			elif field_component == 'x':
+				values = field_map_data[:,5].reshape([-1])
+
+			# http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html
+			# interested in y-x plane
+			ymin,ymax,xmin,xmax = points[:,0].min(), points[:,0].max(), points[:,1].min(), points[:,1].max()
+			nsteps = 1000j # j because of how mgrid works
+			grid_y, grid_x = np.mgrid[ymin:ymax:nsteps, xmin:xmax:nsteps]
+			
+			# check that paths don't deviate from z=0 plane
+			if np.abs(field_map_data[:,1]).max() > 1e-6:
+				zlog.warn("Some field points are not at z=0. Plot will be of projection onto z=0")
+
+			int_field = scipy.interpolate.griddata(points, values, (grid_y, grid_x))
+			#print int_field.nanmax(), int_field.nanmin(),  np.abs(int_field).nanmax()
+			vmax = np.nanmax(np.abs(int_field))
+			self.lpd.draw_im(int_field.T, (ymin,ymax,xmin,xmax), cm='bwr', vmin=-vmax, vmax=vmax, colorbar_label=label)
+			
+
+		for elem in self.elements:
+			elem.draw_ref_line(self.lpd)
+			elem.draw_outline(self.lpd)
+
+		if draw_tracks:
+			for track in self.tracks:
+				xs, ys, dummy, dummy, dummy = zip(*track)
+				self.lpd.draw_line(xs, ys, "r-")
 
 		if draw_field_points:
 			for track in self.tracks:
@@ -265,19 +313,6 @@ class LabPlot(object):
 						self.lpd.draw_label(xs, ys, "%.3g"%bz, 'rx')
 					elif field_component == 'x':
 						self.lpd.draw_label(xs, ys, "%.3g"%bx, 'rx')
-					else:
-						raise ValueError("field_component should be 'y', 'z' or 'x'")
-
-
-		for elem in self.elements:
-			elem.draw_ref_line(self.lpd)
-			elem.draw_outline(self.lpd)
-
-		if draw_tracks:
-			for track in self.tracks:
-				xs, ys, dummy, dummy, dummy = zip(*track)
-				self.lpd.draw_line(xs, ys, "r-")
-
 
 		#self.lpd.show()
 	
@@ -345,11 +380,13 @@ class LabPlot(object):
 						if t['IEX'] != 1: break
 						y = t['Y']
 						x = t['X']
+						z = t['Z']
 						by, bz, bx = t['BY'], t['BZ'], t['BX']
 						if abs(by) < 1e-50 and abs(bz) < 1e-50 and abs(bx) < 1e-50:
 							by, bz, bx = 0, 0, 0 # ignore tiny fields
 						xt, yt = self.elements[el_ind].transform(x,y)
 						this_track.append([xt,yt, by, bz, bx])
+						self.field_map_data.append([xt,z,yt,by, bz, bx])
 					for t in ftrack_ppn:
 						if t['IEX'] != 1: break
 						# fai has no x coord, and takes label from element before it
