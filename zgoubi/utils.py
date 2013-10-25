@@ -15,8 +15,10 @@ from zgoubi.constants import *
 from zgoubi.exceptions import *
 from zgoubi.rel_conv import *
 import itertools
-from zgoubi.core import zlog, dep_warn
+from zgoubi.core import zlog, dep_warn, Line
 from StringIO import StringIO
+from collections import Counter
+import copy
 
 # use these to convert things to metres and tesla
 m = 1
@@ -407,7 +409,7 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 		return None
 
 
-def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, record_fname=None):
+def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, record_fname=None, plot_search=False):
 	"""Find a closed orbit for the line. can optionally give a list of initial coordinates, init_YTZP, eg:
 	find_closed_orbit(line, init_YTZP=[1.2,2.1,0,0])
 	otherwise [0,0,0,0] are used.
@@ -437,6 +439,12 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 			break
 	else:
 		raise ValueError, "Line has no FAISCNL element"
+	
+	if plot_search:
+		line.full_tracking(True)
+		ptracks = []
+	else:
+		line.full_tracking(False)
 
 	current_YTZP = numpy.array(init_YTZP)
 	areas = []
@@ -451,12 +459,28 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 
 		r = line.run(xterm=False)
 
+		if plot_search:
+			ptrack = r.get_all('plt')
+			ptracks.append(ptrack)
+
+		try:
+			ftrack = r.get_all('fai')
+			lost_lap = ftrack['PASS'].max()
+		except IOError:
+			lost_lap = 0
+
+
 		if not r.run_success():
+			if plot_search:
+				import matplotlib.pyplot as pyplot
+				for ptrack in ptracks:
+					pyplot.plot(ptrack['S'], ptrack['Y'])
+				pyplot.savefig(plot_search)
 			if iteration == 0:
-				zlog.warning("Not a stable orbit")
+				zlog.warning("Initial orbit unstable. Lost on lap %d"%lost_lap)
 				return None
 			else:
-				zlog.warning("Center of orbit from last iteration, not stable")
+				zlog.warning("Center of orbit from last iteration not stable. Lost on iteration %d, lap %d"%(iteration,lost_lap))
 				return None
 		else:
 			track = r.get_track('fai', ['Y', 'T', 'Z', 'P'])
@@ -514,10 +538,10 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 			close_orbit = current_YTZP
 			break
 
-		#if area_h < tol and area_v < tol:
-		#	close_orbit_found = True
-		#	close_orbit = current_YTZP
-		#	break
+		if area_h < tol and area_v < tol:
+			close_orbit_found = True
+			close_orbit = current_YTZP
+			break
 
 
 	
@@ -2108,3 +2132,40 @@ def calc_phase_ad_from_matrix(trans_matrix):
 	mu_y = acos(0.5 * (tm[0,0]+tm[1,1]))
 	mu_z = acos(0.5 * (tm[2,2]+tm[3,3]))
 	return (mu_y,mu_z)
+
+def uniquify_labels(line):
+	"""Returns a new line where every element has a unique label.
+	
+	Checks for repeating labels and appends a count to each that repeats. Ignores elements with blank labels.
+	
+	Note: New line contains deep copies of original elements.
+	"""
+	max_label = 10 # FIXME this was 8 in old zgoubi version, but is now 10. probably should be a global option
+	label1s = Counter()
+	dup_names = set()
+
+	# dont need to rename if already unique
+	for e in line.elements():
+		if hasattr(e, 'label1'):
+			lab1 = e.label1.strip()
+			if lab1 != "":
+				label1s[lab1] += 1
+				if label1s[lab1] > 1:
+					dup_names.add(lab1)
+	
+	label1s = Counter() # reset counter
+	# new line with copy of elements
+	# avoids issues if a line contains the same element instance multiple times
+	new_line = Line(line.name)
+	for e in line.elements():
+		new_e = copy.deepcopy(e)
+		if hasattr(new_e, 'label1'):
+			lab1 = new_e.label1.strip()
+			if lab1 != "" and lab1 in dup_names:
+				new_lab1 = lab1 + str(label1s[lab1])
+				if len(new_lab1) > max_label:
+					raise ValueError("Renaming '%s' to '%s' exceeds label length %s"%(lab1, new_lab1, max_label))
+				label1s[lab1] += 1
+				new_e.set(label1 = new_lab1)
+		new_line.add(new_e)
+	return new_line

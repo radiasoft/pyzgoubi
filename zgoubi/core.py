@@ -1667,9 +1667,9 @@ class Results(object):
 				nu_y = nu_z = -1
 				bits = line.split()
 				if bits[2] == "undefined":
-					zlog.error("Horizontal tune is undefined")
+					zlog.error("Horizontal tune is undefined: %s"%line)
 				if bits[5] == "undefined":
-					zlog.error("Vertical tune is undefined")
+					zlog.error("Vertical tune is undefined: %s"%line)
 				try:
 					nu_y = float(bits[2])
 				except ValueError:

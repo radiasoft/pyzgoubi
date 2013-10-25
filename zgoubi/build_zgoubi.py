@@ -77,16 +77,33 @@ def apply_zgoubi_patches(patches):
 		if ret != 0:
 			raise ZgoubiBuildError("Patch application failed: %s" % patch)
 
+def edit_includes(includes):
+	"Set compile time variables, e.g. max magnet steps"
+	for fname, sourceline in includes:
+		print "Editing", os.path.join("include", fname)
+		file_content = open(os.path.join(zgoubi_build_dir2, "include", fname)).readlines()
+		newfile = open(os.path.join(zgoubi_build_dir2, "include", fname), "w")
+		for line in file_content:
+			if not line.startswith("C"):
+				newfile.write("C      Commented out by pyzgoubi build script\n")
+				line = "C"+line
+			newfile.write(line)
+		newfile.write("       "+sourceline+"\n")
 
-def make_zgoubi(threads=2):
+
+
+
+def make_zgoubi(makecommands, threads=2):
 	"Build zgoubi source code"
 	print "building zgoubi"
 	ret = subprocess.call(['make', 'clean' ], cwd=zgoubi_build_dir2)
-	if ret != 0:
-		raise ZgoubiBuildError("Make clean failed")
-	ret = subprocess.call(['make', '-j%d'%threads ], cwd=zgoubi_build_dir2)
-	if ret != 0:
-		raise ZgoubiBuildError("Building zgoubi failed")
+	for makecommand in makecommands:
+		if ret != 0:
+			raise ZgoubiBuildError("Make clean failed")
+		command = makecommand.split()+ ['-j%d'%threads]
+		ret = subprocess.call(command, cwd=zgoubi_build_dir2)
+		if ret != 0:
+			raise ZgoubiBuildError("Building zgoubi failed:" + " ".join(command) )
 
 def install_zgoubi(postfix=""):
 	"Install zgoubi into ~/.pyzgoubi folder"
@@ -108,24 +125,13 @@ patches=[
 ],
 )
 
-zgoubi_versions["312+patches"] = dict(svnr=312,
+zgoubi_versions["329+patches"] = dict(svnr=329,
 patches=[
-"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/mcmodel-fix2.diff",
-"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks.diff",
-#"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/zgoubi_parallel_build.diff",
-"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/objet3_2.diff",
-"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/kobj301_2.diff",
-"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/disable_ETparam_test_code.diff",
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks2.diff",
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/kobj301_3.diff",
 ],
-)
-
-zgoubi_versions["315+patches"] = dict(svnr=315,
-patches=[
-"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/mcmodel-fix2.diff",
-"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks.diff",
-#"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/zgoubi_parallel_build.diff",
-"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/objet3_3.diff",
-],
+makecommands=["make -f Makefile_zgoubi_gfortran", "make -f Makefile_zpop_gfortran"],
+includes=[["MXSTEP.H", "PARAMETER (MXSTEP = 1000)"]],
 )
 
 def install_zgoubi_all(version="261+patches"):
@@ -140,7 +146,9 @@ def install_zgoubi_all(version="261+patches"):
 	get_zgoubi_svn()
 	set_zgoubi_version(zgoubi_versions[version]['svnr'])
 	apply_zgoubi_patches(zgoubi_versions[version]['patches'])
-	make_zgoubi()
+	if zgoubi_versions[version].has_key("includes"):
+		edit_includes(zgoubi_versions[version]["includes"])
+	make_zgoubi(zgoubi_versions[version].get("makecommands",['make']))
 
 	install_zgoubi("_"+version)
 	print "\nInstalled zgoubi into ", zgoubi_install_dir

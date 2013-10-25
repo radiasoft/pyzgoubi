@@ -2,6 +2,7 @@ from __future__ import division
 from math import *
 import numpy as np
 from zgoubi.core import zlog
+import scipy.interpolate
 
 null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL ".split()
 rect_elements = "DRIFT MULTIPOL QUADRUPO BEND".split()
@@ -71,13 +72,13 @@ class LabPlotElement(object):
 			self.exit_coord[1] += self.z_element.YCE * cos(self.exit_angle)
 
 
-		elif self.element_type == "DIPOLE":
+		elif self.element_type in ["DIPOLE", "DIPOLES"]:
 			self.dip_at = radians(self.z_element.AT) # sector angle of magnet region
 			self.dip_re = self.z_element.RE # radius at entry
 			self.dip_rs = self.z_element.RS # radius at exit
 			self.dip_te = self.z_element.TE # radius at entry
 			self.dip_ts = self.z_element.TS # radius at exit
-			self.width = self.dip_re
+			self.width = min(self.dip_re, 500) # FIXME need proper method for setting widths
 			if self.dip_te != 0 or self.dip_ts != 0:
 				raise ValueError("Non zero TE or TS not implemented for %s"%self.element_type)
 
@@ -100,7 +101,7 @@ class LabPlotElement(object):
 			raise ValueError("Can't handle element "+ self.element_type)
 	
 	def transform(self, x, y):
-		if self.element_type != "DIPOLE":
+		if self.element_type not in ["DIPOLE", "DIPOLES"]:
 			x0, y0 = self.entry_coord # FIXME how to handle transform in changref
 			a0 = self.entry_angle
 
@@ -149,23 +150,23 @@ class LabPlotElement(object):
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, "b-")
 
-		if self.element_type == "DIPOLE":
+		if self.element_type in ["DIPOLE", "DIPOLES"]:
 			# in polar
 			re = self.dip_re
 			w = self.width
 			a = self.dip_at
-			arcsteps = 10
+			arcsteps = 20
 			points = [ t(0, re - w/2),
 			           t(0, re + w/2)]
 			for a1 in np.linspace(0,a,arcsteps):
 				points.append(t(a1, re + w/2))
 			points.append(t(a, re + w/2))
 			points.append(t(a, re - w/2))
-			for a1 in np.linspace(0,a,arcsteps):
+			for a1 in np.linspace(a,0,arcsteps):
 				points.append(t(a1, re - w/2))
 
 			xs, ys = zip(*points)
-			lpd.draw_line(xs, ys, "b-x")
+			lpd.draw_line(xs, ys, "b-")
 
 		
 class LabPlotDrawer(object):
@@ -193,6 +194,18 @@ class LabPlotDrawer(object):
 			self.ax.plot(xs, ys, style)
 			
 		else: ValueError("Can't handle mode "+ self.mode)
+	
+	def draw_label(self, x, y, l, marker=""):
+		if marker != "":
+			self.ax.plot([x],[y], marker)
+		self.ax.annotate(str(l), (x,y))
+	
+	def draw_im(self, im, extent, cm, vmin, vmax, colorbar=True, colorbar_label=""):
+		i = self.ax.imshow(im, extent=extent, origin='lower', cmap=plt.get_cmap(cm),vmin=vmin, vmax=vmax)
+		if colorbar:
+			cbar = self.fig.colorbar(i)
+			if colorbar_label:
+				cbar.ax.set_ylabel(colorbar_label)
 
 
 	def show(self):
@@ -220,6 +233,7 @@ class LabPlot(object):
 		self.elements = []
 		self.element_label1 = []
 		self.tracks = []
+		self.field_map_data = []
 		self.boro = boro
 		
 		self._scan_line()
@@ -246,16 +260,59 @@ class LabPlot(object):
 			position = lpelem.exit_coord
 
 
-	def draw(self):
+	def draw(self, draw_tracks=True, draw_field_points=False, draw_field_midplane=False, field_component='z'):
 		self.lpd = LabPlotDrawer()
+
+		if field_component not in ['x','y','z']:
+			raise ValueError("field_component should be 'y', 'z' or 'x'")
+
+		if draw_field_midplane:
+			label = r"$B_%s$ (kG)"%field_component
+			field_map_data = np.array(self.field_map_data)
+			points = field_map_data[:,0:3:2]
+			if field_component == 'y':
+				values = field_map_data[:,3].reshape([-1])
+			elif field_component == 'z':
+				values = field_map_data[:,4].reshape([-1])
+			elif field_component == 'x':
+				values = field_map_data[:,5].reshape([-1])
+
+			# http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html
+			# interested in y-x plane
+			ymin,ymax,xmin,xmax = points[:,0].min(), points[:,0].max(), points[:,1].min(), points[:,1].max()
+			nsteps = 1000j # j because of how mgrid works
+			grid_y, grid_x = np.mgrid[ymin:ymax:nsteps, xmin:xmax:nsteps]
+			
+			# check that paths don't deviate from z=0 plane
+			if np.abs(field_map_data[:,1]).max() > 1e-6:
+				zlog.warn("Some field points are not at z=0. Plot will be of projection onto z=0")
+
+			int_field = scipy.interpolate.griddata(points, values, (grid_y, grid_x))
+			#print int_field.nanmax(), int_field.nanmin(),  np.abs(int_field).nanmax()
+			vmax = np.nanmax(np.abs(int_field))
+			self.lpd.draw_im(int_field.T, (ymin,ymax,xmin,xmax), cm='bwr', vmin=-vmax, vmax=vmax, colorbar_label=label)
+			
+
 		for elem in self.elements:
 			elem.draw_ref_line(self.lpd)
 			elem.draw_outline(self.lpd)
 
-		for track in self.tracks:
-			xs, ys = zip(*track)
-			self.lpd.draw_line(xs, ys, "r-")
+		if draw_tracks:
+			for track in self.tracks:
+				xs, ys, dummy, dummy, dummy = zip(*track)
+				self.lpd.draw_line(xs, ys, "r-")
 
+		if draw_field_points:
+			for track in self.tracks:
+				for p in track:
+					xs, ys, by, bz, bx = p
+					if by is None: continue
+					if field_component == 'y':
+						self.lpd.draw_label(xs, ys, "%.3g"%by, 'rx')
+					elif field_component == 'z':
+						self.lpd.draw_label(xs, ys, "%.3g"%bz, 'rx')
+					elif field_component == 'x':
+						self.lpd.draw_label(xs, ys, "%.3g"%bx, 'rx')
 
 		#self.lpd.show()
 	
@@ -273,12 +330,10 @@ class LabPlot(object):
 		passes = set()
 		noels = set()
 		if ftrack is not None:
-			print ftrack.dtype.names
 			pids  |= set(np.unique(ftrack['ID']))
 			passes  |= set(np.unique(ftrack['PASS']))
 			noels  |= set(np.unique(ftrack['NOEL']))
 		if ptrack is not None:
-			print ptrack.dtype.names
 			pids |= set(np.unique(ptrack['ID']))
 			passes  |= set(np.unique(ptrack['PASS']))
 			noels  |= set(np.unique(ptrack['NOEL']))
@@ -294,10 +349,6 @@ class LabPlot(object):
 		if ftrack is None: ftrack = dummy
 		if ptrack is None: ptrack = dummy
 
-
-		print pids, passes, noels
-		print np.unique(ftrack['element_label1'])
-		print np.unique(ptrack['element_label1'])
 
 		# per particle, per lap, per element
 		for pid in pids:
@@ -326,20 +377,25 @@ class LabPlot(object):
 						raise ValueError("Track contains label '%s' not found in line. NOEL=%s"%(label, noel))
 
 					for t in ptrack_ppn:
-						#if t['IEX'] != 1: break
+						if t['IEX'] != 1: break
 						y = t['Y']
 						x = t['X']
+						z = t['Z']
+						by, bz, bx = t['BY'], t['BZ'], t['BX']
+						if abs(by) < 1e-50 and abs(bz) < 1e-50 and abs(bx) < 1e-50:
+							by, bz, bx = 0, 0, 0 # ignore tiny fields
 						xt, yt = self.elements[el_ind].transform(x,y)
-						this_track.append([xt,yt])
+						this_track.append([xt,yt, by, bz, bx])
+						self.field_map_data.append([xt,z,yt,by, bz, bx])
 					for t in ftrack_ppn:
-						#if t['IEX'] != 1: break
+						if t['IEX'] != 1: break
 						# fai has no x coord, and takes label from element before it
 						y = t['Y']
 						x = 0
 
 						# index error here may mean plt track passed as fai track, maybe there should be some way to check
 						xt, yt = self.elements[el_ind+1].transform(x,y)
-						this_track.append([xt,yt])
+						this_track.append([xt,yt,None,None,None])
 
 				#print this_track
 				if len(this_track) > 0 :
