@@ -10,7 +10,7 @@ rect_elements = "DRIFT MULTIPOL QUADRUPO BEND".split()
 
 
 class LabPlotElement(object):
-	def __init__(self, z_element, prev_coord, prev_angle, boro=None):
+	def __init__(self, z_element, prev_coord, prev_angle, boro, sector_width):
 		self.z_element = z_element
 		self.prev_coord = list(prev_coord)
 		self.prev_angle = prev_angle
@@ -79,6 +79,9 @@ class LabPlotElement(object):
 			self.dip_te = self.z_element.TE # radius at entry
 			self.dip_ts = self.z_element.TS # radius at exit
 			self.width = min(self.dip_re, 500) # FIXME need proper method for setting widths
+			if sector_width:
+				self.width = float(sector_width)
+
 			if self.dip_te != 0 or self.dip_ts != 0:
 				raise ValueError("Non zero TE or TS not implemented for %s"%self.element_type)
 
@@ -240,9 +243,10 @@ class LabPlot(object):
 	"""A plotter for beam lines and tracks.
 	
 	"""
-	def __init__(self, line, boro=None):
+	def __init__(self, line, boro=None, sector_width=None):
 		"""Creates a new plot from the line.
 		If using an element that adjusts it shape based on BORO, then it must be passed in
+		if sector_width is a number it used for the width of sector elements
 
 		"""
 		
@@ -253,6 +257,7 @@ class LabPlot(object):
 		self.field_map_data = []
 		self.boro = boro
 		self.duped_labels = []
+		self.sector_width = sector_width
 		
 		self._scan_line()
 		
@@ -272,7 +277,7 @@ class LabPlot(object):
 					#zlog.warn("Repeated label '%s'"%label)
 			else:
 				label = ""
-			lpelem = LabPlotElement(elem, position, angle, boro=self.boro)
+			lpelem = LabPlotElement(elem, position, angle, boro=self.boro, sector_width=self.sector_width)
 			self.elements.append(lpelem)
 			self.element_label1.append(label)
 			angle = lpelem.exit_angle
