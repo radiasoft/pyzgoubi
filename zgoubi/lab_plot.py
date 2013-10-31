@@ -122,6 +122,15 @@ class LabPlotElement(object):
 			points = [t(0,0), t(self.length,0)]
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, "k-")
+		if self.element_type in ["DIPOLE", "DIPOLES"]:
+			re = self.dip_re
+			a = self.dip_at
+			arcsteps = 20
+			points = []
+			for a1 in np.linspace(0,a,arcsteps):
+				points.append(t(a1, re))
+			xs, ys = zip(*points)
+			lpd.draw_line(xs, ys, "k-")
 
 	
 	def draw_outline(self, lpd):
