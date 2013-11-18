@@ -93,6 +93,8 @@ alphayz = [twissparam['alpha_y'][0],twissparam['alpha_z'][0]]
 gammayz = [twissparam['gamma_y'][0],twissparam['gamma_z'][0]]
 
 #get periodic twiss parameters and dispersion
+emma.full_tracking(True)
+
 twiss_profiles = get_twiss_profiles(emma,'twiss_profiles.txt')
 
 #Note - Could alternatively specify twiss parameters at beginning of cell

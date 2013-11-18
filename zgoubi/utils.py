@@ -674,7 +674,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	Requires an OBJET type 5, and a MATRIX element.
 
 	Note - This calculation uses trajectories as measured in the local coordinate system of the magnet."""
-		
+	
 	import zgoubi.core as zg
 
 	has_object5 = False
@@ -1022,14 +1022,18 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 			#Closed orbit of off-momentum particle determined by dispersion (for small del_p)
 			ob2.clear()
 			ob2.add(Y=Y0[ind0] + del_p*disp_y_0*cm_, T=T0[ind0] + del_p*disp_py_0*mm_, 
-				Z=Z0[ind0] + del_p*disp_z_0*cm_, P=P0[ind0] + del_p*disp_pz_0*mm_, D=(1+ D0[ind0])*(1+del_p))		
-
-		r = line.run(xterm = False)
-
+				Z=Z0[ind0] + del_p*disp_z_0*cm_, P=P0[ind0] + del_p*disp_pz_0*mm_, D=(1+ D0[ind0])*(1+del_p))
+		
+		#restore full_tracking if necessary 
 		if track_type == 'plt':
-			plt_track_disp = r.get_track('plt', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
+		    line.full_tracking(True)
+		
+		r = line.run(xterm = False)
+		
+		if track_type == 'plt':
+		    plt_track_disp = r.get_track('plt', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
 		else:
-			plt_track_disp = r.get_track('fai', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
+		    plt_track_disp = r.get_track('fai', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
 
 		transpose_plt_track_disp = map(list, zip(*plt_track_disp))
 		y_disp = transpose_plt_track_disp[1]
