@@ -1390,7 +1390,7 @@ class Results(object):
 		loss_res = {}
 		for iexval in loss_types.keys():
 			lossnum = (coords["IEX"] == iexval).sum()
-			if lossnum > 1:
+			if lossnum >= 1:
 				loss_res[loss_types[iexval]] = lossnum
 		return loss_res
 
