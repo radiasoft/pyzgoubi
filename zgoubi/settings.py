@@ -4,6 +4,7 @@ from __future__ import division
 
 import ConfigParser
 import os
+import tempfile
 
 home = os.path.expanduser('~')
 config_dir = os.path.join(home, ".pyzgoubi")
@@ -17,7 +18,7 @@ config_path = os.path.join(config_dir, "settings.ini")
 config = ConfigParser.RawConfigParser()
 config.add_section('pyzgoubi')
 #default values
-config.set('pyzgoubi', 'tmp_dir', '/tmp/')
+config.set('pyzgoubi', 'tmp_dir', tempfile.gettempdir())
 config.set('pyzgoubi', 'extra_defs_files', '')
 config.set('pyzgoubi', 'zgoubi_path', "zgoubi")
 config.set('pyzgoubi', 'log_level', "warn")
