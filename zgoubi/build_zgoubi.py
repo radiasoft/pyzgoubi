@@ -131,7 +131,7 @@ patches=[
 "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/kobj301_3.diff",
 ],
 makecommands=["make -f Makefile_zgoubi_gfortran", "make -f Makefile_zpop_gfortran"],
-includes=[["MXSTEP.H", "PARAMETER (MXSTEP = 1000)"]],
+includes=[["MXSTEP.H", "PARAMETER (MXSTEP = 10000)"]],
 )
 
 def install_zgoubi_all(version="261+patches"):
