@@ -199,12 +199,12 @@ class LabPlotDrawer(object):
 			raise ValueError("Can't handle mode "+ self.mode)
 
 	
-	def draw_line(self, xs,ys, style):
+	def draw_line(self, xs,ys, style, linewidth=1):
 		xs = np.array(xs)
 		ys = np.array(ys)
 		#if np.any(xs < -10): raise ValueError
 		if self.mode == "matplotlib":
-			self.ax.plot(xs, ys, style)
+			self.ax.plot(xs, ys, style, linewidth=linewidth)
 			
 		else: ValueError("Can't handle mode "+ self.mode)
 	
@@ -324,7 +324,7 @@ class LabPlot(object):
 		if draw_tracks:
 			for track in self.tracks:
 				xs, ys, dummy, dummy, dummy = zip(*track)
-				self.lpd.draw_line(xs, ys, "r-")
+				self.lpd.draw_line(xs, ys, "r-", linewidth=0.1)
 
 		if draw_field_points:
 			for track in self.tracks:
