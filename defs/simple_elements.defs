@@ -161,6 +161,13 @@ REBELOTE
 REBELOTE
 NPASS, KWRIT, K : 3I
 
+SCALING #simplified scaling for just one element
+SCALING
+IOPT, NFAM: 2I
+NAMEF : A80
+NT : I
+SCL : E
+TIM : I
 
 SPNPRNL #store spin coordinates into file FNAME
 SPNPRNL

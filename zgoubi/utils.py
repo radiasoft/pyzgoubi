@@ -676,7 +676,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	Requires an OBJET type 5, and a MATRIX element.
 
 	Note - This calculation uses trajectories as measured in the local coordinate system of the magnet."""
-		
+	
 	import zgoubi.core as zg
 
 	has_object5 = False
@@ -1024,14 +1024,18 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 			#Closed orbit of off-momentum particle determined by dispersion (for small del_p)
 			ob2.clear()
 			ob2.add(Y=Y0[ind0] + del_p*disp_y_0*cm_, T=T0[ind0] + del_p*disp_py_0*mm_, 
-				Z=Z0[ind0] + del_p*disp_z_0*cm_, P=P0[ind0] + del_p*disp_pz_0*mm_, D=(1+ D0[ind0])*(1+del_p))		
-
-		r = line.run(xterm = False)
-
+				Z=Z0[ind0] + del_p*disp_z_0*cm_, P=P0[ind0] + del_p*disp_pz_0*mm_, D=(1+ D0[ind0])*(1+del_p))
+		
+		#restore full_tracking if necessary 
 		if track_type == 'plt':
-			plt_track_disp = r.get_track('plt', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
+		    line.full_tracking(True)
+		
+		r = line.run(xterm = False)
+		
+		if track_type == 'plt':
+		    plt_track_disp = r.get_track('plt', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
 		else:
-			plt_track_disp = r.get_track('fai', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
+		    plt_track_disp = r.get_track('fai', ['LET', 'Y', 'T', 'Z', 'P', 'S'])
 
 		transpose_plt_track_disp = map(list, zip(*plt_track_disp))
 		y_disp = transpose_plt_track_disp[1]
@@ -1214,8 +1218,12 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	
 	return twiss_profiles
 
-def calc_phase_slip(line, tof_ref, tol_co = 1e-6, D = 1):
-	"""Calculate phase slip at relative momentum D. Reference TOF must be supplied (tof_ref). Optionally set tol_co to adjust tolerance of find_closed_orbit calculation. 
+def calc_phase_slip(line, tof_ref, del_p = 0.0001, init_YTZP = [0,0,0,0], tol_co = 1e-6, D = 1):
+	"""Calculate phase slip at relative momentum D (D=1 by default). Reference TOF must be supplied 
+	(tof_ref). Optionally set 
+	del_p: momentum shift
+	tol_co: adjust tolerance of find_closed_orbit calculation. 
+	init_YTZP: set initial guess in find_closed_orbit search. 
 		"""
 
 	#check line has an objet2
@@ -1226,10 +1234,8 @@ def calc_phase_slip(line, tof_ref, tol_co = 1e-6, D = 1):
 	else:
 		raise ValueError, "Line has no OBJET2 element"
 
-	del_p = 0.0001 #momentum shift
-
 	closedorb_YTZP = None
-	closedorb_YTZP = find_closed_orbit(line, init_YTZP=[0,0,0,0], tol= tol_co, D= D*(1+del_p))
+	closedorb_YTZP = find_closed_orbit(line, init_YTZP=init_YTZP, tol= tol_co, D= D*(1+del_p))
 
 	phase_slip = None
 	if closedorb_YTZP != None:
@@ -1238,7 +1244,9 @@ def calc_phase_slip(line, tof_ref, tol_co = 1e-6, D = 1):
 		objet.add(Y=closedorb_YTZP[0], T=closedorb_YTZP[1], Z=0, P=0, D=D*(1+del_p))
 
 		r = line.run(xterm = False) 
+
 		tof_delp = r.get_track('fai', ['tof'])[0][0]
+		
 		phase_slip = (tof_delp - tof_ref)/(del_p*tof_ref)
 
 	return phase_slip
