@@ -513,6 +513,7 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 		if record_fname:
 			record_fh.write("#track %s\n"%track_a.shape[0])
 			numpy.savetxt(record_fh, track_a)
+			record_fh.flush()
 
 		tracks.append(track_a)
 

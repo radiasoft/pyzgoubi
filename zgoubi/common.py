@@ -25,7 +25,7 @@ def open_file_or_name(forn, mode="r", mkdir=False):
 	if hasattr(forn, 'readline'):
 		return forn
 	else:
-		if mkdir and mode in ["w", "a"]:
+		if mkdir and mode in ["w", "a"] and os.path.dirname(forn):
 			mkdir_p(os.path.dirname(forn))
 		return open(forn, mode)
 
