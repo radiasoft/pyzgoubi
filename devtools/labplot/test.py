@@ -29,7 +29,7 @@ if 0:
 		l.add(DRIFT("d5", XL=5))
 		l.add(DRIFT("end",XL=0))
 		l.add(FAISCNL("end", FNAME='zgoubi.fai'))
-if 0:
+if 1:
 	# DIPOLE
 	ref_rid = -ke_to_rigidity(10e6, ELECTRON_MASS)
 	dipole_angle = 2*pi/36
@@ -41,7 +41,7 @@ if 0:
 		l.add(FAISCNL("start", FNAME='zgoubi.fai'))
 		l.add(DRIFT("d1", XL=5))
 		#l.add(BEND("b1", XPAS=(10,10,10), XL=5, B1=-4, KPOS=3, W_E = radians(0), W_S = radians(0)))
-		l.add(DIPOLE("b1", AT=ad, RM=dipole_bend_radius*cm_, ACN=ad/2, B_0=dipole_field*kgauss_,
+		l.add(DIPOLE("b1", AT=ad, RM=dipole_bend_radius*cm_, ACN=ad/2, B_0=dipole_field*kgauss_, N=2,
 			OMEGA_E=ad/2, OMEGA_S=-ad/2,
 			R1_E=1e9, R2_E=1e9, R1_S=1e9, R2_S=1e9, R1_L=1e9, R2_L=1e9,R3=1e9,
 			U1_E=-1e9, U2_E=1e9, U1_S=-1e9, U2_S=1e9, U1_L=-1e9, U2_L=1e9,
@@ -55,7 +55,7 @@ if 0:
 
 		l.add(DRIFT("d2", XL=5))
 		l.add(DRIFT("d3", XL=5))
-		l.add(DIPOLE("b2", AT=ad, RM=dipole_bend_radius*cm_, ACN=ad/2, B_0=-dipole_field*kgauss_,
+		l.add(DIPOLE("b2", AT=ad, RM=dipole_bend_radius*cm_, ACN=ad/2, B_0=-dipole_field*kgauss_, N=-2,
 			OMEGA_E=ad/2, OMEGA_S=-ad/2,
 			R1_E=1e9, R2_E=1e9, R1_S=1e9, R2_S=1e9, R1_L=1e9, R2_L=1e9,R3=1e9,
 			U1_E=-1e9, U2_E=1e9, U1_S=-1e9, U2_S=1e9, U1_L=-1e9, U2_L=1e9,
@@ -69,7 +69,7 @@ if 0:
 		l.add(DRIFT("d4", XL=5))
 		l.add(FAISCNL("end", FNAME='zgoubi.fai'))
 
-if 1:
+if 0:
 	# EMMA, quads and change refs
 	emma = Line('emma')
 	xpas = (2,20,2)
@@ -176,7 +176,7 @@ if 0:
 # for magnet field scan
 if 1:
 	for dy in np.linspace(-30,30,100):
-		ob.add(Y=Y+dy, T=T, Z=Z, P=P, D=1000)
+		ob.add(Y=Y+dy, T=T, Z=Z, P=P, D=1)
 
 #ob.add(Y=Y+1, T=T, Z=Z, P=P, D=1)
 #ob.add(Y=Y+1, T=T, Z=Z, P=P, D=2)
@@ -209,8 +209,8 @@ lp.add_tracks(ftrack, ptrack)
 
 #exit()
 #lp.draw()
-#lp.draw(draw_field_points=True, field_component='z')
-lp.draw(draw_tracks=False, draw_field_midplane=True, field_component='z')
+lp.draw(draw_field_points=True, field_component='z')
+#lp.draw(draw_tracks=True, draw_field_midplane=True, field_component='z')
 #lp.save("emma.pdf")
 #lp.save("emma.svg")
 lp.show()

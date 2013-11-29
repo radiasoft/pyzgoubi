@@ -279,6 +279,23 @@ class zgoubi_element(object):
 	def list_params(self):
 		"Return a list of parameters"
 		return list(self._params)
+	
+	def reverse(self):
+		"Flip the element along the beam line direction, i.e. the entrance and exit properties are swapped"
+		if self._zgoubi_name == "DIPOLES":
+			sub_swap_pairs  = "G0_E,G0_S KAPPA_E,KAPPA_S NCE,NCS CE_0,CS_0 CE_1,CS_1 CE_2,CS_2 CE_3,CS_3 CE_4,CS_4 CE_5,CS_5 SHIFT_E,SHIFT_S OMEGA_E,OMEGA_S THETA_E,THETA_S R1_E,R1_S U1_E,U1_S U2_E,U2_S R2_E,R2_S"
+			for sub_element in self._looped_data:
+				for swap_pair in sub_swap_pairs.split():
+					print swap_pair
+					p1, p2 = swap_pair.split(",")
+					sub_element[p1], sub_element[p2] = sub_element[p2], sub_element[p1]
+				sub_element["ACN"] = self._params["AT"] - sub_element["ACN"]
+				sub_element["OMEGA_E"] *= -1
+				sub_element["OMEGA_S"] *= -1
+				sub_element["THETA_E"] *= -1
+				sub_element["THETA_S"] *= -1
+
+
 			
 try:
 	execfile(static_defs)
@@ -322,8 +339,10 @@ class Line(object):
 	def __neg__(self):
 		"return a reversed line"
 		new_line = copy.copy(self)
-		new_line.element_list = copy.copy(new_line.element_list)
+		new_line.element_list = copy.deepcopy(new_line.element_list)
 		new_line.element_list.reverse()
+		for e in new_line.element_list:
+			e.reverse()
 		new_line.name = "-"+self.name
 		return new_line
 
@@ -1371,7 +1390,7 @@ class Results(object):
 		loss_res = {}
 		for iexval in loss_types.keys():
 			lossnum = (coords["IEX"] == iexval).sum()
-			if lossnum > 1:
+			if lossnum >= 1:
 				loss_res[loss_types[iexval]] = lossnum
 		return loss_res
 

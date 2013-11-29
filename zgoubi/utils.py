@@ -450,6 +450,7 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 	areas = []
 	coords = []
 	tracks = []
+	laps = []
 	close_orbit_found = False
 	for iteration in xrange(max_iterations):
 		zlog.debug("start iteration: "+str(iteration)+ " with coords "+str(current_YTZP))
@@ -468,9 +469,13 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 			lost_lap = ftrack['PASS'].max()
 		except IOError:
 			lost_lap = 0
+		laps.append(lost_lap)
 
+		if not r.run_success() and lost_lap >= 5:
+			zlog.warning("Lost on lap %d"%lost_lap)
 
-		if not r.run_success():
+		if lost_lap < 3:
+		#if not r.run_success():
 			if plot_search:
 				import matplotlib.pyplot as pyplot
 				for ptrack in ptracks:
@@ -508,6 +513,7 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 		if record_fname:
 			record_fh.write("#track %s\n"%track_a.shape[0])
 			numpy.savetxt(record_fh, track_a)
+			record_fh.flush()
 
 		tracks.append(track_a)
 
@@ -520,7 +526,6 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 		area_v = calc_area_simple(track_a[:, 2:4], centre=centre_v)
 
 		zlog.debug("End iteration: "+str(iteration)+ " final coords "+str(track_a[-1])+", center "+str([centre_h, centre_v])+", area "+str([area_h,area_v]))
-
 
 		areas.append([area_h , area_v])
 		prev_YTZP = current_YTZP
@@ -542,12 +547,9 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 			close_orbit_found = True
 			close_orbit = current_YTZP
 			break
-
-
 	
 	for x in xrange(len(areas)):
-		print "it:", x, "\tYTZP", coords[x], "\tarea", areas[x]
-
+		print "it:", x, "\tYTZP", coords[x], "\tarea", areas[x], "\t laps", laps[x]
 
 	if close_orbit_found:
 		print "found closed orbit"

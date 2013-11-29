@@ -10,7 +10,7 @@ rect_elements = "DRIFT MULTIPOL QUADRUPO BEND".split()
 
 
 class LabPlotElement(object):
-	def __init__(self, z_element, prev_coord, prev_angle, boro=None):
+	def __init__(self, z_element, prev_coord, prev_angle, boro, sector_width):
 		self.z_element = z_element
 		self.prev_coord = list(prev_coord)
 		self.prev_angle = prev_angle
@@ -19,7 +19,7 @@ class LabPlotElement(object):
 		self.entry_angle = prev_angle # angle of the entry of the ref line
 		self.element_type =  z_element._zgoubi_name
 
-		print "LabPlotElement(",z_element._zgoubi_name, prev_coord, prev_angle, ")"
+		zlog.debug("LabPlotElement(%s %s %s)"%(z_element._zgoubi_name, prev_coord, prev_angle))
 
 		self.exit_coord = list(self.entry_coord) # coord of the exit of the ref line
 		self.exit_angle = self.entry_angle #  angle of the exit of the ref line
@@ -79,6 +79,9 @@ class LabPlotElement(object):
 			self.dip_te = self.z_element.TE # radius at entry
 			self.dip_ts = self.z_element.TS # radius at exit
 			self.width = min(self.dip_re, 500) # FIXME need proper method for setting widths
+			if sector_width:
+				self.width = float(sector_width)
+
 			if self.dip_te != 0 or self.dip_ts != 0:
 				raise ValueError("Non zero TE or TS not implemented for %s"%self.element_type)
 
@@ -120,6 +123,15 @@ class LabPlotElement(object):
 		t = self.transform
 		if self.element_type in rect_elements:
 			points = [t(0,0), t(self.length,0)]
+			xs, ys = zip(*points)
+			lpd.draw_line(xs, ys, "k-")
+		if self.element_type in ["DIPOLE", "DIPOLES"]:
+			re = self.dip_re
+			a = self.dip_at
+			arcsteps = 20
+			points = []
+			for a1 in np.linspace(0,a,arcsteps):
+				points.append(t(a1, re))
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, "k-")
 
@@ -174,7 +186,8 @@ class LabPlotDrawer(object):
 		self.mode = mode
 		
 		if self.mode == "matplotlib":
-			global plt, Line2D
+			global matplotlib,plt, Line2D
+			import matplotlib
 			import matplotlib.pyplot as plt
 			from matplotlib.lines import Line2D
 
@@ -186,12 +199,12 @@ class LabPlotDrawer(object):
 			raise ValueError("Can't handle mode "+ self.mode)
 
 	
-	def draw_line(self, xs,ys, style):
+	def draw_line(self, xs,ys, style, linewidth=1):
 		xs = np.array(xs)
 		ys = np.array(ys)
 		#if np.any(xs < -10): raise ValueError
 		if self.mode == "matplotlib":
-			self.ax.plot(xs, ys, style)
+			self.ax.plot(xs, ys, style, linewidth=linewidth)
 			
 		else: ValueError("Can't handle mode "+ self.mode)
 	
@@ -207,6 +220,13 @@ class LabPlotDrawer(object):
 			if colorbar_label:
 				cbar.ax.set_ylabel(colorbar_label)
 
+	def finish(self):
+		if self.mode == "matplotlib":
+			plt.xlabel("Lab x (cm)")
+			plt.ylabel("Lab y (cm)")
+			version = matplotlib.__version__.split(".")
+			if int(version[0]) >= 1 and int(version[1]) >= 1:
+				plt.tight_layout()
 
 	def show(self):
 		if self.mode == "matplotlib":
@@ -223,9 +243,10 @@ class LabPlot(object):
 	"""A plotter for beam lines and tracks.
 	
 	"""
-	def __init__(self, line, boro=None):
+	def __init__(self, line, boro=None, sector_width=None):
 		"""Creates a new plot from the line.
 		If using an element that adjusts it shape based on BORO, then it must be passed in
+		if sector_width is a number it used for the width of sector elements
 
 		"""
 		
@@ -235,6 +256,8 @@ class LabPlot(object):
 		self.tracks = []
 		self.field_map_data = []
 		self.boro = boro
+		self.duped_labels = []
+		self.sector_width = sector_width
 		
 		self._scan_line()
 		
@@ -250,10 +273,11 @@ class LabPlot(object):
 			if hasattr(elem, 'label1'):
 				label = elem.label1
 				if label in self.element_label1:
-					zlog.warn("Repeated label '%s'"%label)
+					self.duped_labels.append(label)
+					#zlog.warn("Repeated label '%s'"%label)
 			else:
 				label = ""
-			lpelem = LabPlotElement(elem, position, angle, boro=self.boro)
+			lpelem = LabPlotElement(elem, position, angle, boro=self.boro, sector_width=self.sector_width)
 			self.elements.append(lpelem)
 			self.element_label1.append(label)
 			angle = lpelem.exit_angle
@@ -300,7 +324,7 @@ class LabPlot(object):
 		if draw_tracks:
 			for track in self.tracks:
 				xs, ys, dummy, dummy, dummy = zip(*track)
-				self.lpd.draw_line(xs, ys, "r-")
+				self.lpd.draw_line(xs, ys, "r-", linewidth=0.1)
 
 		if draw_field_points:
 			for track in self.tracks:
@@ -314,7 +338,7 @@ class LabPlot(object):
 					elif field_component == 'x':
 						self.lpd.draw_label(xs, ys, "%.3g"%bx, 'rx')
 
-		#self.lpd.show()
+		self.lpd.finish()
 	
 	def show(self):
 		self.lpd.show()
@@ -375,6 +399,10 @@ class LabPlot(object):
 						el_ind = self.element_label1.index(label)
 					except ValueError:
 						raise ValueError("Track contains label '%s' not found in line. NOEL=%s"%(label, noel))
+
+					if label in self.duped_labels:
+						zlog.warn("Track point at element with duplicated label '%s'. Points may be drawn in wrong element"%label)
+
 
 					for t in ptrack_ppn:
 						if t['IEX'] != 1: break

@@ -71,7 +71,7 @@ setup(name='pyzgoubi',
 	license="GNU GENERAL PUBLIC LICENSE"
 	)
 
-is_cygwin = False
+
 if ("install" in sys.argv) and not ( "--help" in sys.argv):
 	#find the log
 	try:
@@ -89,7 +89,6 @@ if ("install" in sys.argv) and not ( "--help" in sys.argv):
 				bin_path = os.path.dirname(line)
 			if line.endswith("Scripts\pyzgoubi"):
 				bin_path = line.rpartition('\\')[0]
-				is_cygwin = True
 			if line.endswith("zgoubi/__init__.py"):
 				lib_path = os.path.normpath(os.path.join(os.path.dirname(line),".."))
 			if line.endswith("zgoubi\__init__.py"):
@@ -100,13 +99,16 @@ if ("install" in sys.argv) and not ( "--help" in sys.argv):
 		sys.exit(1)
 		
 	try:
-		print "\nyou may need to add the following to your .bashrc"
-		if is_cygwin:
-			print "export PYTHONPATH=$PYTHONPATH:%s"%lib_path
-			print "export PATH=$PATH:%s"%bin_path
-			print "or"
-			print 'alias pyzgoubi="PYTHONPATH=%s python %s\pyzgoubi"'%(lib_path, bin_path)
+		if sys.platform == "win32":
+			print "Add the following to your PATH variable in user Environment Variables control panel"
+			#print "export PYTHONPATH=$PYTHONPATH:%s"%lib_path
+			print bin_path
+			bat_file = open(os.path.join( bin_path, "pyzgoubi.bat"), "w")
+			bat_file.write("set PYTHONPATH=%%PYTHONPATH%%;%s\n"%lib_path)
+			bat_file.write("python %s\\pyzgoubi %%*\n"%bin_path)
+			bat_file.close()
 		else:
+			print "\nyou may need to add the following to your .bashrc"
 			print "export PYTHONPATH=$PYTHONPATH:%s"%lib_path
 			print "export PATH=$PATH:%s"%bin_path
 			print "or"
