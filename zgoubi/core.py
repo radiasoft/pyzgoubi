@@ -286,7 +286,6 @@ class zgoubi_element(object):
 			sub_swap_pairs  = "G0_E,G0_S KAPPA_E,KAPPA_S NCE,NCS CE_0,CS_0 CE_1,CS_1 CE_2,CS_2 CE_3,CS_3 CE_4,CS_4 CE_5,CS_5 SHIFT_E,SHIFT_S OMEGA_E,OMEGA_S THETA_E,THETA_S R1_E,R1_S U1_E,U1_S U2_E,U2_S R2_E,R2_S"
 			for sub_element in self._looped_data:
 				for swap_pair in sub_swap_pairs.split():
-					print swap_pair
 					p1, p2 = swap_pair.split(",")
 					sub_element[p1], sub_element[p2] = sub_element[p2], sub_element[p1]
 				sub_element["ACN"] = self._params["AT"] - sub_element["ACN"]
@@ -352,6 +351,8 @@ class Line(object):
 			new_line.add(element)
 		for element in rhs.element_list:
 			new_line.add(element)
+		new_line.add_input_files(self.input_files)
+		new_line.add_input_files(rhs.input_files)
 		return new_line
 
 	def __rmul__(self, lhs):
@@ -359,6 +360,7 @@ class Line(object):
 		for x in xrange(lhs):
 			for element in self.element_list:
 				new_line.add(element)
+		new_line.add_input_files(self.input_files)
 		return new_line
 
 	def __mul__(self, rhs):
@@ -366,6 +368,7 @@ class Line(object):
 		for x in xrange(rhs):
 			for element in self.element_list:
 				new_line.add(element)
+		new_line.add_input_files(self.input_files)
 		return new_line
 
 
@@ -398,6 +401,8 @@ class Line(object):
 					self.full_line = True
 			except AttributeError:
 				pass
+			if hasattr(element, "input_files"):
+				self.add_input_files(element.input_files)
 	
 	def check_line(self):
 		"Check that line has OBJET or MCOBJET at the start, and an END at the end. Gives warnings otherwise. Called by run() if in debug mode."

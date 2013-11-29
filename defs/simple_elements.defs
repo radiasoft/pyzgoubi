@@ -146,6 +146,23 @@ PARTICUL
 PARTICUL
 M, Q, G, tau, X : 5E
 
+POLARMES
+POLARMES
+IC, IL : 2I
+BNORM, AN, RN : 3E
+TITL : A80
+IA, JR : 2I
+FNAME : A80
+ID, A, B, C : I,3E
+IORDRE : I
+XPAS : E
+KPOS : I
+!KPOS=2
+RE, TE, RS, TS: 4E
+!KPOS=1
+DP : E
+
+
 QUADRUPO # the class will be called QUADRUPO
 QUADRUPO # the zgoubi element is called QUADRUPO
 IL : I   # parameters and type I=int, E=float,A=strings numbers for multiples
