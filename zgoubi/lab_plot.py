@@ -3,6 +3,7 @@ from math import *
 import numpy as np
 from zgoubi.core import zlog
 import scipy.interpolate
+import scipy.spatial
 
 null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL ".split()
 rect_elements = "DRIFT MULTIPOL QUADRUPO BEND".split()
@@ -284,38 +285,78 @@ class LabPlot(object):
 			position = lpelem.exit_coord
 
 
-	def draw(self, draw_tracks=True, draw_field_points=False, draw_field_midplane=False, field_component='z'):
+	def draw(self, draw_tracks=True, draw_field_points=False, draw_field_midplane=False, field_component='z', field_steps=100, field_int_mode="kd"):
 		self.lpd = LabPlotDrawer()
 
 		if field_component not in ['x','y','z']:
 			raise ValueError("field_component should be 'y', 'z' or 'x'")
 
 		if draw_field_midplane:
-			label = r"$B_%s$ (kG)"%field_component
-			field_map_data = np.array(self.field_map_data)
-			points = field_map_data[:,0:3:2]
-			if field_component == 'y':
-				values = field_map_data[:,3].reshape([-1])
-			elif field_component == 'z':
-				values = field_map_data[:,4].reshape([-1])
-			elif field_component == 'x':
-				values = field_map_data[:,5].reshape([-1])
+			if field_int_mode=="griddata":
+				label = r"$B_%s$ (kG)"%field_component
+				field_map_data = np.array(self.field_map_data)
+				points = field_map_data[:,0:3:2]
+				if field_component == 'y':
+					values = field_map_data[:,3].reshape([-1])
+				elif field_component == 'z':
+					values = field_map_data[:,4].reshape([-1])
+				elif field_component == 'x':
+					values = field_map_data[:,5].reshape([-1])
 
-			# http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html
-			# interested in y-x plane
-			ymin,ymax,xmin,xmax = points[:,0].min(), points[:,0].max(), points[:,1].min(), points[:,1].max()
-			nsteps = 1000j # j because of how mgrid works
-			grid_y, grid_x = np.mgrid[ymin:ymax:nsteps, xmin:xmax:nsteps]
-			
-			# check that paths don't deviate from z=0 plane
-			if np.abs(field_map_data[:,1]).max() > 1e-6:
-				zlog.warn("Some field points are not at z=0. Plot will be of projection onto z=0")
+				# http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html
+				# interested in y-x plane
+				ymin,ymax,xmin,xmax = points[:,0].min(), points[:,0].max(), points[:,1].min(), points[:,1].max()
+				nsteps = field_steps*1j # j because of how mgrid works
+				grid_y, grid_x = np.mgrid[ymin:ymax:nsteps, xmin:xmax:nsteps]
+				
+				# check that paths don't deviate from z=0 plane
+				if np.abs(field_map_data[:,1]).max() > 1e-6:
+					zlog.warn("Some field points are not at z=0. Plot will be of projection onto z=0")
 
-			int_field = scipy.interpolate.griddata(points, values, (grid_y, grid_x))
-			#print int_field.nanmax(), int_field.nanmin(),  np.abs(int_field).nanmax()
-			vmax = np.nanmax(np.abs(int_field))
-			self.lpd.draw_im(int_field.T, (ymin,ymax,xmin,xmax), cm='bwr', vmin=-vmax, vmax=vmax, colorbar_label=label)
-			
+				int_field = scipy.interpolate.griddata(points, values, (grid_y, grid_x))
+				#print int_field.nanmax(), int_field.nanmin(),  np.abs(int_field).nanmax()
+				vmax = np.nanmax(np.abs(int_field))
+				self.lpd.draw_im(int_field.T, (ymin,ymax,xmin,xmax), cm='bwr', vmin=-vmax, vmax=vmax, colorbar_label=label)
+			elif field_int_mode=="kd":			
+				label = r"$B_%s$ (kG)"%field_component
+				field_map_data = np.array(self.field_map_data)
+				points = field_map_data[:,0:3:2]
+				if field_component == 'y':
+					values = field_map_data[:,3].reshape([-1])
+				elif field_component == 'z':
+					values = field_map_data[:,4].reshape([-1])
+				elif field_component == 'x':
+					values = field_map_data[:,5].reshape([-1])
+
+				xmin,xmax,ymin,ymax = points[:,0].min(), points[:,0].max(), points[:,1].min(), points[:,1].max()
+
+				print points.shape
+				print values.shape
+				print xmin,xmax,ymin,ymax
+
+				nxsteps = field_steps
+				xstep_size = (xmax-xmin) / nxsteps
+				nysteps = (ymax-ymin) / xstep_size
+
+				kd = scipy.spatial.cKDTree(points)
+				
+				field_map = np.zeros([nxsteps, nysteps])
+				for nx,x in enumerate(np.linspace(xmin,xmax,nxsteps)):
+					for ny,y in enumerate(np.linspace(ymin,ymax,nysteps)):
+						# get nearby points
+						kd_f, kd_i = kd.query([x,y],k=5, distance_upper_bound=xstep_size*1.2)
+						# remove index outside range, then mean not points found in distance_upper_bound
+						kd_i = kd_i[kd_i < values.size]
+						# remove zero fields
+						near_values = values[kd_i][ values[kd_i] != 0 ]
+						if near_values.size:
+							field_map[nx,ny] = near_values.mean()
+				vmax = np.nanmax(np.abs(field_map))
+				self.lpd.draw_im(field_map.T, (xmin,xmax,ymin,ymax), cm='bwr', vmin=-vmax, vmax=vmax, colorbar_label=label)
+			else:
+				raise ValueError("field_int_mode must be griddata or kd")
+
+
 
 		for elem in self.elements:
 			elem.draw_ref_line(self.lpd)
