@@ -157,9 +157,9 @@ ID, A, B, C : I,3E
 IORDRE : I
 XPAS : E
 KPOS : I
-!KPOS=2
+!KPOS==2
 RE, TE, RS, TS: 4E
-!KPOS=1
+!KPOS==1
 DP : E
 
 

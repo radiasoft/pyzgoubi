@@ -97,15 +97,33 @@ class LabPlotElement(object):
 			self.exit_coord[1] = self.sector_center_coord[1] + self.dip_rs * cos(-self.exit_angle)
 			
 
+		elif self.element_type in ["POLARMES"]:
+			# to get opening angle read the list of angles in the field map
+			self.fmap_file_path = self.z_element.FNAME
+			fmap_file = open(self.fmap_file_path)
+			for n in xrange(4): line = fmap_file.readline()
+			phi_line = fmap_file.readline()
+			phi_line = phi_line.split()
+			self.dip_at = float(phi_line[-1])
 
+			self.dip_re = self.dip_rs = 0
+			self.width =  500
+			if sector_width:
+				self.width = float(sector_width)
 
+			self.entry_angle -= self.dip_at / 2
+			self.exit_angle -= self.dip_at
 
+			self.sector_center_coord = list(self.entry_coord)
+			self.exit_coord[0] = self.entry_coord[0]
+			self.exit_coord[1] = self.entry_coord[1]
+			
 
 		else:
 			raise ValueError("Can't handle element "+ self.element_type)
 	
 	def transform(self, x, y):
-		if self.element_type not in ["DIPOLE", "DIPOLES"]:
+		if self.element_type not in ["DIPOLE", "DIPOLES", "POLARMES"]:
 			x0, y0 = self.entry_coord # FIXME how to handle transform in changref
 			a0 = self.entry_angle
 
@@ -163,20 +181,26 @@ class LabPlotElement(object):
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, "b-")
 
-		if self.element_type in ["DIPOLE", "DIPOLES"]:
+		if self.element_type in ["DIPOLE", "DIPOLES","POLARMES"]:
 			# in polar
 			re = self.dip_re
 			w = self.width
+			if self.element_type in ["POLARMES"]:
+				wp = self.width
+				wm = 0
+			else:
+				wp = self.width/2
+				wm = -self.width/2
 			a = self.dip_at
 			arcsteps = 20
-			points = [ t(0, re - w/2),
-			           t(0, re + w/2)]
+			points = [ t(0, re + wm),
+			           t(0, re + wp)]
 			for a1 in np.linspace(0,a,arcsteps):
-				points.append(t(a1, re + w/2))
-			points.append(t(a, re + w/2))
-			points.append(t(a, re - w/2))
+				points.append(t(a1, re + wp))
+			points.append(t(a, re + wp))
+			points.append(t(a, re + wm))
 			for a1 in np.linspace(a,0,arcsteps):
-				points.append(t(a1, re - w/2))
+				points.append(t(a1, re + wm))
 
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, "b-")
@@ -331,6 +355,7 @@ class LabPlot(object):
 				xmin,xmax,ymin,ymax = points[:,0].min(), points[:,0].max(), points[:,1].min(), points[:,1].max()
 
 				print points.shape
+				print points
 				print values.shape
 				print xmin,xmax,ymin,ymax
 
@@ -450,6 +475,8 @@ class LabPlot(object):
 						y = t['Y']
 						x = t['X']
 						z = t['Z']
+						if isnan(x) or isnan(y) or isnan(z):
+							continue
 						by, bz, bx = t['BY'], t['BZ'], t['BX']
 						if abs(by) < 1e-50 and abs(bz) < 1e-50 and abs(bx) < 1e-50:
 							by, bz, bx = 0, 0, 0 # ignore tiny fields
