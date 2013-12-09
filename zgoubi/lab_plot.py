@@ -5,7 +5,7 @@ from zgoubi.core import zlog
 import scipy.interpolate
 import scipy.spatial
 
-null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL ".split()
+null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL REBELOTE".split()
 rect_elements = "DRIFT MULTIPOL QUADRUPO BEND".split()
 
 
