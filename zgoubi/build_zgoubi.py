@@ -134,6 +134,15 @@ makecommands=["make -f Makefile_zgoubi_gfortran", "make -f Makefile_zpop_gfortra
 includes=[["MXSTEP.H", "PARAMETER (MXSTEP = 10000)"]],
 )
 
+zgoubi_versions["360+patches"] = dict(svnr=360,
+patches=[
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks2.diff",
+"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/kobj301_4.diff",
+],
+makecommands=["make -f Makefile_zgoubi_gfortran", "make -f Makefile_zpop_gfortran"],
+includes=[["MXSTEP.H", "PARAMETER (MXSTEP = 10000)"]],
+)
+
 def install_zgoubi_all(version="261+patches"):
 	check_for_programs()
 	"This currently install a version of zgoubi known to work with pyzgoubi"
