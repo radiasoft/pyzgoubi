@@ -293,6 +293,8 @@ class zgoubi_element(object):
 				sub_element["OMEGA_S"] *= -1
 				sub_element["THETA_E"] *= -1
 				sub_element["THETA_S"] *= -1
+		elif self._zgoubi_name == "CHANGREF":
+			self._params["YCE"] *= -1
 
 
 			
