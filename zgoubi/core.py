@@ -497,7 +497,7 @@ class Line(object):
 		if zlog.isEnabledFor(logging.DEBUG):
 			self.check_line()
 		orig_cwd = os.getcwd()
-		tmpdir = tempfile.mkdtemp("zgoubi", prefix=tmp_prefix)
+		tmpdir = tempfile.mkdtemp(prefix="zgoubi_", dir=tmp_prefix)
 		self.tmpdir = tmpdir
 		zlog.debug("running zgoubi in"+tmpdir)
 	
