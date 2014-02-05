@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import sys
 import shutil
 import subprocess
 import urllib2
@@ -93,26 +94,28 @@ def edit_includes(includes):
 
 
 
-def make_zgoubi(makecommands, threads=2):
+def make_zgoubi(makecommands, threads=2, clean=True):
 	"Build zgoubi source code"
 	print "building zgoubi"
-	ret = subprocess.call(['make', 'clean' ], cwd=zgoubi_build_dir2)
-	for makecommand in makecommands:
+	if clean:
+		ret = subprocess.call(['make', 'clean' ], cwd=zgoubi_build_dir2)
 		if ret != 0:
 			raise ZgoubiBuildError("Make clean failed")
+	for makecommand in makecommands:
 		command = makecommand.split()+ ['-j%d'%threads]
 		ret = subprocess.call(command, cwd=zgoubi_build_dir2)
 		if ret != 0:
 			raise ZgoubiBuildError("Building zgoubi failed:" + " ".join(command) )
 
-def install_zgoubi(postfix=""):
+def install_zgoubi(suffix="", install_zpop=True):
 	"Install zgoubi into ~/.pyzgoubi folder"
 	common.mkdir_p(zgoubi_install_dir)
 
 	shutil.copy(os.path.join(zgoubi_build_dir2, "zgoubi", "zgoubi"),
-	                os.path.join(zgoubi_install_dir, "zgoubi%s"%postfix )  )
-	shutil.copy(os.path.join(zgoubi_build_dir2, "zpop", "zpop"),
-	                os.path.join(zgoubi_install_dir, "zpop%s"%postfix )  )
+	                os.path.join(zgoubi_install_dir, "zgoubi%s"%suffix )  )
+	if install_zpop:
+		shutil.copy(os.path.join(zgoubi_build_dir2, "zpop", "zpop"),
+		            os.path.join(zgoubi_install_dir, "zpop%s"%suffix )  )
 
 
 zgoubi_versions = {}
@@ -130,7 +133,8 @@ patches=[
 "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks2.diff",
 "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/kobj301_3.diff",
 ],
-makecommands=["make -f Makefile_zgoubi_gfortran", "make -f Makefile_zpop_gfortran"],
+makecommands=["make -f Makefile_zgoubi_gfortran"],
+makecommands_zpop=["make -f Makefile_zpop_gfortran"],
 includes=[["MXSTEP.H", "PARAMETER (MXSTEP = 10000)"]],
 )
 
@@ -139,7 +143,8 @@ patches=[
 "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks2.diff",
 "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/kobj301_4.diff",
 ],
-makecommands=["make -f Makefile_zgoubi_gfortran", "make -f Makefile_zpop_gfortran"],
+makecommands=["make -f Makefile_zgoubi_gfortran"],
+makecommands_zpop=["make -f Makefile_zpop_gfortran"],
 includes=[["MXSTEP.H", "PARAMETER (MXSTEP = 10000)"]],
 )
 
@@ -148,13 +153,19 @@ patches=[
 "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks2.diff",
 #"http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/kobj301_4.diff",
 ],
-makecommands=["make -f Makefile_zgoubi_gfortran", "make -f Makefile_zpop_gfortran"],
+makecommands=["make -f Makefile_zgoubi_gfortran"],
+makecommands_zpop=["make -f Makefile_zpop_gfortran"],
 includes=[["MXSTEP.H", "PARAMETER (MXSTEP = 10000)"]],
 )
 
 def install_zgoubi_all(version="365"):
-	check_for_programs()
 	"This currently install a version of zgoubi known to work with pyzgoubi"
+	check_for_programs()
+	if sys.platform.startswith('linux'):
+		build_zpop = True
+	else:
+		build_zpop = False
+
 	if version in ['list', 'help']:
 		print "Available versions:", " ".join(zgoubi_versions.keys())
 		exit(0)
@@ -166,9 +177,15 @@ def install_zgoubi_all(version="365"):
 	apply_zgoubi_patches(zgoubi_versions[version]['patches'])
 	if zgoubi_versions[version].has_key("includes"):
 		edit_includes(zgoubi_versions[version]["includes"])
+	
 	make_zgoubi(zgoubi_versions[version].get("makecommands",['make']))
+	if build_zpop:
+		makecommands_zpop = zgoubi_versions[version].get("makecommands_zpop",None)
+		if makecommands_zpop:
+			make_zgoubi(makecommands_zpop, clean=False)
 
-	install_zgoubi("_"+version)
+
+	install_zgoubi("_"+version, build_zpop)
 	print "\nInstalled zgoubi into ", zgoubi_install_dir
 	print "Add the following line to ~/.pyzgoubi/settings.ini"
 	print "zgoubi_path = %s/zgoubi_%s" % (zgoubi_install_dir, version)
