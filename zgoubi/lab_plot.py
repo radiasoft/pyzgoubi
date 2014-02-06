@@ -354,14 +354,14 @@ class LabPlot(object):
 
 				xmin,xmax,ymin,ymax = points[:,0].min(), points[:,0].max(), points[:,1].min(), points[:,1].max()
 
-				print points.shape
-				print points
-				print values.shape
-				print xmin,xmax,ymin,ymax
+				#print points.shape
+				#print points
+				#print values.shape
+				#print xmin,xmax,ymin,ymax
 
 				nxsteps = field_steps
 				xstep_size = (xmax-xmin) / nxsteps
-				nysteps = (ymax-ymin) / xstep_size
+				nysteps = max(1, (ymax-ymin) / xstep_size )
 
 				kd = scipy.spatial.cKDTree(points)
 				
