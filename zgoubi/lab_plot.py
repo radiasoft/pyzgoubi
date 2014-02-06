@@ -207,8 +207,9 @@ class LabPlotElement(object):
 
 		
 class LabPlotDrawer(object):
-	def __init__(self, mode="matplotlib"):
+	def __init__(self, mode="matplotlib", aspect="equal"):
 		self.mode = mode
+		self.aspect = aspect
 		
 		if self.mode == "matplotlib":
 			global matplotlib,plt, Line2D
@@ -219,7 +220,7 @@ class LabPlotDrawer(object):
 			self.fig = plt.figure()
 			self.fig.clf()
 			self.ax = self.fig.add_subplot(111)
-			self.ax.set_aspect('equal', adjustable='datalim')
+			self.ax.set_aspect(self.aspect, adjustable='datalim')
 		else:
 			raise ValueError("Can't handle mode "+ self.mode)
 
@@ -239,7 +240,7 @@ class LabPlotDrawer(object):
 		self.ax.annotate(str(l), (x,y))
 	
 	def draw_im(self, im, extent, cm, vmin, vmax, colorbar=True, colorbar_label=""):
-		i = self.ax.imshow(im, extent=extent, origin='lower', cmap=plt.get_cmap(cm),vmin=vmin, vmax=vmax)
+		i = self.ax.imshow(im, extent=extent, origin='lower', cmap=plt.get_cmap(cm),vmin=vmin, vmax=vmax, aspect=self.aspect)
 		if colorbar:
 			cbar = self.fig.colorbar(i)
 			if colorbar_label:
@@ -268,7 +269,7 @@ class LabPlot(object):
 	"""A plotter for beam lines and tracks.
 	
 	"""
-	def __init__(self, line, boro=None, sector_width=None):
+	def __init__(self, line, boro=None, sector_width=None, aspect="equal"):
 		"""Creates a new plot from the line.
 		If using an element that adjusts it shape based on BORO, then it must be passed in
 		if sector_width is a number it used for the width of sector elements
@@ -283,6 +284,7 @@ class LabPlot(object):
 		self.boro = boro
 		self.duped_labels = []
 		self.sector_width = sector_width
+		self.aspect = aspect
 		
 		self._scan_line()
 		
@@ -310,7 +312,7 @@ class LabPlot(object):
 
 
 	def draw(self, draw_tracks=True, draw_field_points=False, draw_field_midplane=False, field_component='z', field_steps=100, field_int_mode="kd"):
-		self.lpd = LabPlotDrawer()
+		self.lpd = LabPlotDrawer(aspect=self.aspect)
 
 		if field_component not in ['x','y','z']:
 			raise ValueError("field_component should be 'y', 'z' or 'x'")
