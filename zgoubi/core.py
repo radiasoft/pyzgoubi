@@ -296,6 +296,11 @@ class zgoubi_element(object):
 		elif self._zgoubi_name == "CHANGREF":
 			self._params["YCE"] *= -1
 
+	def __neg__(self):
+		new_e = copy.deepcopy(self)
+		new_e.reverse()
+		return new_e
+
 
 			
 try:
