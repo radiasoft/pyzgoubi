@@ -92,6 +92,16 @@ class LabPlotElement(object):
 
 			self.exit_coord[0] = self.sector_center_coord[0] + self.dip_rs * sin(-self.exit_angle)
 			self.exit_coord[1] = self.sector_center_coord[1] + self.dip_rs * cos(-self.exit_angle)
+
+			self.sub_boundaries = []
+			if self.element_type in ["DIPOLES", "FFAG"]:
+				for sub_element in self.z_element._looped_data:
+					e = radians(sub_element["ACN"] - sub_element["OMEGA_E"])
+					s = radians(sub_element["ACN"] - sub_element["OMEGA_S"])
+					ea = sub_element["THETA_E"]
+					sa = sub_element["THETA_S"]
+
+					self.sub_boundaries.append(dict(e=e, s=s, ea=ea, sa=sa))
 			
 
 		elif self.element_type in ["POLARMES"]:
@@ -201,6 +211,26 @@ class LabPlotElement(object):
 
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, "b-")
+
+			if self.element_type in ["DIPOLES", "FFAG"]:
+				#sub element boundaries 
+				for seb in self.sub_boundaries:
+					if seb['ea'] or seb['sa']:
+						zlog.warn("Drawing sub magnet boundaries with THETA != 0 not implemented")
+						continue
+					points = [ t(seb['e'], re + wm),
+							   t(seb['e'], re + wp)]
+					for a1 in np.linspace(seb['e'],seb['s'],arcsteps):
+						points.append(t(a1, re + wp))
+					points.append(t(seb['s'], re + wp))
+					points.append(t(seb['s'], re + wm))
+					for a1 in np.linspace(seb['s'],seb['e'],arcsteps):
+						points.append(t(a1, re + wm))
+
+					xs, ys = zip(*points)
+					lpd.draw_line(xs, ys, "b:")
+
+
 
 		
 class LabPlotDrawer(object):
