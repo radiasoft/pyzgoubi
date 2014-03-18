@@ -58,9 +58,6 @@ class LabPlotElement(object):
 				else:
 					raise ValueError("Only %s with KPOS=1 or 3 is currently implemented"%self.element_type)
 
-
-
-
 		elif self.element_type == "CHANGREF":
 			# change reference element
 			# angle
@@ -73,7 +70,7 @@ class LabPlotElement(object):
 			self.exit_coord[1] += self.z_element.YCE * cos(self.exit_angle)
 
 
-		elif self.element_type in ["DIPOLE", "DIPOLES"]:
+		elif self.element_type in ["DIPOLE", "DIPOLES", "FFAG"]:
 			self.dip_at = radians(self.z_element.AT) # sector angle of magnet region
 			self.dip_re = self.z_element.RE # radius at entry
 			self.dip_rs = self.z_element.RS # radius at exit
@@ -123,7 +120,7 @@ class LabPlotElement(object):
 			raise ValueError("Can't handle element "+ self.element_type)
 	
 	def transform(self, x, y):
-		if self.element_type not in ["DIPOLE", "DIPOLES", "POLARMES"]:
+		if self.element_type not in ["DIPOLE", "DIPOLES", "POLARMES", "FFAG"]:
 			x0, y0 = self.entry_coord # FIXME how to handle transform in changref
 			a0 = self.entry_angle
 
@@ -144,7 +141,7 @@ class LabPlotElement(object):
 			points = [t(0,0), t(self.length,0)]
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, "k-")
-		if self.element_type in ["DIPOLE", "DIPOLES"]:
+		if self.element_type in ["DIPOLE", "DIPOLES", "FFAG"]:
 			re = self.dip_re
 			a = self.dip_at
 			arcsteps = 20
@@ -181,7 +178,7 @@ class LabPlotElement(object):
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, "b-")
 
-		if self.element_type in ["DIPOLE", "DIPOLES","POLARMES"]:
+		if self.element_type in ["DIPOLE", "DIPOLES","POLARMES", "FFAG"]:
 			# in polar
 			re = self.dip_re
 			w = self.width
