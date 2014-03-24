@@ -37,7 +37,7 @@ class LabPlotElement(object):
 			self.exit_wedge_angle = 0
 
 			if self.element_type in "MULTIPOL QUADRUPO".split():
-				self.width =  self.z_element.R_0
+				self.width =  self.z_element.R_0 * 2
 			else:
 				self.width = 20
 
@@ -388,7 +388,7 @@ class LabPlot(object):
 				#print values.shape
 				#print xmin,xmax,ymin,ymax
 
-				nxsteps = field_steps
+				nxsteps = field_steps *2
 				xstep_size = (xmax-xmin) / nxsteps
 				nysteps = max(1, (ymax-ymin) / xstep_size )
 
