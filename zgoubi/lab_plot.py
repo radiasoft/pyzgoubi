@@ -145,12 +145,12 @@ class LabPlotElement(object):
 			y1 = y0 + y * cos(-a0 + x)
 		return [x1, y1]
 
-	def draw_ref_line(self, lpd):
+	def draw_ref_line(self, lpd, style):
 		t = self.transform
 		if self.element_type in rect_elements:
 			points = [t(0,0), t(self.length,0)]
 			xs, ys = zip(*points)
-			lpd.draw_line(xs, ys, "k-")
+			lpd.draw_line(xs, ys, **style["reference"])
 		if self.element_type in ["DIPOLE", "DIPOLES", "FFAG"]:
 			re = self.dip_re
 			a = self.dip_at
@@ -159,10 +159,10 @@ class LabPlotElement(object):
 			for a1 in np.linspace(0,a,arcsteps):
 				points.append(t(a1, re))
 			xs, ys = zip(*points)
-			lpd.draw_line(xs, ys, "k-")
+			lpd.draw_line(xs, ys, **style["reference"])
 
 	
-	def draw_outline(self, lpd):
+	def draw_outline(self, lpd, style):
 		t = self.transform
 		if (self.element_type in rect_elements
 			and self.element_type != 'DRIFT'):
@@ -186,7 +186,7 @@ class LabPlotElement(object):
 						  t(0+entry_offset,self.width/2)]
 
 			xs, ys = zip(*points)
-			lpd.draw_line(xs, ys, "b-")
+			lpd.draw_line(xs, ys, **style["magnet_outline"])
 
 		if self.element_type in ["DIPOLE", "DIPOLES","POLARMES", "FFAG"]:
 			# in polar
@@ -210,7 +210,11 @@ class LabPlotElement(object):
 				points.append(t(a1, re + wm))
 
 			xs, ys = zip(*points)
-			lpd.draw_line(xs, ys, "b-")
+
+			if self.element_type in ["DIPOLES", "FFAG"]:
+				lpd.draw_line(xs, ys, **style["element_outline"])
+			else:
+				lpd.draw_line(xs, ys, **style["magnet_outline"])
 
 			if self.element_type in ["DIPOLES", "FFAG"]:
 				#sub element boundaries 
@@ -228,7 +232,7 @@ class LabPlotElement(object):
 						points.append(t(a1, re + wm))
 
 					xs, ys = zip(*points)
-					lpd.draw_line(xs, ys, "b:")
+					lpd.draw_line(xs, ys, **style["magnet_outline"])
 
 
 
@@ -252,12 +256,12 @@ class LabPlotDrawer(object):
 			raise ValueError("Can't handle mode "+ self.mode)
 
 	
-	def draw_line(self, xs,ys, style, linewidth=1):
+	def draw_line(self, xs, ys, color="k", linestyle="-", linewidth=1):
 		xs = np.array(xs)
 		ys = np.array(ys)
 		#if np.any(xs < -10): raise ValueError
 		if self.mode == "matplotlib":
-			self.ax.plot(xs, ys, style, linewidth=linewidth)
+			self.ax.plot(xs, ys, color=color, linestyle=linestyle, linewidth=linewidth)
 			
 		else: ValueError("Can't handle mode "+ self.mode)
 	
@@ -296,7 +300,7 @@ class LabPlot(object):
 	"""A plotter for beam lines and tracks.
 	
 	"""
-	def __init__(self, line, boro=None, sector_width=None, aspect="equal"):
+	def __init__(self, line, boro=None, sector_width=None, aspect="equal", style=None):
 		"""Creates a new plot from the line.
 		If using an element that adjusts it shape based on BORO, then it must be passed in
 		if sector_width is a number it used for the width of sector elements
@@ -312,9 +316,17 @@ class LabPlot(object):
 		self.duped_labels = []
 		self.sector_width = sector_width
 		self.aspect = aspect
+		self.style = {}
+		self.style["track"] = dict(color="r", linestyle="-", linewidth=0.1)
+		self.style["magnet_outline"] = dict(color="b", linestyle="-", linewidth=1)
+		self.style["element_outline"] = dict(color="b", linestyle=":", linewidth=1)
+		self.style["reference"] = dict(color="k", linestyle="-", linewidth=1)
+
+		if style:
+			self.set_style(style)
 		
 		self._scan_line()
-		
+
 
 	def _scan_line(self):
 		"""Scan through the line, and make a note of where all the elements are.
@@ -337,6 +349,16 @@ class LabPlot(object):
 			angle = lpelem.exit_angle
 			position = lpelem.exit_coord
 
+	def set_style(self, style):
+		"""Style is a nested dictionary, that updates the defaults, eg::
+
+		   style = {"track":{"color":g}}
+
+		Elements to be styled include "track", "magnet_outline", "element_outline", "reference". Each can take a "color", "linestyle" and "linewidth", using matplotlib notations.
+
+		"""
+		for k,v in style.items():
+			self.style[k].update(v)
 
 	def draw(self, draw_tracks=True, draw_field_points=False, draw_field_midplane=False, field_component='z', field_steps=100, field_int_mode="kd"):
 		self.lpd = LabPlotDrawer(aspect=self.aspect)
@@ -413,13 +435,13 @@ class LabPlot(object):
 
 
 		for elem in self.elements:
-			elem.draw_ref_line(self.lpd)
-			elem.draw_outline(self.lpd)
+			elem.draw_ref_line(self.lpd, self.style)
+			elem.draw_outline(self.lpd, self.style)
 
 		if draw_tracks:
 			for track in self.tracks:
 				xs, ys, dummy, dummy, dummy = zip(*track)
-				self.lpd.draw_line(xs, ys, "r-", linewidth=0.1)
+				self.lpd.draw_line(xs, ys, **self.style["track"])
 
 		if draw_field_points:
 			for track in self.tracks:
