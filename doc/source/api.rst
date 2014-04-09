@@ -25,13 +25,17 @@ This contains the main PyZgoubi classes: Line and Results
 	:members:
 
 
-
 :mod:`zgoubi.bunch`
 -------------------
 
 .. automodule:: zgoubi.bunch
 	:members:
 
+:mod:`zgoubi.common`
+-----------------------
+
+.. automodule:: zgoubi.common
+	:members:
 
 :mod:`zgoubi.constants`
 -----------------------
@@ -60,6 +64,11 @@ This contains the main PyZgoubi classes: Line and Results
 .. automodule:: zgoubi.io
 	:members:
 
+:mod:`zgoubi.lab_plot`
+----------------
+
+.. automodule:: zgoubi.lab_plot
+	:members:
 
 :mod:`zgoubi.rel_conv`
 ----------------------

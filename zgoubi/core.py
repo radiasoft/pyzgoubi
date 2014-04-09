@@ -498,7 +498,10 @@ class Line(object):
 
 		
 	def run(self, xterm=False, tmp_prefix=zgoubi_settings['tmp_dir'], silence=False):
-		"Run zgoubi on line. If break is true, stop after running zgoubi, and open an xterm for the user in the tmp dir. From here zpop can be run."
+		"""Run zgoubi on line.
+		If xterm is true, stop after running zgoubi, and open an xterm for the user in the tmp dir. From here zpop can be run.
+		Returns a :py:class:`Results` object
+		"""
 		if zlog.isEnabledFor(logging.DEBUG):
 			self.check_line()
 		orig_cwd = os.getcwd()
@@ -906,6 +909,8 @@ class Line(object):
 	
 class Results(object):
 	"""This class lets you analyse the results after running a line.
+
+	It is created automatically and returned by :py:meth:`Line.run()`
 
 	"""
 	def __init__(self, line=None, rundir=None, element_types=None):
@@ -1628,6 +1633,7 @@ class Results(object):
 	
 	def parse_matrix(self):
 		"""Parse data from output of MATRIX element
+
 		Used by get_tune(), get_transfer_matrix() and get_twiss_parameters()
 		"""
 

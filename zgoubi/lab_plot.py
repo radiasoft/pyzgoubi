@@ -1,9 +1,14 @@
+"""Module for drawing plots of a lattice in lab coordinates
+
+"""
+
 from __future__ import division
 from math import *
 import numpy as np
 from zgoubi.core import zlog
 import scipy.interpolate
 import scipy.spatial
+
 
 null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL REBELOTE".split()
 rect_elements = "DRIFT MULTIPOL QUADRUPO BEND".split()
@@ -352,7 +357,7 @@ class LabPlot(object):
 	def set_style(self, style):
 		"""Style is a nested dictionary, that updates the defaults, eg::
 
-		   style = {"track":{"color":g}}
+		   style = {"track":{"color":"g"}}
 
 		Elements to be styled include "track", "magnet_outline", "element_outline", "reference". Each can take a "color", "linestyle" and "linewidth", using matplotlib notations.
 
@@ -361,6 +366,9 @@ class LabPlot(object):
 			self.style[k].update(v)
 
 	def draw(self, draw_tracks=True, draw_field_points=False, draw_field_midplane=False, field_component='z', field_steps=100, field_int_mode="kd"):
+		"""Draw the plot in memory, then use :py:meth:`show()` to display to screen or :py:meth:`save()` to save to file.
+		
+		"""
 		self.lpd = LabPlotDrawer(aspect=self.aspect)
 
 		if field_component not in ['x','y','z']:
@@ -458,13 +466,16 @@ class LabPlot(object):
 		self.lpd.finish()
 	
 	def show(self):
+		"Display plot to screen, call :py:meth:`draw()` first."
 		self.lpd.show()
 
 	def save(self,fname):
+		"Save plot to file, call :py:meth:`draw()` first."
 		self.lpd.save(fname)
 
 
 	def add_tracks(self, ftrack=None, ptrack=None):
+		"Add tracks from plt or fai files."
 		#tracks = []
  		# find the list of particles and laps/passes
 		pids = set()

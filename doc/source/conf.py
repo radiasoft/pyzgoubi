@@ -120,6 +120,14 @@ pygments_style = 'sphinx'
 #modindex_common_prefix = []
 
 
+def skip(app, what, name, obj, skip, options):
+	if name == "__init__":
+		return False
+	return skip
+
+def setup(app):
+	app.connect("autodoc-skip-member", skip)
+
 # -- Options for HTML output ---------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  Major themes that come with
