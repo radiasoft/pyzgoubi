@@ -456,6 +456,16 @@ class Line(object):
 		drift_to_multi=True replaces drifts with weak (B_1 = 1e-99) multipoles
 
 		"""
+		if drift_to_multi:
+			for element in self.elements():
+				if element._zgoubi_name == "DRIFT" and element.XL != 0:
+					fake_drift = MULTIPOL(element.label1, element.label2,
+					XL=element.XL, XPAS=(10,10,10),
+					B_1=1e-99, IL=2, KPOS=1)
+					self.replace(element, fake_drift)
+
+		found_trackable_element = False
+
 		for element in self.elements():
 			#t = str(type(element)).split("'")[1] #get type, eg zgoubi22.QUADRUPO
 			#print t
@@ -468,17 +478,14 @@ class Line(object):
 					element.set(IL=2)
 				elif enable == False:
 					element.set(IL=0)
+				found_trackable_element = True
 			#	print element.output()
 			except ValueError:
 				pass
 
-		if drift_to_multi:
-			for element in self.elements():
-				if element._zgoubi_name == "DRIFT" and element.XL != 0:
-					fake_drift = MULTIPOL(element.label1, element.label2,
-					XL=element.XL, XPAS=(10,10,10),
-					B_1=1e-99, IL=2, KPOS=1)
-					self.replace(element, fake_drift)
+		if not found_trackable_element:
+			zlog.warn("Did not find any magnets in line")
+
 			
 	def remove_looping(self):
 		"removes any REBELOTE elements from the line"
