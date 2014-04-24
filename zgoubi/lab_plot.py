@@ -1,10 +1,16 @@
+"""Module for drawing plots of a lattice in lab coordinates
+
+"""
+
 from __future__ import division
 from math import *
 import numpy as np
 from zgoubi.core import zlog
 import scipy.interpolate
+import scipy.spatial
 
-null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL ".split()
+
+null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL REBELOTE".split()
 rect_elements = "DRIFT MULTIPOL QUADRUPO BEND".split()
 
 
@@ -36,7 +42,7 @@ class LabPlotElement(object):
 			self.exit_wedge_angle = 0
 
 			if self.element_type in "MULTIPOL QUADRUPO".split():
-				self.width =  self.z_element.R_0
+				self.width =  self.z_element.R_0 * 2
 			else:
 				self.width = 20
 
@@ -57,9 +63,6 @@ class LabPlotElement(object):
 				else:
 					raise ValueError("Only %s with KPOS=1 or 3 is currently implemented"%self.element_type)
 
-
-
-
 		elif self.element_type == "CHANGREF":
 			# change reference element
 			# angle
@@ -72,7 +75,7 @@ class LabPlotElement(object):
 			self.exit_coord[1] += self.z_element.YCE * cos(self.exit_angle)
 
 
-		elif self.element_type in ["DIPOLE", "DIPOLES"]:
+		elif self.element_type in ["DIPOLE", "DIPOLES", "FFAG"]:
 			self.dip_at = radians(self.z_element.AT) # sector angle of magnet region
 			self.dip_re = self.z_element.RE # radius at entry
 			self.dip_rs = self.z_element.RS # radius at exit
@@ -94,17 +97,45 @@ class LabPlotElement(object):
 
 			self.exit_coord[0] = self.sector_center_coord[0] + self.dip_rs * sin(-self.exit_angle)
 			self.exit_coord[1] = self.sector_center_coord[1] + self.dip_rs * cos(-self.exit_angle)
+
+			self.sub_boundaries = []
+			if self.element_type in ["DIPOLES", "FFAG"]:
+				for sub_element in self.z_element._looped_data:
+					e = radians(sub_element["ACN"] - sub_element["OMEGA_E"])
+					s = radians(sub_element["ACN"] - sub_element["OMEGA_S"])
+					ea = sub_element["THETA_E"]
+					sa = sub_element["THETA_S"]
+
+					self.sub_boundaries.append(dict(e=e, s=s, ea=ea, sa=sa))
 			
 
+		elif self.element_type in ["POLARMES"]:
+			# to get opening angle read the list of angles in the field map
+			self.fmap_file_path = self.z_element.FNAME
+			fmap_file = open(self.fmap_file_path)
+			for n in xrange(4): line = fmap_file.readline()
+			phi_line = fmap_file.readline()
+			phi_line = phi_line.split()
+			self.dip_at = float(phi_line[-1])
 
+			self.dip_re = self.dip_rs = 0
+			self.width =  500
+			if sector_width:
+				self.width = float(sector_width)
 
+			self.entry_angle -= self.dip_at / 2
+			self.exit_angle -= self.dip_at
 
+			self.sector_center_coord = list(self.entry_coord)
+			self.exit_coord[0] = self.entry_coord[0]
+			self.exit_coord[1] = self.entry_coord[1]
+			
 
 		else:
 			raise ValueError("Can't handle element "+ self.element_type)
 	
 	def transform(self, x, y):
-		if self.element_type not in ["DIPOLE", "DIPOLES"]:
+		if self.element_type not in ["DIPOLE", "DIPOLES", "POLARMES", "FFAG"]:
 			x0, y0 = self.entry_coord # FIXME how to handle transform in changref
 			a0 = self.entry_angle
 
@@ -119,13 +150,13 @@ class LabPlotElement(object):
 			y1 = y0 + y * cos(-a0 + x)
 		return [x1, y1]
 
-	def draw_ref_line(self, lpd):
+	def draw_ref_line(self, lpd, style):
 		t = self.transform
 		if self.element_type in rect_elements:
 			points = [t(0,0), t(self.length,0)]
 			xs, ys = zip(*points)
-			lpd.draw_line(xs, ys, "k-")
-		if self.element_type in ["DIPOLE", "DIPOLES"]:
+			lpd.draw_line(xs, ys, **style["reference"])
+		if self.element_type in ["DIPOLE", "DIPOLES", "FFAG"]:
 			re = self.dip_re
 			a = self.dip_at
 			arcsteps = 20
@@ -133,10 +164,10 @@ class LabPlotElement(object):
 			for a1 in np.linspace(0,a,arcsteps):
 				points.append(t(a1, re))
 			xs, ys = zip(*points)
-			lpd.draw_line(xs, ys, "k-")
+			lpd.draw_line(xs, ys, **style["reference"])
 
 	
-	def draw_outline(self, lpd):
+	def draw_outline(self, lpd, style):
 		t = self.transform
 		if (self.element_type in rect_elements
 			and self.element_type != 'DRIFT'):
@@ -160,30 +191,61 @@ class LabPlotElement(object):
 						  t(0+entry_offset,self.width/2)]
 
 			xs, ys = zip(*points)
-			lpd.draw_line(xs, ys, "b-")
+			lpd.draw_line(xs, ys, **style["magnet_outline"])
 
-		if self.element_type in ["DIPOLE", "DIPOLES"]:
+		if self.element_type in ["DIPOLE", "DIPOLES","POLARMES", "FFAG"]:
 			# in polar
 			re = self.dip_re
 			w = self.width
+			if self.element_type in ["POLARMES"]:
+				wp = self.width
+				wm = 0
+			else:
+				wp = self.width/2
+				wm = -self.width/2
 			a = self.dip_at
 			arcsteps = 20
-			points = [ t(0, re - w/2),
-			           t(0, re + w/2)]
+			points = [ t(0, re + wm),
+			           t(0, re + wp)]
 			for a1 in np.linspace(0,a,arcsteps):
-				points.append(t(a1, re + w/2))
-			points.append(t(a, re + w/2))
-			points.append(t(a, re - w/2))
+				points.append(t(a1, re + wp))
+			points.append(t(a, re + wp))
+			points.append(t(a, re + wm))
 			for a1 in np.linspace(a,0,arcsteps):
-				points.append(t(a1, re - w/2))
+				points.append(t(a1, re + wm))
 
 			xs, ys = zip(*points)
-			lpd.draw_line(xs, ys, "b-")
+
+			if self.element_type in ["DIPOLES", "FFAG"]:
+				lpd.draw_line(xs, ys, **style["element_outline"])
+			else:
+				lpd.draw_line(xs, ys, **style["magnet_outline"])
+
+			if self.element_type in ["DIPOLES", "FFAG"]:
+				#sub element boundaries 
+				for seb in self.sub_boundaries:
+					if seb['ea'] or seb['sa']:
+						zlog.warn("Drawing sub magnet boundaries with THETA != 0 not implemented")
+						continue
+					points = [ t(seb['e'], re + wm),
+							   t(seb['e'], re + wp)]
+					for a1 in np.linspace(seb['e'],seb['s'],arcsteps):
+						points.append(t(a1, re + wp))
+					points.append(t(seb['s'], re + wp))
+					points.append(t(seb['s'], re + wm))
+					for a1 in np.linspace(seb['s'],seb['e'],arcsteps):
+						points.append(t(a1, re + wm))
+
+					xs, ys = zip(*points)
+					lpd.draw_line(xs, ys, **style["magnet_outline"])
+
+
 
 		
 class LabPlotDrawer(object):
-	def __init__(self, mode="matplotlib"):
+	def __init__(self, mode="matplotlib", aspect="equal"):
 		self.mode = mode
+		self.aspect = aspect
 		
 		if self.mode == "matplotlib":
 			global matplotlib,plt, Line2D
@@ -194,17 +256,17 @@ class LabPlotDrawer(object):
 			self.fig = plt.figure()
 			self.fig.clf()
 			self.ax = self.fig.add_subplot(111)
-			self.ax.set_aspect('equal', adjustable='datalim')
+			self.ax.set_aspect(self.aspect, adjustable='datalim')
 		else:
 			raise ValueError("Can't handle mode "+ self.mode)
 
 	
-	def draw_line(self, xs,ys, style, linewidth=1):
+	def draw_line(self, xs, ys, color="k", linestyle="-", linewidth=1):
 		xs = np.array(xs)
 		ys = np.array(ys)
 		#if np.any(xs < -10): raise ValueError
 		if self.mode == "matplotlib":
-			self.ax.plot(xs, ys, style, linewidth=linewidth)
+			self.ax.plot(xs, ys, color=color, linestyle=linestyle, linewidth=linewidth)
 			
 		else: ValueError("Can't handle mode "+ self.mode)
 	
@@ -214,7 +276,7 @@ class LabPlotDrawer(object):
 		self.ax.annotate(str(l), (x,y))
 	
 	def draw_im(self, im, extent, cm, vmin, vmax, colorbar=True, colorbar_label=""):
-		i = self.ax.imshow(im, extent=extent, origin='lower', cmap=plt.get_cmap(cm),vmin=vmin, vmax=vmax)
+		i = self.ax.imshow(im, extent=extent, origin='lower', cmap=plt.get_cmap(cm),vmin=vmin, vmax=vmax, aspect=self.aspect)
 		if colorbar:
 			cbar = self.fig.colorbar(i)
 			if colorbar_label:
@@ -243,7 +305,7 @@ class LabPlot(object):
 	"""A plotter for beam lines and tracks.
 	
 	"""
-	def __init__(self, line, boro=None, sector_width=None):
+	def __init__(self, line, boro=None, sector_width=None, aspect="equal", style=None):
 		"""Creates a new plot from the line.
 		If using an element that adjusts it shape based on BORO, then it must be passed in
 		if sector_width is a number it used for the width of sector elements
@@ -258,9 +320,18 @@ class LabPlot(object):
 		self.boro = boro
 		self.duped_labels = []
 		self.sector_width = sector_width
+		self.aspect = aspect
+		self.style = {}
+		self.style["track"] = dict(color="r", linestyle="-", linewidth=0.1)
+		self.style["magnet_outline"] = dict(color="b", linestyle="-", linewidth=1)
+		self.style["element_outline"] = dict(color="b", linestyle=":", linewidth=1)
+		self.style["reference"] = dict(color="k", linestyle="-", linewidth=1)
+
+		if style:
+			self.set_style(style)
 		
 		self._scan_line()
-		
+
 
 	def _scan_line(self):
 		"""Scan through the line, and make a note of where all the elements are.
@@ -283,48 +354,102 @@ class LabPlot(object):
 			angle = lpelem.exit_angle
 			position = lpelem.exit_coord
 
+	def set_style(self, style):
+		"""Style is a nested dictionary, that updates the defaults, eg::
 
-	def draw(self, draw_tracks=True, draw_field_points=False, draw_field_midplane=False, field_component='z'):
-		self.lpd = LabPlotDrawer()
+		   style = {"track":{"color":"g"}}
+
+		Elements to be styled include "track", "magnet_outline", "element_outline", "reference". Each can take a "color", "linestyle" and "linewidth", using matplotlib notations.
+
+		"""
+		for k,v in style.items():
+			self.style[k].update(v)
+
+	def draw(self, draw_tracks=True, draw_field_points=False, draw_field_midplane=False, field_component='z', field_steps=100, field_int_mode="kd"):
+		"""Draw the plot in memory, then use :py:meth:`show()` to display to screen or :py:meth:`save()` to save to file.
+		
+		"""
+		self.lpd = LabPlotDrawer(aspect=self.aspect)
 
 		if field_component not in ['x','y','z']:
 			raise ValueError("field_component should be 'y', 'z' or 'x'")
 
 		if draw_field_midplane:
-			label = r"$B_%s$ (kG)"%field_component
-			field_map_data = np.array(self.field_map_data)
-			points = field_map_data[:,0:3:2]
-			if field_component == 'y':
-				values = field_map_data[:,3].reshape([-1])
-			elif field_component == 'z':
-				values = field_map_data[:,4].reshape([-1])
-			elif field_component == 'x':
-				values = field_map_data[:,5].reshape([-1])
+			if field_int_mode=="griddata":
+				label = r"$B_%s$ (kG)"%field_component
+				field_map_data = np.array(self.field_map_data)
+				points = field_map_data[:,0:3:2]
+				if field_component == 'y':
+					values = field_map_data[:,3].reshape([-1])
+				elif field_component == 'z':
+					values = field_map_data[:,4].reshape([-1])
+				elif field_component == 'x':
+					values = field_map_data[:,5].reshape([-1])
 
-			# http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html
-			# interested in y-x plane
-			ymin,ymax,xmin,xmax = points[:,0].min(), points[:,0].max(), points[:,1].min(), points[:,1].max()
-			nsteps = 1000j # j because of how mgrid works
-			grid_y, grid_x = np.mgrid[ymin:ymax:nsteps, xmin:xmax:nsteps]
-			
-			# check that paths don't deviate from z=0 plane
-			if np.abs(field_map_data[:,1]).max() > 1e-6:
-				zlog.warn("Some field points are not at z=0. Plot will be of projection onto z=0")
+				# http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html
+				# interested in y-x plane
+				ymin,ymax,xmin,xmax = points[:,0].min(), points[:,0].max(), points[:,1].min(), points[:,1].max()
+				nsteps = field_steps*1j # j because of how mgrid works
+				grid_y, grid_x = np.mgrid[ymin:ymax:nsteps, xmin:xmax:nsteps]
+				
+				# check that paths don't deviate from z=0 plane
+				if np.abs(field_map_data[:,1]).max() > 1e-6:
+					zlog.warn("Some field points are not at z=0. Plot will be of projection onto z=0")
 
-			int_field = scipy.interpolate.griddata(points, values, (grid_y, grid_x))
-			#print int_field.nanmax(), int_field.nanmin(),  np.abs(int_field).nanmax()
-			vmax = np.nanmax(np.abs(int_field))
-			self.lpd.draw_im(int_field.T, (ymin,ymax,xmin,xmax), cm='bwr', vmin=-vmax, vmax=vmax, colorbar_label=label)
-			
+				int_field = scipy.interpolate.griddata(points, values, (grid_y, grid_x))
+				#print int_field.nanmax(), int_field.nanmin(),  np.abs(int_field).nanmax()
+				vmax = np.nanmax(np.abs(int_field))
+				self.lpd.draw_im(int_field.T, (ymin,ymax,xmin,xmax), cm='bwr', vmin=-vmax, vmax=vmax, colorbar_label=label)
+			elif field_int_mode=="kd":			
+				label = r"$B_%s$ (kG)"%field_component
+				field_map_data = np.array(self.field_map_data)
+				points = field_map_data[:,0:3:2]
+				if field_component == 'y':
+					values = field_map_data[:,3].reshape([-1])
+				elif field_component == 'z':
+					values = field_map_data[:,4].reshape([-1])
+				elif field_component == 'x':
+					values = field_map_data[:,5].reshape([-1])
+
+				xmin,xmax,ymin,ymax = points[:,0].min(), points[:,0].max(), points[:,1].min(), points[:,1].max()
+
+				#print points.shape
+				#print points
+				#print values.shape
+				#print xmin,xmax,ymin,ymax
+
+				nxsteps = field_steps *2
+				xstep_size = (xmax-xmin) / nxsteps
+				nysteps = max(1, (ymax-ymin) / xstep_size )
+
+				kd = scipy.spatial.cKDTree(points)
+				
+				field_map = np.zeros([nxsteps, nysteps])
+				for nx,x in enumerate(np.linspace(xmin,xmax,nxsteps)):
+					for ny,y in enumerate(np.linspace(ymin,ymax,nysteps)):
+						# get nearby points
+						kd_f, kd_i = kd.query([x,y],k=5, distance_upper_bound=xstep_size*1.2)
+						# remove index outside range, then mean not points found in distance_upper_bound
+						kd_i = kd_i[kd_i < values.size]
+						# remove zero fields
+						near_values = values[kd_i][ values[kd_i] != 0 ]
+						if near_values.size:
+							field_map[nx,ny] = near_values.mean()
+				vmax = np.nanmax(np.abs(field_map))
+				self.lpd.draw_im(field_map.T, (xmin,xmax,ymin,ymax), cm='bwr', vmin=-vmax, vmax=vmax, colorbar_label=label)
+			else:
+				raise ValueError("field_int_mode must be griddata or kd")
+
+
 
 		for elem in self.elements:
-			elem.draw_ref_line(self.lpd)
-			elem.draw_outline(self.lpd)
+			elem.draw_ref_line(self.lpd, self.style)
+			elem.draw_outline(self.lpd, self.style)
 
 		if draw_tracks:
 			for track in self.tracks:
 				xs, ys, dummy, dummy, dummy = zip(*track)
-				self.lpd.draw_line(xs, ys, "r-", linewidth=0.1)
+				self.lpd.draw_line(xs, ys, **self.style["track"])
 
 		if draw_field_points:
 			for track in self.tracks:
@@ -341,13 +466,16 @@ class LabPlot(object):
 		self.lpd.finish()
 	
 	def show(self):
+		"Display plot to screen, call :py:meth:`draw()` first."
 		self.lpd.show()
 
 	def save(self,fname):
+		"Save plot to file, call :py:meth:`draw()` first."
 		self.lpd.save(fname)
 
 
 	def add_tracks(self, ftrack=None, ptrack=None):
+		"Add tracks from plt or fai files."
 		#tracks = []
  		# find the list of particles and laps/passes
 		pids = set()
@@ -409,6 +537,8 @@ class LabPlot(object):
 						y = t['Y']
 						x = t['X']
 						z = t['Z']
+						if isnan(x) or isnan(y) or isnan(z):
+							continue
 						by, bz, bx = t['BY'], t['BZ'], t['BX']
 						if abs(by) < 1e-50 and abs(bz) < 1e-50 and abs(bx) < 1e-50:
 							by, bz, bx = 0, 0, 0 # ignore tiny fields

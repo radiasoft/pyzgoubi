@@ -251,7 +251,7 @@ def read_file(fname):
 				except ValueError:
 					new_row = []
 					for s in row:
-						if len(s)>5 and (s[1]=='.'or s[2]=='.') and s[-4] == '-':
+						if len(s)>5 and (s[1]=='.'or s[2]=='.') and (s[-4] == '-' or s[-4] == '+'):
 							ns = s[:-4] + 'E' + s[-4:]
 							zlog.debug("Replaced %s with %s (%s)"%(s, ns, float(ns)))
 							s = ns

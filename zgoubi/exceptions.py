@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-"Exceptions raised by pyzgoubi"
+"Exceptions raised by PyZgoubi"
 
 class NoTrackError(Exception):
 	"No particle track"
 	pass
 
 class BadLineError(Exception):
-	"Line on sufficient for this function"
+	"Line not sufficient for this function"
 	pass
 
 class OldFormatError(Exception):
@@ -19,9 +19,9 @@ class BadFormatError(Exception):
 	pass
 
 class EmptyFileError(Exception):
-	"File contians not records"
+	"File contains no records"
 	pass
 
 class ZgoubiRunError(Exception):
-	"Zgoubi hit a fatal erro"
+	"Zgoubi hit a fatal error"
 	pass

@@ -2167,6 +2167,7 @@ def uniquify_labels(line):
 	# new line with copy of elements
 	# avoids issues if a line contains the same element instance multiple times
 	new_line = Line(line.name)
+	new_line.add_input_files(line.input_files)
 	for e in line.elements():
 		new_e = copy.deepcopy(e)
 		if hasattr(new_e, 'label1'):

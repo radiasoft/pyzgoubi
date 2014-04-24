@@ -6,7 +6,7 @@ l = Line("lp test")
 
 if 0:
 	# changref
-	l.add(OBJET2())
+	#l.add(OBJET2())
 	for x in xrange(2):
 		l.add(DRIFT("d1", XL=10))
 		l.add(QUADRUPO("d1", XL=10, B_0=5, KPOS=1))
@@ -29,7 +29,7 @@ if 0:
 		l.add(DRIFT("d5", XL=5))
 		l.add(DRIFT("end",XL=0))
 		l.add(FAISCNL("end", FNAME='zgoubi.fai'))
-if 1:
+if 0:
 	# DIPOLE
 	ref_rid = -ke_to_rigidity(10e6, ELECTRON_MASS)
 	dipole_angle = 2*pi/36
@@ -69,7 +69,7 @@ if 1:
 		l.add(DRIFT("d4", XL=5))
 		l.add(FAISCNL("end", FNAME='zgoubi.fai'))
 
-if 0:
+if 1:
 	# EMMA, quads and change refs
 	emma = Line('emma')
 	xpas = (2,20,2)
@@ -169,12 +169,12 @@ if 0:
 	for dy in np.linspace(-4,4,10):
 		ob.add(Y=Y+dy, T=T, Z=Z, P=P, D=1)
 
-if 0:
+if 1:
 	for dd in np.linspace(0.1,1.5,10):
 		ob.add(Y=Y, T=T, Z=Z, P=P, D=dd)
 
 # for magnet field scan
-if 1:
+if 0:
 	for dy in np.linspace(-30,30,100):
 		ob.add(Y=Y+dy, T=T, Z=Z, P=P, D=1)
 
@@ -202,14 +202,14 @@ from zgoubi.lab_plot import LabPlot
 
 print l
 
-lp = LabPlot(l, boro=-ke_to_rigidity(10e6,ELECTRON_MASS))
+lp = LabPlot(l, boro=-ke_to_rigidity(10e6,ELECTRON_MASS), style={"track":{"linewidth":2, "color":"g"}})
 #lp.add_tracks(ftrack=ftrack)
 #lp.add_tracks(ptrack=ptrack)
 lp.add_tracks(ftrack, ptrack)
 
 #exit()
-#lp.draw()
-lp.draw(draw_field_points=True, field_component='z')
+lp.draw()
+#lp.draw(draw_field_points=True, field_component='z')
 #lp.draw(draw_tracks=True, draw_field_midplane=True, field_component='z')
 #lp.save("emma.pdf")
 #lp.save("emma.svg")
