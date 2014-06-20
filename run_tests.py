@@ -28,7 +28,7 @@ except getopt.GetoptError, err:
 	sys.exit(2)
 
 
-
+orig_dir = os.getcwd()
 
 
 log_file_path = "test-" + datetime.datetime.today().strftime("%Y%m%d-%H%M") + ".log"
@@ -58,21 +58,28 @@ log = open(log_file_path, "w")
 print "writing test log to:", log_file_path
 
 #install pyzoubi to temp folder
-install_dir = tempfile.mkdtemp(prefix='/tmp/pyzgoubi_test_inst_')
+install_dir = tempfile.mkdtemp(prefix='pyzgoubi_test_inst_')
 print "installing to", install_dir
+
 print >> log, "installing to", install_dir
 #install_res = os.system("python setup.py install --prefix=%s"%install_dir)
 #subprocess.Popen(["./setup.py", "clean", "--all"])
-clean_proc = subprocess.Popen(["./setup.py", "clean", "--all"], stdout=log, stderr=subprocess.STDOUT)
+clean_proc = subprocess.Popen(["python", "./setup.py", "clean", "--all"], stdout=log, stderr=subprocess.STDOUT)
 clean_proc.wait()
-install_res = subprocess.Popen(["./setup.py", "install", "--prefix=%s"%install_dir], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+install_res = subprocess.Popen(["python", "./setup.py", "install", "--prefix=%s"%install_dir], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 for line in install_res.communicate()[0].split('\n'):
 	print >>log, line
 	if line.startswith('alias pyzgoubi='):
 		pyzgoubi_cmd = line.partition('=')[2]
 		pyzgoubi_cmd = pyzgoubi_cmd.strip('"')
-		
+	if line:
+		last_line = line.strip()
+
+if sys.platform == "win32":
+	pyzgoubi_cmd = os.path.join(last_line, "pyzgoubi.bat")
+print last_line
+	
 if install_res.returncode != 0:
 	print "ERROR: install failed"
 	print >> log, "ERROR: install failed"
@@ -90,7 +97,7 @@ proc = subprocess.Popen(pyzgoubi_cmd+" --version", shell=True, stderr=subprocess
 proc.wait()
 
 # move to another temp dir for running tests
-run_dir = tempfile.mkdtemp(prefix='/tmp/pyzgoubi_test_run_')
+run_dir = tempfile.mkdtemp(prefix='pyzgoubi_test_run_')
 print "running tests from", run_dir
 print >> log,"running tests from", run_dir
 os.chdir(run_dir)
@@ -182,7 +189,7 @@ if len(tests_fail) != 0:
 print "Took %s sec"%tot_time
 print >> log,"Took %s sec"%tot_time
 
-
+os.chdir(orig_dir)
 
 shutil.rmtree(install_dir)
 shutil.rmtree(run_dir)
