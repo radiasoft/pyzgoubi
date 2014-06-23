@@ -317,6 +317,8 @@ except NameError:
 	zlog.error("Elements did not load correctly")
 	path_info = " zgoubi_module_path: %s\nzgoubi_path: %s\npyzgoubi_egg_path: %s" % (zgoubi_module_path, zgoubi_path, pyzgoubi_egg_path)
 	zlog.error(path_info)
+	zlog.error("Try deleting: "+static_defs+ " " +compiled_defs_path)
+	exit(1)
 
 
 class Line(object):
