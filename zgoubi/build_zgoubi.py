@@ -181,6 +181,9 @@ includes=[
 [os.path.join("..","zgoubi","PARIZ.H"), ["PARAMETER (IZ = 61, ID=3, MMAP=8)","PARAMETER (MXX=801, MXY=29)" ]],
 ],
 )
+if sys.platform == "win32":
+	zgoubi_versions["365_32bit"]["patches"][0] = "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks2_windows.diff"
+	zgoubi_versions["365"]["patches"][0] = "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks2_windows.diff"
 
 def install_zgoubi_all(version="365"):
 	"This currently install a version of zgoubi known to work with pyzgoubi"
