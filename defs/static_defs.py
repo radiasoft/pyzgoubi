@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 import os.path
+from zgoubi.core import zgoubi_element
+from zgoubi.constants import *
+
+nl="\n"
 
 class OBJET1(zgoubi_element):
 	"""Beam made of grid of particles, default params give just 1 reference particle.
