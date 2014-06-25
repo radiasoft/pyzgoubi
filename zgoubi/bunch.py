@@ -477,8 +477,8 @@ class Bunch(object):
 		#numpy.savetxt(fh, self.coords[['Y','T','Z','P','S','D']])
 		# but the field end up in the wrong order, see http://thread.gmane.org/gmane.comp.python.numeric.general/36933
 
-		fh = open(fname, "w")
 		if binary:
+			fh = open(fname, "wb")
 			# this is quite optimised
 			# rather than call the general io.write_fortran_record(), use a fast special case
 			#header
@@ -498,6 +498,7 @@ class Bunch(object):
 			fh.seek(-len(rec_len_r),1); fh.truncate()
 
 		else:
+			fh = open(fname, "w")
 			nparts = len(self.coords)
 			dist = numpy.zeros([nparts, 6])
 			dist[:, 0] = self.coords['Y']
