@@ -3,6 +3,7 @@ import numpy
 import scipy.interpolate
 from zgoubi.core import *
 from zgoubi.constants import *
+from zgoubi.common import *
 from zgoubi.utils import *
 from zgoubi.exceptions import *
 
@@ -335,5 +336,163 @@ def get_tracks(cell, start_YTZP, particle, ke, full_tracking=False, return_zgoub
 		ret_data['res_file'] = res.res()
 
 	return ret_data
+
+
+
+def plot_cell_properties(data, output_prefix="results/cell_", file_fmt=".pdf", ncells=1):
+	"""Produce a set of standard plots from the data structure
+	
+	data: the data structure returned by get_cell_properties()
+
+	"""
+	import os
+	from matplotlib import pyplot
+	pyplot.clf()
+
+	mkdir_p(os.path.dirname(output_prefix))
+
+	#data = numpy.load(data_file_path)
+	n_vars = len(data.dtype.names)
+
+	# drop rows that dont start with zero
+	stable_data =  data[data['stable']]
+
+	n_energies =  stable_data.shape[0]
+	if n_energies == 0:
+		print "No stable properties to plot"
+		return
+
+	off_x, off_y = 0.1, -3
+	# horizontal
+	for n in xrange(n_energies):
+		pyplot.plot([stable_data['Y'][n]], [stable_data['T'][n]], 'bx')
+		if (n_energies < 5) or ((n%int(n_energies/5))==0):
+			pyplot.annotate("%.3f"%(stable_data['KE'][n]/1e6), xy=(stable_data['Y'][n], stable_data['T'][n]),
+			               xycoords='data', xytext=(10, 10), textcoords='offset points',
+						   arrowprops=dict(arrowstyle="->", color="grey"))
+	pyplot.title("Horizontal closed orbit")
+	pyplot.xlabel("Y (cm)")
+	pyplot.ylabel("T (mrad)")
+	if (stable_data['T'].max() - stable_data['T'].min()) < 1e-3:
+		y_min = stable_data['T'].min()
+		y_max = stable_data['T'].max()
+		pyplot.ylim([ y_min-(y_max-y_min)*1 , y_max+(y_max-y_min)*1 ])
+	pyplot.tight_layout()
+	pyplot.savefig("%s_hor"%(output_prefix)+file_fmt)
+	label = "Min = %s, Max = %s" % (stable_data['Y'].min(), stable_data['Y'].max())
+
+	# vert
+	pyplot.clf()
+	off_x, off_y = 0, 0
+	for n in xrange(n_energies):
+		pyplot.plot([stable_data['Z'][n]], [stable_data['P'][n]], 'bx')
+		if (n_energies < 5) or ((n%int(n_energies/5))==0):
+			pyplot.annotate("%.3f"%(stable_data['KE'][n]/1e6), xy=(stable_data['Z'][n], stable_data['P'][n]),
+			               xycoords='data', xytext=(10, 10), textcoords='offset points',
+						   arrowprops=dict(arrowstyle="->", color="grey"))
+	pyplot.title("Vertical closed orbit")
+	pyplot.xlabel("Z (cm)")
+	pyplot.ylabel("P (mrad)")
+	pyplot.tight_layout()
+	pyplot.savefig("%s_ver"%(output_prefix)+file_fmt)
+	label = "Min = %s, Max = %s" % (stable_data['Z'].min(), stable_data['Z'].max())
+
+	#tune
+	pyplot.clf()
+	#pyplot.title("Cell Tune")
+	pyplot.xlabel("KE (MeV)")
+	pyplot.ylabel("Cell Tune")
+
+	pyplot.plot(stable_data['KE']/1e6,stable_data['NU_Y'], "b-x", label='Horizontal')
+	pyplot.plot(stable_data['KE']/1e6,stable_data['NU_Z'], "g-x", label='Vertical')
+	pyplot.legend(loc='best')
+
+	pyplot.tight_layout()
+	pyplot.savefig("%s_tune"%(output_prefix)+file_fmt)
+
+	if(ncells>1):
+		pyplot.clf()
+		#pyplot.title("Ring Tune")
+		pyplot.xlabel("KE (MeV)")
+		pyplot.ylabel("Ring Tune")
+
+		pyplot.plot(stable_data['KE']/1e6,stable_data['NU_Y']*ncells, "b-x", label='Horizontal')
+		pyplot.plot(stable_data['KE']/1e6,stable_data['NU_Z']*ncells, "g-x", label='Vertical')
+		pyplot.legend(loc='best')
+
+		pyplot.savefig("%s_ring_tune"%(output_prefix)+file_fmt)
+
+	#tof
+	pyplot.clf()
+	#pyplot.title("Cell time of flight")
+	pyplot.xlabel("KE (MeV)")
+	pyplot.ylabel("Cell Time of flight ($\mu$s)")
+	pyplot.plot(stable_data['KE']/1e6,stable_data['tof'], "bx")
+	pyplot.tight_layout()
+	pyplot.savefig("%s_tof"%(output_prefix)+file_fmt)
+
+	if(ncells>1):
+		pyplot.clf()
+		#pyplot.title("Cell time of flight")
+		pyplot.xlabel("KE (MeV)")
+		pyplot.ylabel("Ring Time of flight ($\mu$s)")
+		pyplot.plot(stable_data['KE']/1e6, stable_data['tof']*ncells, "bx")
+		pyplot.tight_layout()
+		pyplot.savefig("%s_ring_tof"%(output_prefix)+file_fmt)
+		label = "Mean time of flight = %s microseconds" % (stable_data['tof']*ncells).mean()
+
+	#freq
+	pyplot.clf()
+	#pyplot.title("Revolution Frequency")
+	pyplot.xlabel("KE (MeV)")
+	pyplot.ylabel("Cell revolution frequence (MHz)")
+	pyplot.plot(stable_data['KE']/1e6,1/(stable_data['tof']), "bx")
+	pyplot.tight_layout()
+	pyplot.savefig("%s_freq"%(output_prefix)+file_fmt)
+	
+	if(ncells>1):
+		pyplot.clf()
+		#pyplot.title("Revolution Frequency")
+		pyplot.xlabel("KE (MeV)")
+		pyplot.ylabel("Revolution frequence (MHz)")
+		pyplot.plot(stable_data['KE']/1e6,1/(stable_data['tof'])/ncells, "bx")
+		pyplot.tight_layout()
+		pyplot.savefig("%s_ring_freq"%(output_prefix)+file_fmt)
+		label = "Min = %s, Max = %s" % ((1/(stable_data['tof'])/ncells).min(), (1/(stable_data['tof'])/ncells).max())
+
+	#path length
+	pyplot.clf()
+	#pyplot.title("Path length")
+	pyplot.xlabel("KE (MeV)")
+	pyplot.ylabel("Cell path length")
+	pyplot.plot(stable_data['KE']/1e6,(stable_data['S']), "bx")
+	pyplot.tight_layout()
+	pyplot.savefig("%s_pathlen"%(output_prefix)+file_fmt)
+	
+	if(ncells>1):
+		pyplot.clf()
+		#pyplot.title("Path length")
+		pyplot.xlabel("KE (MeV)")
+		pyplot.ylabel("Ring path length")
+		pyplot.plot(stable_data['KE']/1e6,(stable_data['S'])*ncells, "bx")
+		pyplot.tight_layout()
+		pyplot.savefig("%s_ring_pathlen"%(output_prefix)+file_fmt)
+		label = "Min = %s, Max = %s" % (((stable_data['S'])*ncells).min(), ((stable_data['S'])*ncells).max())
+	page_images = []
+
+
+def cell_properties_table(data, keys, sep="\t"):
+	"""Quick function for printing parameter tables, eg:
+	
+	    print gcp.cell_properties_table(data_arc, ["KE", "stable", "Y", "T", "NU_Y", "NU_Z"])
+
+	"""
+	out = ""
+	out += sep.join(keys) + "\n"
+	for d in data:
+		row = [str(d[k]) for k in keys]
+		out += sep.join(row) + "\n"
+	return out
+
 
 

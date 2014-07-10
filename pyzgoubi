@@ -34,6 +34,7 @@ from zgoubi.core import *
 from zgoubi.constants import *
 from zgoubi.version import *
 from zgoubi.bunch import *
+from zgoubi import gcp
 import logging
 
 sys.path.append(os.getcwd())
