@@ -496,3 +496,102 @@ def cell_properties_table(data, keys, sep="\t"):
 
 
 
+def get_twiss_params(cell, data, particle, output_prefix="results/twiss_profiles_", full_tracking=False):
+	"""Get the periodic Twiss (Courant and Snyder) parameters for the cell. Tracks a bunch of particles containing pairs offset in each plane.
+
+	Must pass in data returned from get_cell_properties() to give initial conditions. The profile is added to the 'twiss_profile' key in the data structure. If full_tracking is enabled, the Twiss parameters are every integration step are recorded, otherwise parameters are recorded at the end of each magnetic element.
+
+
+	"""
+	mkdir_p(os.path.dirname(output_prefix))
+
+	tline = Line('test_line')
+	tline.add_input_files(cell.input_files)
+	ob = OBJET5(DR=1, PY=1e-4,PT=1e-3,PZ=1e-4,PP=1e-3,PX=1e-3,PD=1e-3)
+	tline.add(ob)
+	part_ob, mass, charge_sign = part_info(particle)
+	tline.add(part_ob)
+	
+	tline.add(DRIFT('start', XL=0))
+
+	for e in cell.elements():
+		isphysical = False
+		try:
+			dummy = e.XL
+			isphysical = True
+		except AttributeError:pass
+		try:
+			dummy = e.AT
+			isphysical = True
+		except AttributeError:pass
+		tline.add(e)
+		if isphysical:
+			tline.add(FAISCNL(FNAME='zgoubi.fai',))
+
+	tline.add(DRIFT('end', XL=0))
+	tline.add(MATRIX(IORD=1,IFOC=11))	
+	tline.add(END())
+
+	for n, particle_ke in enumerate(data['KE']):
+		if not data[n]['stable']: continue
+		print "energy = ", particle_ke
+		rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
+		ob.set(BORO=rigidity)
+
+		ref_Y,ref_T,ref_Z,ref_P = data[n]['Y'], data[n]['T'], data[n]['Z'], data[n]['P']
+		ob.set(YR=ref_Y, TR=ref_T, ZR=0, PR=0, XR=0)
+		init_twiss = numpy.zeros(1,dtype=[('beta_y','f8'),('alpha_y','f8'),('gamma_y','f8'),('disp_y','f8'),('disp_py','f8'),
+		                         ('beta_z','f8'),('alpha_z','f8'),('gamma_z','f8'),('disp_z','f8'),('disp_pz','f8')])
+		init_twiss["beta_y"] = data[n]["BETA_Y"]
+		init_twiss['alpha_y'] = data[n]['ALPHA_Y']
+		init_twiss['gamma_y'] = data[n]['GAMMA_Y']
+		init_twiss['disp_y'] = data[n]['DISP_Y']
+		init_twiss['disp_py'] = data[n]['DISP_PY']
+		init_twiss['beta_z'] = data[n]['BETA_Z']
+		init_twiss['alpha_z'] = data[n]['ALPHA_Z']
+		init_twiss['gamma_z'] = data[n]['GAMMA_Z']
+		init_twiss['disp_z'] = data[n]['DISP_Z']
+		init_twiss['disp_pz'] = data[n]['DISP_PZ']
+		#data[n][["BETA_Y", "ALPHA_Y", "GAMMA_Y", "DISP_Y", "DISP_PY", "BETA_Z", "ALPHA_Z", "GAMMA_Z", "DISP_Z", "DISP_PZ"]]
+	
+		tline.full_tracking(False)
+		twiss_profiles = get_twiss_profiles(tline,'%s%s.txt'%(output_prefix, particle_ke), input_twiss_parameters=init_twiss, calc_dispersion=0)
+		data[n]['twiss_profile'] = twiss_profiles
+		if full_tracking:
+			tline.full_tracking(True)
+			twiss_profiles = get_twiss_profiles(tline, '%s%s_full.txt'%(output_prefix, particle_ke), calc_dispersion=False, input_twiss_parameters=init_twiss)
+			data[n]['full_twiss_profile'] = twiss_profiles
+
+
+def plot_twiss_params(data, output_prefix="results/twiss_profiles_"):
+	"""Plot the Twiss profiles found with get_twiss_params()
+
+	"""
+	import pylab
+	stable_data =  numpy.extract(data['stable'], data)
+	for n, particle_ke in enumerate(stable_data['KE']):
+		if stable_data[n]['full_twiss_profile'] != 0:
+			twiss_profiles = stable_data[n]['full_twiss_profile']
+		elif stable_data[n]['twiss_profile'] != 0:
+			print "get_twiss_params() called without full_tracking=True, so only plotting twiss at element ends"
+			twiss_profiles = stable_data[n]['twiss_profile']
+		else:
+			print "Call get_twiss_params() before plot_twiss_params()"
+			raise ValueError
+
+		pylab.clf()
+		ax1 = pylab.axes()
+		ax2 = ax1.twinx()
+		l2 = ax1.plot(twiss_profiles['s'],twiss_profiles['beta_y'],"-b", label=r"$\beta_y$")
+		l4 = ax1.plot(twiss_profiles['s'],twiss_profiles['beta_z'],"-c", label=r"$\beta_z$")
+		l6 = ax2.plot(twiss_profiles['s'],twiss_profiles['alpha_y'],"-r", label=r"$\alpha_y$")
+		l8 = ax2.plot(twiss_profiles['s'],twiss_profiles['alpha_z'],"-m", label=r"$\alpha_z$")
+		lns = l2+l4+l6+l8
+		ax1.set_xlabel("Path length (m)")
+		ax1.set_ylabel(r"$\beta$ (m)", color='k')
+		ax2.set_ylabel(r"$\alpha$", color='k')
+		pylab.legend(lns, [l.get_label() for l in lns],loc="best") # stackoverflow.com/questions/5484922
+		pylab.savefig('%s%s.pdf'%(output_prefix, particle_ke))
+
+
+
