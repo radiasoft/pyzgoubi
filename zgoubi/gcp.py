@@ -101,7 +101,7 @@ def get_cell_properties(cell, min_ke, max_ke=None, ke_steps=1, particle=None, to
 	returns orbit_data, an array with ke_steps elements, with the following data
 	KE : particle KE in eV
 	stable, found_co, stable_tm_YT, stable_tm_ZP : boolean stability flags
-	Y, T, Z, P : closed orbit at start of cell
+	Y, T, Z, P : closed orbit at start of cell, in cm and mrad
 	BETA_Y, BETA_Z, ALPHA_Y, ALPHA_Z, GAMMA_Y, GAMMA_Z, DISP_Y, DISP_Z, DISP_PY, DISP_PZ, NU_Y, NU_Z: periodic twiss functions
 	tof, S: time of flight and path length along closed orbit
 	matrix, matrix_trace_YT, matrix_trace_ZP: transfer matrix and traces
@@ -592,6 +592,116 @@ def plot_twiss_params(data, output_prefix="results/twiss_profiles_"):
 		ax2.set_ylabel(r"$\alpha$", color='k')
 		pylab.legend(lns, [l.get_label() for l in lns],loc="best") # stackoverflow.com/questions/5484922
 		pylab.savefig('%s%s.pdf'%(output_prefix, particle_ke))
+
+
+
+
+def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show=False, plot_unstable=False, draw_field_midplane=False, sector_width=None, aspect="equal", style=None, draw_tracks=True, min_y=None, max_y=None, y_steps=None, angle=0):
+	"""Plot particle track through cell, starting from in the closed orbits stored in data.
+
+	output_file: file to save plot
+	show: display plot to screen
+	plot_unstable: show tracks for initial coordinates marked as unstable in data structure
+	draw_field_midplane: show the magnet field on the magnet midplane
+	sector_width: width to draw sector magnets
+	aspect: "equal", use same scale for x and y, "auto" stretch to fit
+	style: style for plotting, see lab_plot.LabPlot
+	draw_tracks: draw particle tracks
+	min_y, max_y, y_steps, angle: starting coordinates for test particles for sampling the midplane field
+
+	"""
+	from zgoubi.lab_plot import LabPlot
+	import pylab
+	pylab.close()
+	n_vars = len(data.dtype.names)
+
+	if plot_unstable==False:
+		# drop rows that dont start with zero
+		stable_data =  numpy.extract(data['stable'], data)
+	else:
+		stable_data = data
+
+
+	cell = uniquify_labels(cell)
+
+	tline = Line('test_line')
+	tline.add_input_files(cell.input_files)
+	ob = OBJET2()
+	tline.add(ob)
+	part_ob, mass, charge_sign = part_info(particle)
+	tline.add(part_ob)
+	tline.add(DRIFT("gcpstart", XL=0* cm_))
+	#add(FAISCEAU("fco"))
+	tline.add(FAISCNL("gcpstart",FNAME='zgoubi.fai',))
+	tline.add(cell)
+	tline.add(DRIFT("gcpend", XL=0* cm_))
+	tline.add(FAISCNL("gcpend", FNAME='zgoubi.fai'))
+	#add(REBELOTE(NPASS=9, K=99))
+	tline.add(END())
+	tline.full_tracking(True, drift_to_multi=True)
+
+	# if line contains BENDS, then line will be drawn with first energy, but zgoubi will adjust angles for other particles
+	if len(data['KE']>0):
+		boro = ke_to_rigidity(data['KE'][0],mass) * charge_sign
+	else:
+		boro = None
+	lp = LabPlot(tline, boro=boro, sector_width=sector_width, aspect=aspect)
+	if style:
+		lp.set_style(style)
+	
+
+	if draw_tracks:
+		for n, particle_ke in enumerate(stable_data['KE']):
+			print "energy = ", particle_ke
+			rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
+			ob.set(BORO=rigidity)
+
+			ref_Y,ref_T,ref_Z,ref_P = stable_data[n]['Y'], stable_data[n]['T'],stable_data[n]['Z'],stable_data[n]['P']
+			ob.clear()
+			ob.add(Y=ref_Y, T=ref_T, Z=0, P=0, X=0, D=1)
+
+			res = tline.run()
+			try:
+				ftrack = res.get_all('fai')
+				ptrack = res.get_all('plt')
+			except IOError:
+				print res.res()
+				raise
+			lp.add_tracks(ftrack=ftrack, ptrack=ptrack, draw=1)
+	
+	if draw_field_midplane:
+		if min_y is None or max_y is None or y_steps is None:
+			raise ValueError("When using draw_field_midplane, you must set min_y, max_y and y_steps")
+
+		for Y in numpy.linspace(min_y, max_y, y_steps):
+			rigidity = ke_to_rigidity(1e15, mass) * charge_sign
+			ob.set(BORO=rigidity)
+
+			ref_Y,ref_T,ref_Z,ref_P = Y, angle, 0, 0
+			ob.clear()
+			ob.add(Y=ref_Y, T=ref_T, Z=0, P=0, X=0, D=1)
+
+			res = tline.run()
+			try:
+				ftrack = res.get_all('fai')
+				ptrack = res.get_all('plt')
+			except IOError:
+				print res.res()
+				raise
+			lp.add_tracks(ftrack=ftrack, ptrack=ptrack, draw=0, field=1)
+
+
+	if draw_field_midplane:
+		lp.draw(draw_field_midplane=draw_field_midplane, draw_tracks=draw_tracks, field_steps=y_steps)
+	else:
+		lp.draw()
+
+	lp.save(output_file)
+	if show:
+		lp.show()
+
+
+
 
 
 
