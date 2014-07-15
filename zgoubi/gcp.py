@@ -992,3 +992,303 @@ def plot_element_fields(cell, min_y, max_y, y_steps, angle=None, output_prefix_r
 				pyplot.clf()
 
 
+def get_dynamic_aperture(cell, data, particle, npass, nangles=3, tol=0.01, quick_mode=False, debug_log=None, island_avoid=0.01, start = 1e-6):
+	"""Get Dynamic Aperture.
+	
+	cell: the cell to run
+	data: data structure containing the closed orbit to be used initial conditions, see get_cell_properties()
+
+	tol: tolerance 0.01 give result to 1% precision
+	npass: number of passes through the cell
+	quick_mode: "+y+z" 1 particle at [dY,0,dZ,0]
+	            "+t+p" 1 particle at [0,dT,0,dP]
+	            False:16 combinations of plus and minus offsets are used
+	nangles: number of realspace angles to use. 1 will give the 45degree DA, i.e. with equal horizontal and vertical excitation, 2 will give pure horizontal (0 deg) and pure vertical (90deg), for other numbers will use numpy.linspace(0,pi/2,nangles).
+	island_avoid: when an unstable amplitude is found take a small step up, to see if it just a small island. set to zero to disable
+	debug_log: file name to write debug information to
+	start: starting emittance 
+
+	From the starting emittance a search for the stability boundary is made.
+
+	"""
+
+	if debug_log:
+		debug_log = open(debug_log, "w")
+		print >>debug_log, "get_dynamic_aperture, npass=", npass, " nangles=", nangles, " quick_mode=", quick_mode
+		if data['stable'].sum() == 0:
+			print >>debug_log, "no stable orbits"
+
+	min_val = 1e-10 # unstable if below
+	step = 5 # step factor when unbounded
+
+	if nangles == 1:
+		angles = numpy.array([pi/4])
+	else:
+		angles = numpy.linspace(0,pi/2,nangles)
+
+	def get_cur(cur, bound_min, bound_max):
+		if bound_min is None and bound_max is None:
+			# first lap
+			cur = start
+		elif bound_min is None:
+			# not found bottom bound yet
+			cur /= step
+		elif bound_max is None:
+			# not found top bound yet
+			cur *= step
+		else:
+			# bisect
+			cur = (bound_min + bound_max) /2
+			if cur == bound_min or cur == bound_max:
+				print "WARN: Bounds equal, machine precision reached. Reduce tolerance"
+		return cur
+
+	def update_bounds(cur, stab, bound_min, bound_max):
+		if stab and (bound_min is None or bound_min < cur):
+			bound_min = cur
+		elif not stab and (bound_max is None or bound_max > cur):
+			bound_max = cur
+		else:
+			print "WARN:  bounds unchanged", cur, stab, bound_min, bound_max, " Reduce tolerance"
+
+		return bound_min, bound_max
+	
+	def is_stable(cur_emit, tline, angle, it):
+		emit_h = sin(pi/2 - angle) * cur_emit # like 'cos(angle)' but goes to zero better
+		emit_v = sin(angle) * cur_emit
+
+
+		# get offsets from closed orbit
+		current_YTZP = emittance_to_coords(emit_h, emit_v, [alpha_y,alpha_z], [beta_y, beta_z])
+		dY, dT, dZ, dP = current_YTZP[0][0], current_YTZP[1][1], current_YTZP[0][2], current_YTZP[1][3]
+		if debug_log:
+			print >>debug_log, "cur_emit=", cur_emit, "  emit_h=", emit_h, " emit_v=", emit_v
+			print >>debug_log, "dY, dT, dZ, dP", dY, dT, dZ, dP
+
+		#print dY, dT, dZ, dP
+		ob.clear()
+		pn = 0
+		if quick_mode:
+			if quick_mode == "+y+z":
+				ob.add(Y=Yc+dY, T=Tc, Z=Zc+dZ, P=Pc, LET="A", D=1)
+			elif quick_mode == "+t+p":
+				ob.add(Y=Yc, T=Tc+dT, Z=Zc, P=Pc+dP, LET="B", D=1)
+			else:
+				raise ValueError('quick mode must be "+y+z" or "+t+p"')
+			pn=1
+		else:
+			for yt_coords in [[dY,0],[-dY,0],[0,dT],[0,-dT]]:
+				for zp_coords in [[dZ,0],[-dZ,0],[0,dP],[0,-dP]]:
+					#print pn,  yt_coords + zp_coords
+					Ye1, Te1, Ze1, Pe1 = yt_coords + zp_coords
+					ob.add(Y=Yc+Ye1, T=Tc+Te1, Z=Zc+Ze1, P=Pc+Pe1, LET=chr(ord('A')+(pn%26)), D=1)
+					pn+=1
+		
+		print "DA: angle %.2f iteration %s"%(degrees(angle), it)
+		res = tline.run(xterm =0)
+		
+		if res.test_rebelote(): # atlease one particle survived
+			iexs = res.get_all(file="fai")['IEX'] # get losses
+			stab_c = sum(iexs==1)
+			if stab_c == pn:
+				stab = True
+			else:
+				stab = False
+
+		else: # all particles lost
+			stab = False
+			stab_c = 0
+		if debug_log:
+			print >>debug_log, "stab=", stab, "  stab_c=", stab_c
+
+		res.clean()
+
+		return stab, pn, stab_c
+
+	def is_stable_test(cur_emit, tline, angle, it):
+		da     = 0.12345
+		island = 0.00312
+		#island_size = island * 0.02 # big island
+		island_size = island * 0.01 # big island
+		#island_size = island * 0.001 # tiny island
+
+		in_island = (  island-island_size < cur_emit < island+island_size  )
+		stab = (cur_emit < da and not in_island)
+		if debug_log:
+			print >>debug_log, "In island", in_island
+		return stab, 16, 0
+
+	tline = Line('test_line')
+	tline.add_input_files(cell.input_files)
+	ob = OBJET2()
+	tline.add(ob)
+	part_ob, mass, charge_sign = part_info(particle)
+	tline.add(part_ob)
+	tline.add(cell)
+	
+
+	tline.add(REBELOTE(NPASS=npass, K=99))
+	tline.add(DRIFT("end",XL=1e-12))
+	tline.add(FAISCNL("end", FNAME='zgoubi.fai'))
+	tline.add(END())
+	tline.full_tracking(False)
+
+	for n, particle_ke in enumerate(data['KE']):
+		if not data[n]['stable']: continue
+		print "energy = ", particle_ke
+		rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
+		ob.set(BORO=rigidity)
+		# closed orbit
+		Yc, Tc, Zc, Pc = [data[n]['Y'], data[n]['T'],data[n]['Z'],data[n]['P'] ]
+		alpha_y, beta_y, alpha_z, beta_z = data[n]['ALPHA_Y'], data[n]['BETA_Y'],data[n]['ALPHA_Z'],data[n]['BETA_Z']
+		
+		data[n]['DA'] = numpy.zeros([nangles])
+		data[n]['DA_angles'] = angles
+
+		for an, angle in enumerate(angles):
+
+			cur_emit = 0 # just need to create it, get set by get_cur
+			it=0
+			bound_min = None
+			bound_max = None
+			if debug_log:
+				print >>debug_log, "Start search KE=", particle_ke, " angle=", angle
+			
+			while it<100:
+				it += 1
+				cur_emit = get_cur(cur_emit, bound_min, bound_max)
+				if debug_log:
+					print >>debug_log, "\ncur_emit=", cur_emit
+
+				stab, count_p, count_s  = is_stable(cur_emit, tline, angle, it)
+
+				if not stab and island_avoid != 0 and not (count_p == 16 and count_s <= 8):
+					# check if this is just a small unstable island
+					stab, count_p, count_s = is_stable(cur_emit*(1+island_avoid), tline, angle, it)
+					if stab:
+						print >>debug_log, "Stepped over small unstable island at", cur_emit
+
+				if debug_log:
+					print >>debug_log, "stab=", stab
+					debug_log.flush()
+
+				bound_min, bound_max = update_bounds(cur_emit, stab, bound_min, bound_max)
+
+				if bound_min is not None and bound_max is not None and ((bound_max-bound_min)/bound_min < tol):
+					data[n]['DA'][an] = bound_min
+					break
+
+				if not stab and cur_emit < min_val:
+					zlog.warn("Not stable above min_val")
+					data[n]['DA'][an] = 0
+					break
+			else:
+				zlog.warn("Maximum iterations reached")
+				data[n]['DA'][an] = 0
+
+		print "DA", data[n]['DA']
+		
+
+
+def plot_dynamic_aperture(cell, data, particle, npass, output_prefix="results/da_"):
+	"""Make phase space plots showing dynamic aperture
+
+	"""
+
+	from matplotlib import pyplot
+	mkdir_p(os.path.dirname(output_prefix))
+
+	tline = Line('test_line')
+	tline.add_input_files(cell.input_files)
+	ob = OBJET2()
+	tline.add(ob)
+	part_ob, mass, charge_sign = part_info(particle)
+	tline.add(part_ob)
+	tline.add(cell)
+	tline.add(FAISCNL("end", FNAME='zgoubi.fai'))
+	tline.add(REBELOTE(NPASS=npass, K=99))
+	tline.add(END())
+	tline.full_tracking(False)
+
+	for n, particle_ke in enumerate(data['KE']):
+		if not data[n]['stable']: continue
+		pyplot.clf()
+		print "energy = ", particle_ke
+		rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
+		ob.set(BORO=rigidity)
+		Yc, Tc, Zc, Pc = [data[n]['Y'], data[n]['T'],data[n]['Z'],data[n]['P'] ]
+		alpha_y, beta_y, alpha_z, beta_z = data[n]['ALPHA_Y'], data[n]['BETA_Y'],data[n]['ALPHA_Z'],data[n]['BETA_Z']
+		
+
+		emit_h_max_stable = data[n]['DA'][0]
+		emit_v_max_stable = data[n]['DA'][-1]
+		
+		tracks = []
+		# then test a range from small to unstable
+		#for m, emit in enumerate(numpy.linspace(1e-12, 2, 20)): # linearly spaced in emittance
+		for m, emit in enumerate((numpy.linspace(1e-12, (2)**0.5, 20))**2): # linearly spaced on plot
+			print "plot_da ke", particle_ke, "n", n, "m", m
+			ob.clear()
+			# horizontal particle
+			current_YTZP = emittance_to_coords(emit*emit_h_max_stable/sqrt(2), emit*emit_h_max_stable/sqrt(2), [alpha_y,alpha_z], [beta_y, beta_z])
+			Ye1, Te1, Ze1, Pe1 = current_YTZP[0][0], current_YTZP[0][1], current_YTZP[0][2], current_YTZP[0][3]
+			ob.add(Y=Yc+Ye1, T=Tc+Te1, Z=Zc+0, P=Pc+0, LET='A', D=1)
+
+			# vertical particle
+			current_YTZP = emittance_to_coords(emit*emit_v_max_stable/sqrt(2), emit*emit_v_max_stable/sqrt(2), [alpha_y,alpha_z], [beta_y, beta_z])
+			Ye1, Te1, Ze1, Pe1 = current_YTZP[0][0], current_YTZP[0][1], current_YTZP[0][2], current_YTZP[0][3]
+			ob.add(Y=Yc+0, T=Tc+0, Z=Zc+Ze1, P=Pc+Pe1, LET='B', D=1)
+			
+			res = tline.run()
+			if res.test_rebelote():
+				stab = True
+				fai_data = res.get_all('fai')
+			else:
+				stab = False
+
+				try:
+					fai_data = res.get_all('fai')
+				except IOError:
+					print "No fai file"
+					continue
+			tracks.append([fai_data,emit,stab])
+
+			#pyplot.plot(fai_data['Y'], fai_data['T'], ','+color)
+
+		import pickle
+		pickle.dump(tracks, open('%s_%s.pickle'%(output_prefix, particle_ke), "w"))
+
+		print "dynamic aperture", numpy.median(data[n]['DA'])
+		for fai_data,emit,stab in tracks:
+			fai_data = fai_data[fai_data["LET"]=="A"]
+			print emit, stab, len(fai_data)
+			stab = fai_data["PASS"].max() == npass+1
+			if stab:
+				pyplot.plot(fai_data['Y'], fai_data['T'], ',k')
+				plot_width_Y = fai_data['Y'].max() - fai_data['Y'].min()
+				plot_width_T = fai_data['T'].max() - fai_data['T'].min()
+				#pyplot.annotate("%4g"%(emit*1e6), [fai_data['Y'][0], fai_data['T'][0]])
+			else:
+				pyplot.plot(fai_data['Y'], fai_data['T'], ',r')
+
+		pyplot.xlabel("Y (cm)")
+		pyplot.ylabel("T (mrad)")
+		pyplot.xlim(Yc-0.6*plot_width_Y, Yc+0.6*plot_width_Y)
+		pyplot.ylim(Tc-0.6*plot_width_T, Tc+0.6*plot_width_T)
+		pyplot.savefig('%sh_%s.pdf'%(output_prefix, particle_ke))
+
+		for fai_data,emit,stab in tracks:
+			fai_data = fai_data[fai_data["LET"]=="B"]
+			stab = fai_data["PASS"].max() == npass+1
+			if stab:
+				pyplot.plot(fai_data['Z'], fai_data['P'], ',k')
+				plot_width_Z = fai_data['Z'].max() - fai_data['Z'].min()
+				plot_width_P = fai_data['P'].max() - fai_data['P'].min()
+				#pyplot.annotate("%4g"%(emit*1e6), [fai_data['Z'][0], fai_data['P'][0]])
+			else:
+				pyplot.plot(fai_data['Z'], fai_data['P'], ',r')
+		pyplot.xlabel("Z (cm)")
+		pyplot.ylabel("P (mrad)")
+		pyplot.xlim(Zc-0.6*plot_width_Z, Zc+0.6*plot_width_Z)
+		pyplot.ylim(Pc-0.6*plot_width_P, Pc+0.6*plot_width_P)
+		pyplot.savefig('%sv_%s.pdf'%(output_prefix, particle_ke))
