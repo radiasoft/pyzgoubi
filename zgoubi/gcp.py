@@ -84,7 +84,6 @@ def part_info(particle):
 	return part_ob, mass, charge_sign
 
 
-
 def get_cell_properties(cell, min_ke, max_ke=None, ke_steps=1, particle=None, tol=1e-6, stop_at_first_unstable=False, closed_orbit_range=None, closed_orbit_range_count=None, closed_orbit_init_YTZP=None, reuse_co_coords=True, closed_orbit_debug=False, full_tracking=False):
 	"""Get the closed orbits and basic properties of a periodic cell.
 
@@ -275,7 +274,6 @@ def get_cell_tracks(cell, data, particle, full_tracking=False):
 		data[n]['ftrack'] = tracks['ftrack']
 		data[n]['ptrack'] = tracks['ptrack']
 
-	
 
 def get_tracks(cell, start_YTZP, particle, ke, full_tracking=False, return_zgoubi_files=False, xterm=False):
 	"""Run a particle through a cell from a give starting point and return track from fai and plt files.
@@ -336,7 +334,6 @@ def get_tracks(cell, start_YTZP, particle, ke, full_tracking=False, return_zgoub
 		ret_data['res_file'] = res.res()
 
 	return ret_data
-
 
 
 def plot_cell_properties(data, output_prefix="results/cell_", file_fmt=".pdf", ncells=1):
@@ -495,7 +492,6 @@ def cell_properties_table(data, keys, sep="\t"):
 	return out
 
 
-
 def get_twiss_params(cell, data, particle, output_prefix="results/twiss_profiles_", full_tracking=False):
 	"""Get the periodic Twiss (Courant and Snyder) parameters for the cell. Tracks a bunch of particles containing pairs offset in each plane.
 
@@ -595,8 +591,6 @@ def plot_twiss_params(data, output_prefix="results/twiss_profiles_"):
 		ax2.set_ylabel(r"$\alpha$", color='k')
 		pylab.legend(lns, [l.get_label() for l in lns],loc="best") # stackoverflow.com/questions/5484922
 		pylab.savefig('%s%s.pdf'%(output_prefix, particle_ke))
-
-
 
 
 def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show=False, plot_unstable=False, draw_field_midplane=False, sector_width=None, aspect="equal", style=None, draw_tracks=True, min_y=None, max_y=None, y_steps=None, angle=0):
@@ -706,7 +700,295 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 		lp.show()
 
 
+def profile_get_tracks(magnet, min_y, max_y, y_steps, angle=0):
+	"""Internal function used by profile1d() and profile2d()
+
+	"""
+
+	tline = Line('t')
+	try:
+		tline.add_input_files(magnet.input_files)
+	except AttributeError:
+		pass
+	tline.add(magnet)
+
+	# test bunch of high rigidity particles
+	testparticles = numpy.zeros([y_steps], dtype=data_def)
+	testparticles['Y'] = numpy.linspace(min_y, max_y, y_steps)
+	testparticles['T'] = angle
+	testparticles['KE'] = 1e20
+	testparticles['stable'] =True
+
+	get_cell_tracks(tline, testparticles, 'p', full_tracking=True)
+
+	fieldpoints_list = []
+	for pt in testparticles['ptrack']:
+		fieldpoints = []
+		if pt is None:
+			zlog.warn('Empty track')
+			continue
+		for pp in pt:
+			y, z, x = pp['Y'], pp['Z'], pp['X']
+			by, bz, bx = pp['BY'], pp['BZ'], pp['BX']
+			if isnan(x) or isnan(y) or isnan(z):
+				continue
+			fieldpoints.append([y,z,x,by, bz, bx])
+	
+		field_map_data = numpy.array(fieldpoints)
+		fieldpoints_list.append(field_map_data)
+	
+	return fieldpoints_list
 
 
+def profile2d(magnet, min_y, max_y, y_steps, angle=0):
+	"""Get a 2d interpolated field profile. Used by plot_element_fields
+
+	returns a y_steps by y_steps grid of interpolated field values, and the extents of that grid:
+
+	    returns int_field, (xmin,xmax,ymin,ymax)
+
+	"""
+
+	field_map_data = profile_get_tracks(magnet, min_y, max_y, y_steps, angle)
+	
+	# due to scales being different we need to rescale
+	# see https://github.com/scipy/scipy/issues/2975
+	# get typecal steps, in x and y. should be close to xpas, and gap between orbits
+	x_diff_means = []
+	y_pos_means = []
+	for fmp in field_map_data:
+		fmp_xs = fmp[:,2]
+		fmp_ys = fmp[:,0]
+		x_difs = fmp_xs[1:] - fmp_xs[:-1]
+		x_diff_means.append(x_difs.mean())
+		y_pos_means.append(fmp_ys.mean())
+
+	x_step = numpy.array(x_diff_means).mean()
+	y_pos_means = numpy.array(y_pos_means)
+	y_step =  (y_pos_means[1:] - y_pos_means[:-1]).mean()
+
+	field_map_data = numpy.vstack(field_map_data)
+	if len(field_map_data) == 0:
+		zlog.error("No tracks, can't make field profile")
+		raise NoTrackError
+
+	points = field_map_data[:,0:3:2]
+	values = field_map_data[:,4] #bz
+
+	ymin,ymax,xmin,xmax = points[:,0].min(), points[:,0].max(), points[:,1].min(), points[:,1].max()
+
+	# scale positions, we return orginal extents, so this does not effect results
+	points[:,0] /= y_step
+	points[:,1] /= x_step
+	mean_sy = points[:,0].mean()
+	points[:,0] -= mean_sy
+	symin,symax,sxmin,sxmax = points[:,0].min(), points[:,0].max(), points[:,1].min(), points[:,1].max()
+
+	nsteps = 1j*y_steps*2 # j because of how mgrid works
+	grid_y, grid_x = numpy.mgrid[symin:symax:nsteps, sxmin:sxmax:nsteps]
+
+	if numpy.abs(field_map_data[:,1]).max() > 1e-6:
+		zlog.warn("Some field points are not at z=0. Plot will be of projection onto z=0")
+
+	int_field = scipy.interpolate.griddata(points, values, (grid_y, grid_x), method="linear")
+
+	return int_field, (xmin,xmax,ymin,ymax)
+
+
+def profile1d(magnet, min_y, max_y, y_steps, angle=0):
+	"""Returns a 1d transverse horizontal (radial) profile of the magnet. At mid point, or ACN for DIPOLES. Used by plot_element_fields()
+	
+	returns field, ys
+	"""
+
+	field_map_data = profile_get_tracks(magnet, min_y, max_y, y_steps, angle)
+	
+	# due to scales being different we need to rescale
+	# see https://github.com/scipy/scipy/issues/2975
+	# get typecal steps, in x and y. should be close to xpas, and gap between orbits
+	x_diff_means = []
+	y_pos_means = []
+	for fmp in field_map_data:
+		fmp_xs = fmp[:,2]
+		fmp_ys = fmp[:,0]
+		x_difs = fmp_xs[1:] - fmp_xs[:-1]
+		x_diff_means.append(x_difs.mean())
+		y_pos_means.append(fmp_ys.mean())
+
+	x_step = numpy.array(x_diff_means).mean()
+	y_pos_means = numpy.array(y_pos_means)
+	y_step =  (y_pos_means[1:] - y_pos_means[:-1]).mean()
+
+	field_map_data = numpy.vstack(field_map_data)
+	if len(field_map_data) == 0:
+		zlog.error("No tracks, can't make field profile")
+		raise NoTrackError
+
+	points = field_map_data[:,0:3:2]
+	values = field_map_data[:,4] #bz
+
+	ymin,ymax,xmin,xmax = points[:,0].min(), points[:,0].max(), points[:,1].min(), points[:,1].max()
+
+	xmid = (xmax + xmin)/2
+	if hasattr(magnet, "elements"):
+		magnet = magnet.elements().next()
+	if magnet._zgoubi_name in ["DIPOLES"]:
+		xmid = radians(magnet._looped_data[0]['ACN'])
+
+	# scale positions, we return original extents, so this does not effect results
+	points[:,0] /= y_step
+	points[:,1] /= x_step
+	points[:,0] -= points[:,0].mean()
+	sxmid = xmid / x_step
+	symin,symax,sxmin,sxmax = points[:,0].min(), points[:,0].max(), points[:,1].min(), points[:,1].max()
+
+	nsteps = 1j * y_steps # j because of how mgrid works
+	grid_y, grid_x = numpy.mgrid[symin:symax:nsteps, sxmid:sxmid:1j]
+	if numpy.abs(field_map_data[:,1]).max() > 1e-6:
+		zlog.warn("Some field points are not at z=0. Plot will be of projection onto z=0")
+
+	int_field = scipy.interpolate.griddata(points, values, (grid_y, grid_x), method="linear")
+	int_field = int_field.reshape([-1])
+
+	return int_field, numpy.linspace(ymin,ymax,y_steps)
+
+
+def plot_element_fields(cell, min_y, max_y, y_steps, angle=None, output_prefix_rad="results/mag_field_rad_%s.pdf", output_prefix_long="", output_prefix_2d="", rad_method="interp", extra_test_range=0.5):
+	"""Plots radial, longitudinal and 2d mid-plane magnetic field for each element, using high rigidity rays to sample field.
+	
+	min_y, max_y, y_steps, angle set the starting positions and angle for the test rays
+	If angle=None, then 0 will be used for rectangular magnets, and AT/2 for sector magnets
+
+	output_prefix_rad, output_prefix_long, output_prefix_long should contain a '%s' that is replaced with the element label, eg
+	"results/mag_field_rad_%s.pdf"
+	output_prefix_long and output_prefix_2d will be skipped if they are left blank
+	The longitudinal profile is along the straight lines of the test rays, not the closed orbit.
+
+	For the radial plot method can be:
+	interp: points along a radial line are interpolated from a 2d profile
+	max: use the max field seen by the ray
+
+	extra_test_range factor to extend the range (min_y, max_y) for test particles, to improve interpolation edges
+	
+	In 2d plots the trick of making rectangular magnets by using large radii is recognised for radii over 1e6cm
+
+	"""
+	from matplotlib import pyplot
+
+	estart = min_y - (max_y-min_y)*extra_test_range
+	estop = max_y + (max_y-min_y)*extra_test_range
+	ecount = int(y_steps *(1+extra_test_range))
+
+	for e in cell.elements():
+		ismagnet = False
+		if angle:
+			this_angle = angle
+		else:
+			this_angle = 0
+		try:
+			dummy = e.XL
+			ismagnet = True
+			mag_shape = "rect"
+		except AttributeError:pass
+		try:
+			dummy = e.AT
+			ismagnet = True
+			mag_shape = "sect"
+			if angle is None:
+				this_angle = radians(-e.AT/2)*1000 # AT in deg, Y in mrad
+		except AttributeError:pass
+		if e._zgoubi_name == "DRIFT":
+			ismagnet = False
+
+		if e._zgoubi_name == "POLARMES":
+			ismagnet = True
+			mag_shape = "sect"
+
+
+		if ismagnet:
+			mag_rm = 0
+			if hasattr(e, "AT") and hasattr(e, "RM"):
+				mag_rm = e.RM
+			tline = Line("m")
+			tline.add_input_files(cell.input_files)
+			tline.add(e)
+
+			if rad_method == "interp":
+				bz, ys = profile1d(tline, estart, estop, ecount, this_angle)
+				ys -= mag_rm
+				pyplot.clf()
+				mask = numpy.logical_and(ys>=min_y, ys<=max_y)
+				pyplot.plot(ys[mask], bz[mask], '-b')
+			elif rad_method == "max":
+				testparticles = numpy.zeros([ecount], dtype=data_def)
+				testparticles['Y'] = numpy.linspace(min_y, max_y, y_steps)
+				testparticles['T'] = this_angle
+				testparticles['KE'] = 1e15
+				testparticles['stable'] =True
+				get_cell_tracks(tline, testparticles, 'p', full_tracking=True)
+
+				max_bz = [ pt["BZ"].max() for pt in testparticles['ptrack'] ]
+				pyplot.plot(testparticles['Y'], max_bz, "-b")
+			else:
+				raise ValueError('rad_method should be "interp" or "max"')
+
+			pyplot.xlabel("Y (cm)")
+			pyplot.ylabel("$B_z$ (kGauss)")
+			pyplot.grid()
+			pyplot.tight_layout()
+			pyplot.savefig(output_prefix_rad%e.label1)
+			pyplot.clf()
+
+			if output_prefix_long:
+				testparticles = numpy.zeros([y_steps], dtype=data_def)
+				testparticles['Y'] = numpy.linspace(min_y, max_y, y_steps)
+				testparticles['T'] = this_angle
+				testparticles['KE'] = 1e15
+				testparticles['stable'] =True
+
+				get_cell_tracks(tline, testparticles, 'p', full_tracking=True)
+				pyplot.clf()
+				for pt in testparticles['ptrack']:
+					pyplot.plot(pt["S"], pt["BZ"], '-b')
+				pyplot.xlabel("S (cm)")
+				pyplot.ylabel("$B_z$ (kGauss)")
+				pyplot.grid()
+
+				pyplot.tight_layout()
+				pyplot.savefig(output_prefix_long%e.label1)
+				pyplot.clf()
+
+			if output_prefix_2d:
+				bz2, extents = profile2d(tline, estart, estop, ecount, this_angle)
+				#check for rectangular magnets made with DIPOLES.
+				if e.RM > 1e6:
+					# looks like using DIPOLES with large RM to fake rectangular magnet, so convert radians to cm
+					extents = extents[0]*mag_rm, extents[1]*mag_rm, extents[2], extents[3]
+
+				extents = [extents[0], extents[1], extents[2]-mag_rm, extents[3]-mag_rm]
+
+				gridn = bz2.shape[0]
+				grid_base = extents[2]
+				grid_size = extents[3] - extents[2]
+				nstart = int(floor((min_y - extents[2]) / grid_size * gridn))
+				nstop = int(ceil((max_y - extents[2]) / grid_size * gridn))
+				bz2 = bz2[nstart:nstop+1,:]
+				extents[2] = nstart * grid_size/gridn + grid_base
+				extents[3] = nstop * grid_size/gridn + grid_base
+
+				bz_max = numpy.nanmax(numpy.abs(bz2))
+				pyplot.clf()
+				pyplot.imshow(bz2, extent=extents, origin="lower", vmin=-bz_max, vmax=bz_max, aspect="auto", interpolation="bilinear", cmap="bwr")
+
+				cbar = pyplot.colorbar()
+				cbar.ax.set_ylabel("$B_z$ (kGauss)")
+				if mag_shape == "rect" or mag_rm > 1e6:
+					pyplot.xlabel("S (cm)")
+				else:
+					pyplot.xlabel("S (radians)")
+				pyplot.ylabel("Y (cm)")
+				pyplot.tight_layout()
+				pyplot.savefig(output_prefix_2d%e.label1)
+				pyplot.clf()
 
 
