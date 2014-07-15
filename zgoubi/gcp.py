@@ -165,7 +165,7 @@ def get_cell_properties(cell, min_ke, max_ke=None, ke_steps=1, particle=None, to
 			orbit_data['Y'][n],orbit_data['T'][n],orbit_data['Z'][n], orbit_data['P'][n]= closed_orbit
 			orbit_data['found_co'][n] = True
 		else:
-			print "No closed orbit at:", particle_ke
+			zlog.warn("No closed orbit at: %s"% particle_ke)
 			if closed_orbit_debug:
 				plot_find_closed_orbit(data_fname=record_fname, outfile=record_fname+".pdf")
 				print "Search plots writen to ", record_fname+".pdf"
@@ -359,7 +359,7 @@ def plot_cell_properties(data, output_prefix="results/cell_", file_fmt=".pdf", n
 
 	n_energies =  stable_data.shape[0]
 	if n_energies == 0:
-		print "No stable properties to plot"
+		zlog.warn("No stable properties to plot")
 		return
 
 	off_x, off_y = 0.1, -3
@@ -569,14 +569,17 @@ def plot_twiss_params(data, output_prefix="results/twiss_profiles_"):
 	"""
 	import pylab
 	stable_data =  numpy.extract(data['stable'], data)
+	full_tracking_message = 0
 	for n, particle_ke in enumerate(stable_data['KE']):
 		if stable_data[n]['full_twiss_profile'] != 0:
 			twiss_profiles = stable_data[n]['full_twiss_profile']
 		elif stable_data[n]['twiss_profile'] != 0:
-			print "get_twiss_params() called without full_tracking=True, so only plotting twiss at element ends"
+			if full_tracking_message == 0:
+				zlog.warn("get_twiss_params() called without full_tracking=True, so only plotting twiss at element ends")
+				full_tracking_message = 1
 			twiss_profiles = stable_data[n]['twiss_profile']
 		else:
-			print "Call get_twiss_params() before plot_twiss_params()"
+			zlog.error("Call get_twiss_params() before plot_twiss_params()")
 			raise ValueError
 
 		pylab.clf()
@@ -665,6 +668,7 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 				ftrack = res.get_all('fai')
 				ptrack = res.get_all('plt')
 			except IOError:
+				zlog.error("Failed to read fai or plt files")
 				print res.res()
 				raise
 			lp.add_tracks(ftrack=ftrack, ptrack=ptrack, draw=1)
@@ -683,6 +687,7 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 
 			res = tline.run()
 			try:
+				zlog.error("Failed to read fai or plt files")
 				ftrack = res.get_all('fai')
 				ptrack = res.get_all('plt')
 			except IOError:
