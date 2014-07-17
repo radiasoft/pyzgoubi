@@ -142,6 +142,8 @@ def _show_usage():
 	print "pyzgoubi", "--zgoubi /path/to/zgoubi"
 	print "pyzgoubi", "--debug"
 	print "pyzgoubi", "--log_level DEBUG/WARNING/ERROR"
+	print "pyzgoubi", "-i drop to interactive mode on exception"
+	print "pyzgoubi", "--profile write execution profile to prof.log "
 	print "pyzgoubi", "--install-zgoubi"
 	print "\nFor documentation see http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/"
 
@@ -199,7 +201,7 @@ def show_version():
 
 if __name__ == '__main__':
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "version", "zgoubi=", "debug", "log_level=", "install-zgoubi"])
+		opts, args = getopt.getopt(sys.argv[1:], "hi", ["help", "version", "zgoubi=", "debug", "log_level=", "install-zgoubi", "profile"])
 	except getopt.GetoptError, err:
 		print str(err)
 		_show_usage()
@@ -208,6 +210,7 @@ if __name__ == '__main__':
 	if len(sys.argv) == 1:
 		_show_usage()
 		sys.exit(1)
+	pyzgoubi_make_profile = False
 
 	for o, a in opts:
 		if o in ['--help', "-h"]:
@@ -232,6 +235,10 @@ if __name__ == '__main__':
 			else:
 				build_zgoubi.install_zgoubi_all()
 			sys.exit(0)
+		if o in ["-i"]:
+			os.environ["PYTHONINSPECT"] = "1"
+		if o in ["--profile"]:
+			pyzgoubi_make_profile = True
 
 	try:
 		input_file_name = args[0]
@@ -256,8 +263,20 @@ if __name__ == '__main__':
 		print "or add the direcory containing zgoubi to the $PATH"
 		sys.exit(1)
 
+	if pyzgoubi_make_profile:
+		import cProfile
+		pyzgoubi_profile = cProfile.Profile()
+		pyzgoubi_profile.enable()
 
-	execfile(input_file_name)
+	try:
+		execfile(input_file_name)
+	except SystemExit:
+		# catch exit() so that we can do cleanup
+		pass
+
+	if pyzgoubi_make_profile:
+		pyzgoubi_profile.disable()
+		pyzgoubi_profile.dump_stats("prof.log")
 	
 
 	for left_over in locals().values():
