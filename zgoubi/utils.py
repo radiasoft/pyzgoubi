@@ -17,7 +17,6 @@ from zgoubi.rel_conv import *
 import itertools
 from zgoubi.core import zlog, dep_warn, Line
 from StringIO import StringIO
-from collections import Counter
 import copy
 
 # use these to convert things to metres and tesla
@@ -2164,6 +2163,11 @@ def uniquify_labels(line):
 	
 	Note: New line contains deep copies of original elements.
 	"""
+	try:
+		from collections import Counter
+	except ImportError:
+		print "uniquify_labels() requires python 2.7"
+		raise
 	max_label = 10 # FIXME this was 8 in old zgoubi version, but is now 10. probably should be a global option
 	label1s = Counter()
 	dup_names = set()

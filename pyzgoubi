@@ -28,6 +28,11 @@ More infomation please see the README file or the pyzgoubi website
 from __future__ import division
 from math import *
 import getopt, sys, os
+try:
+	eval("1 if True else 2")
+except SyntaxError:
+	print "PyZgoubi requires Python 2.5 or newer (2.7 recommended)"
+	sys.exit()
 import subprocess
 from zgoubi.utils import *
 from zgoubi.core import *
