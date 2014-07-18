@@ -2163,13 +2163,10 @@ def uniquify_labels(line):
 	
 	Note: New line contains deep copies of original elements.
 	"""
-	try:
-		from collections import Counter
-	except ImportError:
-		print "uniquify_labels() requires python 2.7"
-		raise
+	from collections import defaultdict
+
 	max_label = 10 # FIXME this was 8 in old zgoubi version, but is now 10. probably should be a global option
-	label1s = Counter()
+	label1s = defaultdict(int)
 	dup_names = set()
 
 	# dont need to rename if already unique
@@ -2181,7 +2178,7 @@ def uniquify_labels(line):
 				if label1s[lab1] > 1:
 					dup_names.add(lab1)
 	
-	label1s = Counter() # reset counter
+	label1s = defaultdict(int) # reset counter
 	# new line with copy of elements
 	# avoids issues if a line contains the same element instance multiple times
 	new_line = Line(line.name)
