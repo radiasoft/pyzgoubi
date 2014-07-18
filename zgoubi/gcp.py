@@ -344,6 +344,7 @@ def plot_cell_properties(data, output_prefix="results/cell_", file_fmt=".pdf", n
 	"""
 	import os
 	from matplotlib import pyplot
+	if not hasattr(pyplot, "tight_layout"): pyplot.tight_layout = lambda :None 
 	pyplot.clf()
 
 	mkdir_p(os.path.dirname(output_prefix))
@@ -874,6 +875,7 @@ def plot_element_fields(cell, min_y, max_y, y_steps, angle=None, output_prefix_r
 
 	"""
 	from matplotlib import pyplot
+	if not hasattr(pyplot, "tight_layout"): pyplot.tight_layout = lambda :None
 
 	estart = min_y - (max_y-min_y)*extra_test_range
 	estop = max_y + (max_y-min_y)*extra_test_range
