@@ -377,6 +377,9 @@ class LabPlot(object):
 
 		if draw_field_midplane:
 			if field_int_mode=="griddata":
+				if not hasattr(scipy.interpolate, "griddata"):
+					print "LabPlot.draw() with field_int_mode='griddata' requires scipy > 0.9, try field_int_mode='kd'"
+					raise
 				label = r"$B_%s$ (kG)"%field_component
 				field_map_data = np.array(self.field_map_data)
 				points = field_map_data[:,0:3:2]

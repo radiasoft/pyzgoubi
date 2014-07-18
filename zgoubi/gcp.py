@@ -749,6 +749,9 @@ def profile2d(magnet, min_y, max_y, y_steps, angle=0):
 	    returns int_field, (xmin,xmax,ymin,ymax)
 
 	"""
+	if not hasattr(scipy.interpolate, "griddata"):
+		print "profile2d() requires scipy > 0.9"
+		raise
 
 	field_map_data = profile_get_tracks(magnet, min_y, max_y, y_steps, angle)
 	
@@ -801,6 +804,9 @@ def profile1d(magnet, min_y, max_y, y_steps, angle=0):
 	
 	returns field, ys
 	"""
+	if not hasattr(scipy.interpolate, "griddata"):
+		print "profile1d() requires scipy > 0.9"
+		raise
 
 	field_map_data = profile_get_tracks(magnet, min_y, max_y, y_steps, angle)
 	
