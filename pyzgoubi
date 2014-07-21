@@ -141,7 +141,7 @@ def _show_usage():
 	print "pyzgoubi", "--version"
 	print "pyzgoubi", "--zgoubi /path/to/zgoubi"
 	print "pyzgoubi", "--debug"
-	print "pyzgoubi", "--log_level DEBUG/WARNING/ERROR"
+	print "pyzgoubi", "--log-level DEBUG/WARNING/ERROR"
 	print "pyzgoubi", "-i drop to interactive mode on exception"
 	print "pyzgoubi", "--profile write execution profile to prof.log "
 	print "pyzgoubi", "--install-zgoubi"
@@ -168,7 +168,6 @@ def show_version():
 
 	shutil.rmtree(tmpdir)
 
-	import sys
 	print "Python version", sys.version
 	show_path = False
 
@@ -201,7 +200,7 @@ def show_version():
 
 if __name__ == '__main__':
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "hi", ["help", "version", "zgoubi=", "debug", "log_level=", "install-zgoubi", "profile"])
+		opts, args = getopt.getopt(sys.argv[1:], "hi", ["help", "version", "zgoubi=", "debug", "log_level=", "log-level=" ,"install-zgoubi", "profile"])
 	except getopt.GetoptError, err:
 		print str(err)
 		_show_usage()
@@ -222,9 +221,9 @@ if __name__ == '__main__':
 		if o in ['--zgoubi']:
 			zgoubi_settings['zgoubi_path'] = a
 		if o in ['--debug']:
-			zlog.setLevel(logging._levelNames['DEBUG'])
-		if o in ['--log_level']:
-			zlog.setLevel(logging._levelNames[a.upper()])
+			zlog.setLevel(logging.DEBUG)
+		if o in ['--log_level', "--log-level"]:
+			zlog.setLevel(a.upper())
 		if o in ['--version']:
 			show_version()
 			sys.exit(0)
@@ -281,7 +280,7 @@ if __name__ == '__main__':
 
 	for left_over in locals().values():
 		if "Result"  in str(type(left_over)).split("'")[1]:
-			del(left_over)
+			del left_over
 	
 
 	# uncomment to enable list leftover objects for memory debugging

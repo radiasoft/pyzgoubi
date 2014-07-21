@@ -38,7 +38,7 @@ class Bunch(object):
 	('Z', numpy.float64),
 	('P', numpy.float64),
 	('S', numpy.float64),
-	('tof', numpy.float64), # these are for accumulating 
+	('tof', numpy.float64), # these are for accumulating
 	('X', numpy.float64),
 	]
 
@@ -53,7 +53,7 @@ class Bunch(object):
 			self.coords['D'] = 1
 		self.mass = mass
 		self.charge = charge
-		self.rigidity = rigidity 
+		self.rigidity = rigidity
 		if ke != None:
 			self.set_bunch_ke(ke)
 
@@ -62,7 +62,7 @@ class Bunch(object):
 		if ceil(len(self.coords) / n_slices) > max_particles:
 			n_slices = ceil(len(self.coords)/max_particles)
 
-		rigidity=self.get_bunch_rigidity()
+		rigidity = self.get_bunch_rigidity()
 		for pslice in numpy.array_split(self.coords, n_slices):
 			if pslice.size != 0:
 				yield Bunch(rigidity=rigidity, mass=self.mass, charge=self.charge,
@@ -78,9 +78,9 @@ class Bunch(object):
 	def set_bunch_ke(self, ke):
 		"Set bunch kinetic energy"
 		if self.mass == 0:
-			raise ValueError, "Particle mass can't be Zero"
+			raise ValueError("Particle mass can't be Zero")
 		if self.charge == 0:
-			raise ValueError, "Particle charge can't be Zero"
+			raise ValueError("Particle charge can't be Zero")
 		self.rigidity = rel_conv.ke_to_rigidity(mass=self.mass, ke=ke, charge=self.charge)
 
 	def get_bunch_ke(self):
@@ -160,7 +160,7 @@ class Bunch(object):
 			#	new_coord = numpy.dot(coord, matrix)
 			coords[n] = numpy.dot(matrix, coord)
 		
-		bunch =  numpy.zeros([npart], Bunch.min_data_def)
+		bunch = numpy.zeros([npart], Bunch.min_data_def)
 		
 		bunch['Y'] = coords[:, 0]
 		bunch['T'] = coords[:, 1]
@@ -200,10 +200,10 @@ class Bunch(object):
 		coords = numpy.zeros([npart, 6], numpy.float64)
 	
 		# From Chris Prior.
-		y = numpy.random.uniform(-1,1,[npart])
-		y2 = numpy.arccos(y) /2
-		phi = numpy.random.uniform(-pi,pi,[npart])
-		the = numpy.random.uniform(-pi,pi,[npart])
+		y = numpy.random.uniform(-1, 1, [npart])
+		y2 = numpy.arccos(y) / 2
+		phi = numpy.random.uniform(-pi, pi, [npart])
+		the = numpy.random.uniform(-pi, pi, [npart])
 
 		coords[:, 0] = ry * numpy.cos(y2) * numpy.cos(phi)
 		coords[:, 1] = ry * numpy.cos(y2) * numpy.sin(phi)
@@ -216,7 +216,7 @@ class Bunch(object):
 			#	new_coord = numpy.dot(coord, matrix)
 			coords[n] = numpy.dot(matrix, coord)
 		
-		bunch =  numpy.zeros([npart], Bunch.min_data_def)
+		bunch = numpy.zeros([npart], Bunch.min_data_def)
 		
 		bunch['Y'] = coords[:, 0]
 		bunch['T'] = coords[:, 1]
@@ -256,10 +256,10 @@ class Bunch(object):
 		
 		while True:
 			# fill a hypercube with 3.5 times as many particles as needed
-			a1 =  numpy.random.uniform(-1,1,[npart*3.5])
-			a2 =  numpy.random.uniform(-1,1,[npart*3.5])
-			a3 =  numpy.random.uniform(-1,1,[npart*3.5])
-			a4 =  numpy.random.uniform(-1,1,[npart*3.5])
+			a1 = numpy.random.uniform(-1, 1, [npart*3.5])
+			a2 = numpy.random.uniform(-1, 1, [npart*3.5])
+			a3 = numpy.random.uniform(-1, 1, [npart*3.5])
+			a4 = numpy.random.uniform(-1, 1, [npart*3.5])
 			
 			# discard ones that fall out of hypesphere
 			r = a1**2+a2**2+a3**2+a4**2
@@ -289,7 +289,7 @@ class Bunch(object):
 			#	new_coord = numpy.dot(coord, matrix)
 			coords[n] = numpy.dot(matrix, coord)
 		
-		bunch =  numpy.zeros([npart], Bunch.min_data_def)
+		bunch = numpy.zeros([npart], Bunch.min_data_def)
 		
 		bunch['Y'] = coords[:, 0]
 		bunch['T'] = coords[:, 1]
@@ -334,7 +334,7 @@ class Bunch(object):
 		for n, coord in enumerate(coords):
 			coords[n] = numpy.dot(matrix, coord)
 		
-		bunch =  numpy.zeros([npart], Bunch.min_data_def)
+		bunch = numpy.zeros([npart], Bunch.min_data_def)
 
 		bunch['Y'] = coords[:, 0]
 		bunch['T'] = coords[:, 1]
@@ -366,8 +366,8 @@ class Bunch(object):
 			numpy.random.seed(seed)
 
 		#generate momentum distribution
-                if mom_spread > 0.0:
-                        mom_dist = numpy.random.normal(1.0, mom_spread/100, npart)
+		if mom_spread > 0.0:
+			mom_dist = numpy.random.normal(1.0, mom_spread/100, npart)
 		#generate longitudinal coordinate distribution (bunch length)
 		if bunch_length > 0.0:
 			s_dist = numpy.random.normal(0.0, bunch_length, npart)
@@ -375,18 +375,18 @@ class Bunch(object):
 
 		#use numpy.random.multivariate_normal. 
 		#set off-diagonal terms in covariance matrix to zero so that Y is uncorrelated with T (and Z with P)
-		cov_yt = [[emit_y,0],[0,emit_y]]
-		ryrt = numpy.random.multivariate_normal((0,0),cov_yt,(1,npart))[0]
-		cov_zp = [[emit_z,0],[0,emit_z]]
-		rzrp = numpy.random.multivariate_normal((0,0),cov_zp,(1,npart))[0]
+		cov_yt = [[emit_y, 0], [0, emit_y]]
+		ryrt = numpy.random.multivariate_normal((0, 0), cov_yt, (1, npart))[0]
+		cov_zp = [[emit_z, 0], [0, emit_z]]
+		rzrp = numpy.random.multivariate_normal((0, 0), cov_zp, (1, npart))[0]
 
 		coords = numpy.zeros([npart, 6], numpy.float64)
 		#coords2 = numpy.zeros([npart, 6], numpy.float64)
 
-		coords[:, 0] = ryrt[:,0]
-		coords[:, 1] = ryrt[:,1]
-		coords[:, 2] = rzrp[:,0]
-		coords[:, 3] = rzrp[:,1]
+		coords[:, 0] = ryrt[:, 0]
+		coords[:, 1] = ryrt[:, 1]
+		coords[:, 2] = rzrp[:, 0]
+		coords[:, 3] = rzrp[:, 1]
 		if mom_spread > 0.0:
 			#Last column of coords is delta_p.
 			coords[:, 5] = mom_dist-1
@@ -397,7 +397,7 @@ class Bunch(object):
 			#	new_coord = numpy.dot(coord, matrix)
 			coords[n] = numpy.dot(matrix, coord)
 		
-		bunch =  numpy.zeros([npart], Bunch.min_data_def)
+		bunch = numpy.zeros([npart], Bunch.min_data_def)
 		
 		bunch['Y'] = coords[:, 0]
 		bunch['T'] = coords[:, 1]
@@ -432,8 +432,8 @@ class Bunch(object):
 		M = numpy.dot(B, A)
 
 		#add dispersion and dispersion_prime terms
-		M[0,5] = disp
-		M[1,5] = disp_prime
+		M[0, 5] = disp
+		M[1, 5] = disp_prime
 
 		return M
 
@@ -460,10 +460,10 @@ class Bunch(object):
 	def check_bunch(self):
 		"Check that the bunch is not empty, and contains finite values"
 		if self.coords.size == 0:
-			zlog.error("Empty Bunch. Called by %s()"%inspect.stack()[1][3])
+			zlog.error("Empty Bunch. Called by %s()", inspect.stack()[1][3])
 			return False
 		if not numpy.all(numpy.isfinite(self.raw_particles()[0])):
-			zlog.error("Non finite coordinates in bunch. Called by %s()"%inspect.stack()[1][3])
+			zlog.error("Non finite coordinates in bunch. Called by %s()", inspect.stack()[1][3])
 			return False
 	
 		return True
@@ -491,11 +491,12 @@ class Bunch(object):
 			rec_len_r2 = rec_len_r + rec_len_r
 
 			fh.write(rec_len_r) # write length once before, twice after each record, and then truncate one at the end
-			for p in self.coords.view((numpy.float64,8)): #  tostring is slightly faster if we ignore the dtypew
+			for p in self.coords.view((numpy.float64, 8)): #  tostring is slightly faster if we ignore the dtypew
 			#for p in self.coords:
 				ps = p.tostring() # tostring is slow, but quicker than manipulating p and using tofile
-				fh.write(ps[8:48] + ps[:8] +rec_len_r2) # writing YTZPSD even though array is DYTZPStofX
-			fh.seek(-len(rec_len_r),1); fh.truncate()
+				fh.write(ps[8:48] + ps[:8] + rec_len_r2) # writing YTZPSD even though array is DYTZPStofX
+			fh.seek(-len(rec_len_r), 1)
+			fh.truncate()
 
 		else:
 			fh = open(fname, "w")
@@ -555,7 +556,7 @@ class Bunch(object):
 		fmt can be a list of formats in matplotlib style, eg ['rx', 'bo']
 		"""
 		import pylab
-		if fmt==None:
+		if fmt == None:
 			fmt = [',']
 
 		self.check_bunch()
@@ -569,18 +570,18 @@ class Bunch(object):
 				# otherwise just append it
 				bunches.append(add_bunch)
 
-		coordsz = ['Y','T','Z','P','X','D']
-		coords = ["x","x'","y","y'","s","p"]
+		coordsz = ['Y', 'T', 'Z', 'P', 'X', 'D']
+		coords = ["x", "x'", "y", "y'", "s", "p"]
 		plot_specs = [None,
-				(0,2,"x-y (Y-Z)"),
-				(2,3,"y-y' (Z-P)"),
-				(0,1,"x-x' (Y-T)"),
-				(4,5,"s-p (X-D)"),
+				(0, 2, "x-y (Y-Z)"),
+				(2, 3, "y-y' (Z-P)"),
+				(0, 1, "x-x' (Y-T)"),
+				(4, 5, "s-p (X-D)"),
 				]
 
-		for n in range(1,5):
-			if n == 4 and longitudinal==False: continue
-			x,y,title = plot_specs[n]
+		for n in range(1, 5):
+			if n == 4 and longitudinal == False: continue
+			x, y, title = plot_specs[n]
 			
 			pylab.subplot(2, 2, n)
 			pylab.grid()
@@ -588,7 +589,7 @@ class Bunch(object):
 				pylab.plot(abunch.coords[coordsz[x]], abunch.coords[coordsz[y]], f)
 				pylab.xlabel(coords[x])
 				pylab.ylabel(coords[y])
-			if lims != None and n!=4:
+			if lims != None and n != 4:
 				pylab.xlim(-lims[x], lims[x])
 				pylab.ylim(-lims[y], lims[y])
 			#pylab.title(title)
