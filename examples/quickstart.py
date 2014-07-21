@@ -8,9 +8,9 @@ add(ob)
 
 add(FAISCNL(FNAME='zgoubi.fai')) # record point
 d1 = DRIFT(XL=50)
-q1 = QUADRUPO(XL=20, B_0=5, R_0=10, XPAS=(10,20,10))
+q1 = QUADRUPO(XL=20, B_0=5, R_0=10, XPAS=(10,20,10), KPOS=1)
 d2 = DRIFT(XL=50)
-q2 = QUADRUPO(XL=20, B_0=-5, R_0=10, XPAS=(10,20,10))
+q2 = QUADRUPO(XL=20, B_0=-5, R_0=10, XPAS=(10,20,10), KPOS=1)
 add(d1, q1, d2, q2)
 add(FAISCNL(FNAME='zgoubi.fai')) # record point
 add(END())
