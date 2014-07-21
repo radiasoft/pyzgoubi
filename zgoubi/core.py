@@ -519,14 +519,10 @@ class Line(object):
 		
 		#os.system('ls')
 		
-		self.res_file = tmpdir+"/zgoubi.res"
-		self.dat_file = tmpdir+"/zgoubi.dat"
-		self.plt_file = tmpdir+"/zgoubi.plt"
-		self.fai_file = tmpdir+"/zgoubi.fai"
-		self.spn_file = tmpdir+"/zgoubi.spn"
+		res_file = tmpdir+"/zgoubi.res"
 		#output = outfile.read()
 		
-		for n, line in enumerate(open(self.res_file)):
+		for n, line in enumerate(open(res_file)):
 			if "ERROR" in line or "WARNING" in line or "SBR" in line:
 				print "zgoubi.res:",n,":",line
 				if "SBR OBJ3 -> error in  reading  file" in line:
@@ -674,105 +670,6 @@ class Line(object):
 		
 		#self.tmp_folders = [] # and blank list
 		
-	def res(self):
-		"return zgoubi.res as a string. (It is better to use the equivalent method on the results object)"
-		warnings.warn("Line.res()"+dep_warn, DeprecationWarning)
-		if (not self.has_run): print "Line has not been run"
-		fh = open(self.res_file)
-		return fh.read()
-		
-	def dat(self):
-		"return zgoubi.dat as a string. (It is better to use the equivalent method on the results object)"
-		warnings.warn("Line.dat()"+dep_warn, DeprecationWarning)
-		if (not self.has_run): print "Line has not been run"
-		fh = open(self.dat_file)
-		return fh.read()
-		
-	def plt(self):
-		"return zgoubi.plt as a string. (It is better to use the equivalent method on the results object)"
-		warnings.warn("Line.plt()"+dep_warn, DeprecationWarning)
-		if (not self.has_run): print "Line has not been run"
-		fh = open(self.plt_file)
-		return fh.read()
-	
-	def fai(self):
-		"return zgoubi.fai as a string. (It is better to use the equivalent method on the results object)"
-		warnings.warn("Line.fai()"+dep_warn, DeprecationWarning)
-		if (not self.has_run): print "Line has not been run"
-		fh = open(self.fai_file)
-		return fh.read()
-
-	def spn(self):
-		"return zgoubi.spn as a string. (It is better to use the equivalent method on the results object)"
-		warnings.warn("Line.spn()"+dep_warn, DeprecationWarning)
-		if (not self.has_run): print "Line has not been run"
-		fh = open(self.spn_file)
-		return fh.read()
-
-	def res_fh(self):
-		"return zgoubi.res file handle. (It is better to use the equivalent method on the results object)"
-		warnings.warn("Line.res_fh()"+dep_warn, DeprecationWarning)
-		if (not self.has_run): print "Line has not been run"
-		fh = open(self.res_file)
-		return fh
-		
-	def dat_fh(self):
-		"return zgoubi.dat file handle. (It is better to use the equivalent method on the results object)"
-		warnings.warn("Line.dat_fh()"+dep_warn, DeprecationWarning)
-		if (not self.has_run): print "Line has not been run"
-		fh = open(self.dat_file)
-		return fh
-		
-	def plt_fh(self):
-		"return zgoubi.plt file handle. (It is better to use the equivalent method on the results object)"
-		warnings.warn("Line.plt_fh()"+dep_warn, DeprecationWarning)
-		if (not self.has_run): print "Line has not been run"
-		fh = open(self.plt_file)
-		return fh
-		
-	def fai_fh(self):
-		"return zgoubi.fai file handle. (It is better to use the equivalent method on the results object)"
-		warnings.warn("Line.fai_fh()"+dep_warn, DeprecationWarning)
-		if (not self.has_run): print "Line has not been run"
-		fh = open(self.fai_file)
-		return fh
-
-	def spn_fh(self):
-		"return zgoubi.spn file handle. (It is better to use the equivalent method on the results object)"
-		warnings.warn("Line.spn_fh()"+dep_warn, DeprecationWarning)
-		if (not self.has_run): print "Line has not been run"
-		fh = open(self.spn_file)
-		return fh
-
-	def save_res(self, path):
-		"save zgoubi.res to path. (It is better to use the equivalent method on the results object)"
-		warnings.warn("Line.save_res()"+dep_warn, DeprecationWarning)
-		if (not self.has_run): print "Line has not been run"
-		shutil.copyfile(self.res_file, path)
-
-	def save_dat(self, path):
-		"save zgoubi.dat to path. (It is better to use the equivalent method on the results object)"
-		warnings.warn("Line.save_dat()"+dep_warn, DeprecationWarning)
-		if (not self.has_run): print "Line has not been run"
-		shutil.copyfile(self.dat_file, path)
-		
-	def save_plt(self, path):
-		"save zgoubi.plt to path. (It is better to use the equivalent method on the results object)"
-		warnings.warn("Line.save_plt()"+dep_warn, DeprecationWarning)
-		if (not self.has_run): print "Line has not been run"
-		shutil.copyfile(self.plt_file, path)
-		
-	def save_fai(self, path):
-		"save zgoubi.fai to path. (It is better to use the equivalent method on the results object)"
-		warnings.warn("Line.save_fai()"+dep_warn, DeprecationWarning)
-		if (not self.has_run): print "Line has not been run"
-		shutil.copyfile(self.fai_file, path)
-
-	def save_spn(self, path):
-		"save zgoubi.spn to path. (It is better to use the equivalent method on the results object)"
-		warnings.warn("Line.save_spn()"+dep_warn, DeprecationWarning)
-		if (not self.has_run): print "Line has not been run"
-		shutil.copyfile(self.spn_file, path)
 
 	def add_input_files(self, file_paths=None, pattern=None):
 		"""Add some extra input files to the directory where zgoubi is run.
