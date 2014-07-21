@@ -70,14 +70,19 @@ install_res = subprocess.Popen(["python", "./setup.py", "install", "--prefix=%s"
 
 for line in install_res.communicate()[0].split('\n'):
 	print >>log, line
-	if line.startswith('alias pyzgoubi='):
-		pyzgoubi_cmd = line.partition('=')[2]
-		pyzgoubi_cmd = pyzgoubi_cmd.strip('"')
+	if line.startswith('export PYTHONPATH='):
+		env_pythonpath = line.rpartition(':')[2]
+		os.environ["PYTHONPATH"] = os.pathsep + env_pythonpath
+	if line.startswith('export PATH='):
+		env_path = line.rpartition(':')[2]
+		os.environ["PATH"] = os.pathsep + env_path
 	if line:
 		last_line = line.strip()
 
 if sys.platform == "win32":
 	pyzgoubi_cmd = os.path.join(last_line, "pyzgoubi.bat")
+else:
+	pyzgoubi_cmd = "pyzgoubi"
 print last_line
 	
 if install_res.returncode != 0:
