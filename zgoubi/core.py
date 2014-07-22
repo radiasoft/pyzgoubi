@@ -41,7 +41,7 @@ import weakref
 import warnings
 dep_warn = " is deprecated, and will likely be removed in a future version. Please see the upgrade notes in the docs for more info."
 import logging
-logging.basicConfig(level=logging.WARNING, format= "%(levelname)s %(filename)s:%(lineno)d - %(funcName)s(): %(message)s")
+logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(filename)s:%(lineno)d - %(funcName)s(): %(message)s")
 zlog = logging.getLogger('PyZgoubi')
 
 
@@ -73,7 +73,7 @@ zlog.setLevel(logging._levelNames[zgoubi_settings['log_level']])
 
 sys.setcheckinterval(10000)
 
-zgoubi_module_path = os.path.dirname( os.path.realpath( __file__ ) )
+zgoubi_module_path = os.path.dirname(os.path.realpath(__file__))
 # something like
 # $PREFIX/lib/python2.6/site-packages/zgoubi
 # $PREFIX\Lib\site-packages\zgoubi
@@ -92,7 +92,7 @@ def_cache_dir = os.path.join(config_dir, "def_cache")
 if not os.path.exists(def_cache_dir):
 	os.mkdir(def_cache_dir)
 
-compiled_defs_path = os.path.join(def_cache_dir,"user_defs.py")
+compiled_defs_path = os.path.join(def_cache_dir, "user_defs.py")
 
 definitions_paths = [os.path.join(config_dir, x) for x in os.listdir(config_dir) if x.endswith('.defs')]
 definitions_paths += zgoubi_settings['extra_defs_files']
@@ -129,7 +129,7 @@ def yield_n_lines(fh, n):
 	lines = []
 	for line in fh:
 		lines.append(line)
-		if (len(lines) == n):
+		if len(lines) == n:
 			yield lines
 			lines = []
 
@@ -147,24 +147,24 @@ def read_n_lines(fh, n):
 def trans_to_regex(fmt):
 	"Transform a printf style format in to a regular expression"
 	fmt = fmt.replace('%c', '(.)')
-	fmt = re.sub('%(\d+)c', r'(.{\1})', fmt)
-	fmt = fmt.replace('%d', '([-+]?\d+)')
-	fmt = fmt.replace('%e', '([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
-	fmt = fmt.replace('%E', '([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
-	fmt = fmt.replace('%f', '([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
-	fmt = fmt.replace('%g', '([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
-	fmt = fmt.replace('%i', '([-+]?(?:0[xX][\dA-Fa-f]+|0[0-7]*|\d+))')
+	fmt = re.sub(r'%(\d+)c', r'(.{\1})', fmt)
+	fmt = fmt.replace('%d', r'([-+]?\d+)')
+	fmt = fmt.replace('%e', r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
+	fmt = fmt.replace('%E', r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
+	fmt = fmt.replace('%f', r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
+	fmt = fmt.replace('%g', r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
+	fmt = fmt.replace('%i', r'([-+]?(?:0[xX][\dA-Fa-f]+|0[0-7]*|\d+))')
 	fmt = fmt.replace('%o', '(0[0-7]*)')
-	fmt = fmt.replace('%s', '(\S+)')
-	fmt = fmt.replace('%u', '(\d+)')
-	fmt = fmt.replace('%x', '(0[xX][\dA-Fa-f]+")')
-	fmt = fmt.replace('%X', '(0[xX][\dA-Fa-f]+")')
+	fmt = fmt.replace('%s', r'(\S+)')
+	fmt = fmt.replace('%u', r'(\d+)')
+	fmt = fmt.replace('%x', r'(0[xX][\dA-Fa-f]+")')
+	fmt = fmt.replace('%X', r'(0[xX][\dA-Fa-f]+")')
 	#print "fmt=", fmt
 	return re.compile(fmt)
 
 def scanf(in_str, fmt):
 	"something like scanf, used to read the fai and plt files in Results.get_all()"
-	if (type(fmt) == type(re.compile(''))):
+	if type(fmt) == type(re.compile('')):
 		res = fmt.search(in_str)
 	else:
 		res = trans_to_regex(fmt).search(in_str)
@@ -199,11 +199,12 @@ class zgoubi_element(object):
 			if key in self._params.keys():
 				self._params[key] = val
 			else:
-				raise ValueError,  "no such param: '" + str(key) + "' In element " + self._zgoubi_name
+				raise ValueError("no such param: '" + str(key) + "' In element " + self._zgoubi_name)
 	def get(self, key):
 		"Get a parameter"
 		return self._params[key]
 
+	#FIXME investigae if these would be faster as staticmethods
 	def f2s(self, f):
 		"format float for printing"
 		#out = "%e" % float(f)
@@ -240,7 +241,7 @@ class zgoubi_element(object):
 	def reverse(self):
 		"Flip the element along the beam line direction, i.e. the entrance and exit properties are swapped"
 		if self._zgoubi_name == "DIPOLES":
-			sub_swap_pairs  = "G0_E,G0_S KAPPA_E,KAPPA_S NCE,NCS CE_0,CS_0 CE_1,CS_1 CE_2,CS_2 CE_3,CS_3 CE_4,CS_4 CE_5,CS_5 SHIFT_E,SHIFT_S OMEGA_E,OMEGA_S THETA_E,THETA_S R1_E,R1_S U1_E,U1_S U2_E,U2_S R2_E,R2_S"
+			sub_swap_pairs = "G0_E,G0_S KAPPA_E,KAPPA_S NCE,NCS CE_0,CS_0 CE_1,CS_1 CE_2,CS_2 CE_3,CS_3 CE_4,CS_4 CE_5,CS_5 SHIFT_E,SHIFT_S OMEGA_E,OMEGA_S THETA_E,THETA_S R1_E,R1_S U1_E,U1_S U2_E,U2_S R2_E,R2_S"
 			for sub_element in self._looped_data:
 				for swap_pair in sub_swap_pairs.split():
 					p1, p2 = swap_pair.split(",")
@@ -295,9 +296,7 @@ class Line(object):
 		self.full_line = False # has an OBJET, dont allow full lines to be added to each other
 								# only a full line outputs its name into zgoubi.dat
 
-	#def __del__(self):
-	#	self.clean()
-	
+
 	def __neg__(self):
 		"return a reversed line"
 		new_line = copy.copy(self)
@@ -342,7 +341,7 @@ class Line(object):
 			if isinstance(element, Line):
 				out += element.__str__(prefix+" ")
 			else:
-				out +=  "%s %s %s %s\n" % (prefix, element._zgoubi_name, element.label1, element.label2)
+				out += "%s %s %s %s\n" % (prefix, element._zgoubi_name, element.label1, element.label2)
 		return out
 
 	def elements(self):
@@ -375,7 +374,7 @@ class Line(object):
 			if has_end:
 				line_good = False
 				try:
-					zlog.warn("Element (%s) after END" % element._zgoubi_name)
+					zlog.warn("Element (%s) after END", element._zgoubi_name)
 				except AttributeError:
 					zlog.warn("Element after END")
 
@@ -392,15 +391,15 @@ class Line(object):
 				zlog.warn("First element in line no OBJET/MCOBJET")
 				line_good = False
 			if n != 0 and isobjet:
-				zlog.warn("OBJET/MCOBJET appears as element number %d. (Should only be first)" % n)
+				zlog.warn("OBJET/MCOBJET appears as element number %d. (Should only be first)", n)
 				line_good = False
 
 			if hasattr(element, 'XPAS'):
 				if element.XPAS == 0:
-					zlog.warn("Element %s type %s has XPAS=0 (integration step)"%(n, element._zgoubi_name))
+					zlog.warn("Element %s type %s has XPAS=0 (integration step)", n, element._zgoubi_name)
 		if not has_end:
-				zlog.warn("No END element found")
-				line_good = False
+			zlog.warn("No END element found")
+			line_good = False
 
 		return line_good
 				
@@ -416,8 +415,8 @@ class Line(object):
 			for element in self.elements():
 				if element._zgoubi_name == "DRIFT" and element.XL != 0:
 					fake_drift = MULTIPOL(element.label1, element.label2,
-					XL=element.XL, XPAS=(10,10,10),
-					B_1=1e-99, IL=2, KPOS=1)
+					                      XL=element.XL, XPAS=(10, 10, 10),
+					                      B_1=1e-99, IL=2, KPOS=1)
 					self.replace(element, fake_drift)
 
 		found_trackable_element = False
@@ -468,8 +467,8 @@ class Line(object):
 		if zlog.isEnabledFor(logging.DEBUG):
 			self.check_line()
 		orig_cwd = os.getcwd()
+
 		tmpdir = tempfile.mkdtemp(prefix="zgoubi_", dir=tmp_prefix)
-		self.tmpdir = tmpdir
 		zlog.debug("running zgoubi in"+tmpdir)
 	
 		for input_file in self.input_files:
@@ -505,11 +504,11 @@ class Line(object):
 		exe_result = z_proc.wait()
 
 		if exe_result != 0:
-			zlog.error("zgoubi failed to run\nIt returned:%s"%exe_result)
+			zlog.error("zgoubi failed to run\nIt returned:%s", exe_result)
 			if exe_result == 32512:
 				zlog.error("check that fortran runtime libraries are installed")
 
-		if (xterm and not self.no_more_xterm):
+		if xterm and not self.no_more_xterm:
 			print "Do you want an xterm? (y=yes/n=no/s=stop asking)"
 			ans = raw_input()
 			if ans.startswith('y'):
@@ -524,13 +523,13 @@ class Line(object):
 		
 		for n, line in enumerate(open(res_file)):
 			if "ERROR" in line or "WARNING" in line or "SBR" in line:
-				print "zgoubi.res:",n,":",line
+				print "zgoubi.res:", n, ":", line
 				if "SBR OBJ3 -> error in  reading  file" in line:
 					raise ZgoubiRunError(line)
 
 		#os.chdir(orig_cwd)
 		
-		element_types =  [ str(type(element)).split("'")[1].rpartition(".")[2] for element in self.elements() ]
+		element_types = [str(type(element)).split("'")[1].rpartition(".")[2] for element in self.elements()]
 		self.has_run = True	
 		result = Results(line=self, rundir=tmpdir, element_types=element_types)
 		self.results.append(weakref.ref(result))
@@ -563,7 +562,7 @@ class Line(object):
 		done_bunch = result.get_bunch('bfai', end_label="trackbun", old_bunch=bunch)
 		done_bunch_len = len(done_bunch)
 		if bunch_len != done_bunch_len:
-			zlog.warn("Started with %s particles, finished with %s" % (bunch_len, done_bunch_len))
+			zlog.warn("Started with %s particles, finished with %s", bunch_len, done_bunch_len)
 		result.clean()
 		return done_bunch
 		
@@ -622,8 +621,8 @@ class Line(object):
 		#in_q.join()
 		#print "Work done"
 
-		final_bunch = zgoubi.bunch.Bunch(nparticles = len(bunch), rigidity=bunch.get_bunch_rigidity(), mass=bunch.mass, charge=bunch.charge)
-		survive_particles = numpy.zeros(len(bunch),dtype=numpy.bool) # bit map, set true when filling with particles
+		final_bunch = zgoubi.bunch.Bunch(nparticles=len(bunch), rigidity=bunch.get_bunch_rigidity(), mass=bunch.mass, charge=bunch.charge)
+		survive_particles = numpy.zeros(len(bunch), dtype=numpy.bool) # bit map, set true when filling with particles
 
 		# workers may return out of order, so use start_index to put the coords in the correct place
 		for x in xrange(n_tasks):
@@ -647,7 +646,7 @@ class Line(object):
 
 		if not numpy.all(survive_particles):
 			final_bunch.coords = final_bunch.particles()[survive_particles]
-			zlog.warn("Started with %s particles, finished with %s" % (len(bunch), len(final_bunch)))
+			zlog.warn("Started with %s particles, finished with %s", len(bunch), len(final_bunch))
 
 
 		#print "all done"
@@ -704,7 +703,7 @@ class Line(object):
 	def _find_by_index(self, index):
 		"""Iterate through sub lines to find element as if indexed in a flat list
 		returns [line, index_in_line]"""
-		stack = [[self,-1]]
+		stack = [[self, -1]]
 		for n in xrange(index+1):
 			if stack[-1][1]+1 >= len(stack[-1][0].element_list):
 				# step back up
@@ -713,11 +712,11 @@ class Line(object):
 					raise ValueError("Index %s out of range"%index)
 
 			# step along
-			stack[-1][1] +=1
+			stack[-1][1] += 1
 
 			if isinstance(stack[-1][0].element_list[stack[-1][1]], Line):
 				# step in
-				stack.append([stack[-1][0].element_list[stack[-1][1]],0])
+				stack.append([stack[-1][0].element_list[stack[-1][1]], 0])
 		return  stack[-1]
 		
 	def replace(self, elementold, elementnew, select_index=0):
@@ -743,7 +742,7 @@ class Line(object):
 	def prepend(self, *elements):
 		"Add a elements to the start of the line"
 		for element in elements:
-			self.element_list.insert(0,element)
+			self.element_list.insert(0, element)
 
 			try:
 				if 'OBJET' in element._zgoubi_name:
@@ -794,7 +793,7 @@ class Results(object):
 		"return f file handle"
 		path = os.path.join(self.rundir, f)
 		if not os.path.exists(path):
-			raise IOError, "No file: %s in %s" % (f, self.rundir)
+			raise IOError("No file: %s in %s" % (f, self.rundir))
 		fh = open(path)
 		return fh
 		
@@ -806,7 +805,7 @@ class Results(object):
 		"save f to path"
 		spath = os.path.join(self.rundir, f)
 		if not os.path.exists(spath):
-			raise IOError, "No file: %s in %s" % (f, self.rundir)
+			raise IOError("No file: %s in %s" % (f, self.rundir))
 		shutil.copyfile(spath, path)
 	
 	#generate specific functions
@@ -898,21 +897,21 @@ class Results(object):
 		
 	def get_all_bin(self, file='bplt'):
 		
-		if(file == 'bplt'):
-			return io.read_file(os.path.join(self.rundir,'b_zgoubi.plt'))
-		elif(file == 'bfai'):
+		if file == 'bplt':
+			return io.read_file(os.path.join(self.rundir, 'b_zgoubi.plt'))
+		elif file == 'bfai':
 			try:
-				return io.read_file(os.path.join(self.rundir,'b_zgoubi.fai'))
+				return io.read_file(os.path.join(self.rundir, 'b_zgoubi.fai'))
 			except io.OldFormatError:
 				pass
 
 			fh = self.b_fai_fh()
-			file_len = os.path.getsize(os.path.join(self.rundir,'b_zgoubi.fai'))
+			file_len = os.path.getsize(os.path.join(self.rundir, 'b_zgoubi.fai'))
 			head_len = 352
 			chunk_len = 251
 			assert((file_len-head_len)%chunk_len == 0), "File size does not seem right for a binary fai file. File length is %s"%file_len
 		else:
-			raise ValueError, "get_all_bin() expects name to be 'bplt' or 'bfai'"
+			raise ValueError("get_all_bin() expects name to be 'bplt' or 'bfai'")
 
 		plt_data = []
 		for pos in xrange(head_len, file_len, chunk_len):
@@ -968,27 +967,27 @@ class Results(object):
 		#	error += "It actually was"+ str(type(file_nh))
 		#	raise TypeError, error
 
-		if(file == 'plt'):
+		if file == 'plt':
 			fh = self.plt_fh()
-		elif(file == 'fai'):
+		elif file == 'fai':
 			fh = self.fai_fh()
-		elif(file == 'spn'):
+		elif file == 'spn':
 			fh = self.spn_fh()
-		elif(file == 'bfai'):
+		elif file == 'bfai':
 			return self.get_all_bin(file=file)
 		else:
 			#open previously saved file
 			fh = open(file)
 			#decide what type of file we have, look at extension
 			fileext = os.path.splitext(file)[1]
-			if(fileext == '.plt'):
+			if fileext == '.plt':
 				file = 'plt'
-			elif(fileext == '.fai'):
+			elif fileext == '.fai':
 				file = 'fai'
-			elif(fileext == '.spn'):
+			elif fileext == '.spn':
 				file = 'spn'
 			else:
-				raise ValueError, "get_all() expects '.plt', '.fai' or '.spn' extension"
+				raise ValueError("get_all() expects '.plt', '.fai' or '.spn' extension")
 			
 
 		header = list(read_n_lines(fh, 4))
@@ -1029,15 +1028,15 @@ class Results(object):
 		plt_data = []
 		for lines in yield_n_lines(fh, n_lines):
 			
-			if (id != None):
+			if id != None:
 				try:
-					if(lines[3].split()[1] != id):
+					if lines[3].split()[1] != id:
 						continue # escape quickly if this is not a point we are interested in
 				except:
 					print lines
 					continue
 
-			if (len(lines) == n_lines): # dont go through this if we have just few dangling lines on the end of the file
+			if len(lines) == n_lines: # dont go through this if we have just few dangling lines on the end of the file
 				# fill dictionary with the bits that have been identified
 				#
 				p = {}
@@ -1085,7 +1084,7 @@ class Results(object):
 					
 					#line 3
 					# see 20080501 in lab book
-					if (file == 'plt'):
+					if file == 'plt':
 						l3 = scanf(lines[3], l3_re_plt)
 						p['KART'] = int(l3[0])
 						p['ID'] = l3[1]
@@ -1094,7 +1093,7 @@ class Results(object):
 						p['X'] = float(l3[4])
 						p['By'] = float(l3[6])
 						p['Bz'] = float(l3[7])
-					elif (file =='fai'):
+					elif file == 'fai':
 						l3 = scanf(lines[3], l3_re)
 						p['ID'] = l3[0]
 						p['IREP'] = l3[1]
@@ -1105,14 +1104,14 @@ class Results(object):
 					#	particle['X'] = 0 
 
 					#line4
-					if (file =='plt'):
+					if file == 'plt':
 						l4 = scanf(lines[4], l4_re_plt)
 						p['BORO'] = float(l4[3])
 						p['PASS'] = int(l4[4])
 						p['element_type'] = l4[5].strip()
 						p['element_label1'] = l4[6].strip()
 						p['element_label2'] = l4[7].strip()
-					elif (file =='fai'):
+					elif file == 'fai':
 						l4 = scanf(lines[4], l4_re)
 						p['BORO'] = float(l4[0])
 						p['PASS'] = int(l4[1])
@@ -1159,8 +1158,8 @@ class Results(object):
 						p['PASS'] = int(l0[29])
 						p['NOEL'] = int(l0[30])
 						p['element_type'] = l0_stringpart[0].strip('\'')
-						p['element_label1']  = l0_stringpart[1].strip('\'')
-						p['element_label2']  = l0_stringpart[2].strip('\'')
+						p['element_label1'] = l0_stringpart[1].strip('\'')
+						p['element_label2'] = l0_stringpart[2].strip('\'')
 						p['LET'] = l0_stringpart[3].strip('\'')
 					elif file == 'plt':
 						p['beta'] = self._bad_float(l0[15]) # Relativistic beta
@@ -1179,8 +1178,8 @@ class Results(object):
 						p['PASS'] = int(l0[40])
 						p['NOEL'] = int(l0[41])
 						p['element_type'] = l0_stringpart[0].strip()
-						p['element_label1']  = l0_stringpart[1].strip()
-						p['element_label2']  = l0_stringpart[2].strip()
+						p['element_label1'] = l0_stringpart[1].strip()
+						p['element_label2'] = l0_stringpart[2].strip()
 						p['LET'] = l0_stringpart[3].strip()
 
 				
@@ -1195,18 +1194,19 @@ class Results(object):
 		
 		If all the columns requested are numerical, and new headered data formats are being used then this function will return a numpy array
 		"""
-		all = self.get_all(file)
+		#FIXME can probably give a rec array for mixed case. numpy is a requirement these days
+		alldata = self.get_all(file)
 		#check if we are using the new zgoubi.io version
-		if (type(all) == type(numpy.zeros(0))):
-			#coords = numpy.zeros([all.size, len(coord_list)])
+		if type(alldata) == type(numpy.zeros(0)):
+			#coords = numpy.zeros([alldata.size, len(coord_list)])
 			
 			# is set logic to see what best array type is
 			# mixed arrays might break some old code, so fall back to dicts
-			dtypes =  set([all[c].dtype for c in coord_list])
-			if not( dtypes - set([numpy.dtype('i')]) ):
+			dtypes = set([alldata[c].dtype for c in coord_list])
+			if not dtypes - set([numpy.dtype('i')]):
 				# if there is nothing but ints, use int
 				best_type = 'i'
-			elif not( dtypes - set([numpy.dtype('i'), numpy.dtype('f'), numpy.dtype('d')]) ):
+			elif not dtypes - set([numpy.dtype('i'), numpy.dtype('f'), numpy.dtype('d')]):
 				# if there is nothing but ints and float/double, use double
 				best_type = 'd'
 			else:
@@ -1216,10 +1216,10 @@ class Results(object):
 
 			if best_type != "mixed":
 				# all cols numeric, so give a fast numpy array
-				coords = numpy.zeros([all.size, len(coord_list)], dtype=(best_type))
+				coords = numpy.zeros([alldata.size, len(coord_list)], dtype=(best_type))
 
 				for n, c in enumerate(coord_list):
-					coords[:, n] = all[c]
+					coords[:, n] = alldata[c]
 					if multi_list:
 						if multi_list[n]:
 							coords[:, n] *= multi_list[n]
@@ -1227,12 +1227,12 @@ class Results(object):
 
 
 		coords = []
-		for p in all:
+		for p in alldata:
 			this_coord = []
 			for n, c in enumerate(coord_list):
-				if (multi_list == None):
+				if multi_list == None:
 					this_coord.append(p[c])
-				elif (multi_list[n] == None):
+				elif multi_list[n] == None:
 					this_coord.append(p[c])
 				else:
 					this_coord.append(p[c] * multi_list[n])
@@ -1256,14 +1256,14 @@ class Results(object):
 			return False
 		
 		loss_types = {-1:"the trajectory happened to wander outside the limits of a field map",
-				-2:"too many integration steps in an optical element",
-				-3:"deviation happened to exceed pi/2in an optical element",
-				-4:"stopped by walls (procedures CHAMBR, COLLIMA)",
-				-5:"too many iterations in subroutine DEPLA",
-				-6:"energy loss exceeds particle energy",
-				-7:"field discontinuities larger than 50% wthin a field map",
-				-8:"reached field limit in an optical element",
-				}
+		              -2:"too many integration steps in an optical element",
+		              -3:"deviation happened to exceed pi/2in an optical element",
+		              -4:"stopped by walls (procedures CHAMBR, COLLIMA)",
+		              -5:"too many iterations in subroutine DEPLA",
+		              -6:"energy loss exceeds particle energy",
+		              -7:"field discontinuities larger than 50% wthin a field map",
+		              -8:"reached field limit in an optical element",
+		              }
 		loss_res = {}
 		for iexval in loss_types.keys():
 			lossnum = (coords["IEX"] == iexval).sum()
@@ -1281,14 +1281,14 @@ class Results(object):
 		try:
 			all_c = self.get_all(file)
 		except IOError:
-			zlog.warn("Could not read %s. returning empty bunch" % file)
+			zlog.warn("Could not read %s. returning empty bunch", file)
 			empty_bunch = zgoubi.bunch.Bunch(nparticles=0, rigidity=0)
 			if old_bunch != None:
 				empty_bunch.mass = old_bunch.mass
 				empty_bunch.charge = old_bunch.charge
 			return empty_bunch
 		except EmptyFileError:
-			zlog.warn("%s empty. returning empty bunch" % file)
+			zlog.warn("%s empty. returning empty bunch", file)
 			empty_bunch = zgoubi.bunch.Bunch(nparticles=0, rigidity=0)
 			if old_bunch != None:
 				empty_bunch.mass = old_bunch.mass
@@ -1297,7 +1297,7 @@ class Results(object):
 
 		loss_sum = self.loss_summary(all_c)
 		if loss_sum:
-			for k,v in loss_sum.items():
+			for k, v in loss_sum.items():
 				zlog.warn("%s particles lost: %s" % (v, k))
 
 			if drop_lost:
@@ -1305,15 +1305,15 @@ class Results(object):
 
 
 
-		if not (type(all_c) == type(numpy.zeros(0))):
+		if not type(all_c) == type(numpy.zeros(0)):
 			raise OldFormatError("get_bunch() only works with the new fai format")
 		
 		# select only the particles that made it to the last lap
-		last_lap = all_c[ all_c['PASS'] == all_c['PASS'].max() ]
+		last_lap = all_c[all_c['PASS'] == all_c['PASS'].max()]
 		# also select only particles at FAISTORE with matching end_label
 		if end_label:
 			end_label = end_label.ljust(last_lap.dtype['element_label1'].itemsize) # pad to match zgoubi, as of Zgoubi SVN r290 this has changed from 8 to 10
-			last_lap = last_lap[ last_lap['element_label1'] == end_label ]
+			last_lap = last_lap[last_lap['element_label1'] == end_label]
 
 		#print last_lap[:10]['BORO']
 		#print last_lap[:10]['D-1']
@@ -1339,36 +1339,37 @@ class Results(object):
 		"""
 		Get the max and min positions of a certain coordinate, in a certain element
 		"""
+		# FIXME could be done better with numpy
 		all = self.get_all(file, id=id)
-		if (element_label == None):
+		if element_label == None:
 			el_points = all
 		else:
 			el_points = [p for p in all if (p['element_label1'] == element_label or p['element_label2'] == element_label)]
 
 		
-		if (len(el_points) == 0):
+		if len(el_points) == 0:
 			print "no points for particle id:", id, "element_label", element_label
 			raise NoTrackError
 			
 		
-		mini = min( [p[coord] for p in el_points] )
-		maxi = max( [p[coord] for p in el_points] )
+		mini = min([p[coord] for p in el_points])
+		maxi = max([p[coord] for p in el_points])
 
 		return mini, maxi
 
 	def list_particles(self, file):
-		if(file == 'plt'):
+		if file == 'plt':
 			fh = self.plt_fh()
-		elif(file == 'fai'):
+		elif file == 'fai':
 			fh = self.fai_fh()
 		else:
-			raise ValueError, "get_all() expects name to be 'plt' or 'fai'"
+			raise ValueError("get_all() expects name to be 'plt' or 'fai'")
 
 		#ignore header lines
 		dummy = list(read_n_lines(fh, 4))
 		particle_ids = set()
 		for lines in yield_n_lines(fh, 5):
-			if (len(lines) == 5): # dont go through this if we have just few dangling lines on the end of the file
+			if len(lines) == 5: # dont go through this if we have just few dangling lines on the end of the file
 				#bits = [] # not computerscience bits. just the bits of data on each line
 				#bits.append(line.split()) # split them by whitespace
 				#particle_ids.add(int(bits[3][1]))
@@ -1379,10 +1380,10 @@ class Results(object):
 		"""
 		check if particle exceeded bounds in this element. pass bounds in zgoubi's default unit for that coordinate
 		"""
-		if (id != None):
+		if id != None:
 			part_list = [id]
 		else:
-			part_list =  self.list_particles(file)
+			part_list = self.list_particles(file)
 
 		
 		for id in part_list:
@@ -1392,12 +1393,12 @@ class Results(object):
 				print "No Track"
 				return True
 			in_b = True
-			if (track_min <= min_bound):
-				if(verbose): print track_min, "<=", min_bound, "hit lower bound, in element", element_label
+			if track_min <= min_bound:
+				if verbose: print track_min, "<=", min_bound, "hit lower bound, in element", element_label
 				in_b = False
 				
-			if (track_max >= max_bound):
-				if(verbose): print track_max, ">=", max_bound, "hit upper bound, in element", element_label
+			if track_max >= max_bound:
+				if verbose: print track_max, ">=", max_bound, "hit upper bound, in element", element_label
 				in_b = False
 
 		return in_b
@@ -1409,16 +1410,16 @@ class Results(object):
 		returns numpy arrays
 		note: lost particles dont crash
 		"""
-		if (part_ids == None):
+		if part_ids == None:
 			particle_ids = self.list_particles(file)
 		else:
 			particle_ids = part_ids
-		if(file == 'plt'):
+		if file == 'plt':
 			fh = self.plt_fh()
-		elif(file == 'fai'):
+		elif file == 'fai':
 			fh = self.fai_fh()
 		else:
-			raise ValueError, "get_all() expects name to be 'plt' or 'fai'"
+			raise ValueError("get_all() expects name to be 'plt' or 'fai'")
 
 		header = list(read_n_lines(fh, 4))
 		
@@ -1429,7 +1430,7 @@ class Results(object):
 		crash_lap += 100000
 		
 		for lines in yield_n_lines(fh, 5):
-			if (len(lines) != 5):
+			if len(lines) != 5:
 				continue
 			bits = {} # not computerscience bits. just the bits of data on each line
 			particle = {}
@@ -1443,8 +1444,8 @@ class Results(object):
 			particle['Y'] = float(bits[1][1])
 			particle['T'] = float(bits[1][2])
 			
-			if (assume_in_order):
-				if (crashes[int(particle['ID'])-1]>0):
+			if assume_in_order:
+				if crashes[int(particle['ID'])-1] > 0:
 					continue
 			
 			#the last line of each chunk is a pain.
@@ -1465,29 +1466,29 @@ class Results(object):
 			particle['element_label1'] = ""
 			particle['element_label2'] = ""
 			#particle['element_number'] = bits[4][len(bits[4]) -1]
-			if((len(bits[4]) - first_non_numeric) == 4): # 2 labels
+			if (len(bits[4]) - first_non_numeric) == 4: # 2 labels
 				particle['element_label1'] = bits[4][first_non_numeric + 1]
 				particle['element_label2'] = bits[4][first_non_numeric + 2]
-			if((len(bits[4]) - first_non_numeric) == 3): # 1 labels
+			if (len(bits[4]) - first_non_numeric) == 3: # 1 labels
 				particle['element_label1'] = bits[4][first_non_numeric + 1]
 			
 			has_crashed = False
 			for k, v in min_bounds.items():
-				if (particle['element_label1'] == k or particle['element_label2'] == k):
-					if (particle['Y'] <= v):
+				if particle['element_label1'] == k or particle['element_label2'] == k:
+					if particle['Y'] <= v:
 						#crash
 						has_crashed = True
 			for k, v in max_bounds.items():
-				if (particle['element_label1'] == k or particle['element_label2'] == k):
-					if (particle['Y'] >= v):
+				if particle['element_label1'] == k or particle['element_label2'] == k:
+					if particle['Y'] >= v:
 						#crash
 						has_crashed = True
-			if (has_crashed):
+			if has_crashed:
 				# zgoubi counts from 1, we count from zero
-				crashes[int(particle['ID'])-1] +=1
+				crashes[int(particle['ID'])-1] += 1
 				crash_lap[int(particle['ID'])-1] = min(crash_lap[int(particle['ID'])-1], int(particle['PASS'])) # record the first crash
 			else:
-				not_crashes[int(particle['ID'])-1] +=1
+				not_crashes[int(particle['ID'])-1] += 1
 
 		return crashes, not_crashes, laps, crash_lap
 	
@@ -1501,14 +1502,14 @@ class Results(object):
 		has_matrix = 'MATRIX' in self.element_types
 				
 		if not (has_object5 and has_matrix):
-			raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX element with IORD=1 and IFOC>10 to get tune"
+			raise BadLineError("beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX element with IORD=1 and IFOC>10 to get tune")
 
 		found_output = False
 		in_matrix = False
 
-		parsed_info = dict(matrix1=None, twiss=None, tune=(-1,-1))
-		tp = numpy.zeros(1,dtype=[('beta_y','f8'),('alpha_y','f8'),('gamma_y','f8'),('disp_y','f8'),('disp_py','f8'),
-						('beta_z','f8'),('alpha_z','f8'),('gamma_z','f8'),('disp_z','f8'),('disp_pz','f8')])
+		parsed_info = dict(matrix1=None, twiss=None, tune=(-1, -1))
+		tp = numpy.zeros(1, dtype=[('beta_y', 'f8'), ('alpha_y', 'f8'), ('gamma_y', 'f8'), ('disp_y', 'f8'), ('disp_py', 'f8'),
+						('beta_z', 'f8'), ('alpha_z', 'f8'), ('gamma_z', 'f8'), ('disp_z', 'f8'), ('disp_pz', 'f8')])
 		matrix_lines = []
 		
 		fh = self.res_fh()
@@ -1535,29 +1536,29 @@ class Results(object):
 				matrix_lines.append(line.strip())
 
 		if len(matrix_lines) == 0:
-			raise BadLineError, "Could not find MATRIX output in res file. Maybe beam lost."
+			raise BadLineError("Could not find MATRIX output in res file. Maybe beam lost.")
 
-		for n,line in enumerate(matrix_lines):
+		for n, line in enumerate(matrix_lines):
 			if line == "TRANSFER  MATRIX  ORDRE  1  (MKSA units)":
-				matrix1 = numpy.zeros([6,6])
+				matrix1 = numpy.zeros([6, 6])
 				for x in xrange(6):
 					matrix1[x] = matrix_lines[x+n+2].split()
 				parsed_info['matrix1'] = matrix1
 			if line == "Beam  matrix  (beta/-alpha/-alpha/gamma) and  periodic  dispersion  (MKSA units)":
-				twissmat = numpy.zeros([6,6])
+				twissmat = numpy.zeros([6, 6])
 				for x in xrange(6):
 					twissmat[x] = matrix_lines[x+n+2].split()
-				tp['beta_y'] = twissmat[0,0]
-				tp['alpha_y'] = -twissmat[1,0]
-				tp['gamma_y'] = twissmat[1,1]
-				tp['disp_y'] = twissmat[0,5]
-				tp['disp_py'] = twissmat[1,5]
+				tp['beta_y'] = twissmat[0, 0]
+				tp['alpha_y'] = -twissmat[1, 0]
+				tp['gamma_y'] = twissmat[1, 1]
+				tp['disp_y'] = twissmat[0, 5]
+				tp['disp_py'] = twissmat[1, 5]
 
-				tp['beta_z'] = twissmat[2,2]
-				tp['alpha_z'] = -twissmat[3,2]
-				tp['gamma_z'] = twissmat[3,3]
-				tp['disp_z'] = twissmat[2,5]
-				tp['disp_pz'] = twissmat[3,5]
+				tp['beta_z'] = twissmat[2, 2]
+				tp['alpha_z'] = -twissmat[3, 2]
+				tp['gamma_z'] = twissmat[3, 3]
+				tp['disp_z'] = twissmat[2, 5]
+				tp['disp_pz'] = twissmat[3, 5]
 				parsed_info['twiss'] = tp
 			if line.startswith("NU_Y"):
 				#print "\n# ".join(matrix_lines)
@@ -1665,7 +1666,7 @@ class Results(object):
 		#	if t == 'REBELOTE':
 		#		has_reb = True
 		has_reb = 'REBELOTE' in self.element_types
-		if not (has_reb):
+		if not has_reb:
 			raise BadLineError, "beamline need to have a REBELOTE for this function"
 
 		for line in self.res_fh():
