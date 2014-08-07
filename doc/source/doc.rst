@@ -757,6 +757,18 @@ If you are on Linux you maybe able to work around this by adjusting your memory 
 
 Or by editing the file /etc/sysctl.conf. See https://www.kernel.org/doc/Documentation/vm/overcommit-accounting for more details.
 
+Matplotlib Issues
+"""""""""""""""""
+
+If you see the error::
+
+    ImportError: No module named backend_tkagg
+
+You need to install the matplotlib tk backend, for example the package python-matplotlib-tk. If this is not possible you can switch to a different default plotting backend by editing (or creating) a matplotlib config file (.config/matplotlib/matplotlibrc or .matplotlib/matplotlibrc on linux), for example add the line::
+
+    backend : Agg
+
+There are a range of backends to choose from, see http://matplotlib.org/faq/usage_faq.html#what-is-a-backend .
 
 
 
