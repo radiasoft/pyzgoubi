@@ -506,7 +506,9 @@ class Line(object):
 		if exe_result != 0:
 			zlog.error("zgoubi failed to run\nIt returned:%s", exe_result)
 			if exe_result == 32512:
-				zlog.error("check that fortran runtime libraries are installed")
+				raise ZgoubiRunError("Check that fortran runtime libraries are installed")
+			if exe_result == -9:
+				raise ZgoubiRunError("Check that you have sufficient RAM or enable memory overcommit")
 
 		if xterm and not self.no_more_xterm:
 			print "Do you want an xterm? (y=yes/n=no/s=stop asking)"
