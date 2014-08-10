@@ -316,6 +316,7 @@ class LabPlot(object):
 		self.elements = []
 		self.element_label1 = []
 		self.tracks = []
+		self.mag_tracks = []
 		self.field_map_data = []
 		self.boro = boro
 		self.duped_labels = []
@@ -376,6 +377,9 @@ class LabPlot(object):
 
 		if draw_field_midplane:
 			if field_int_mode=="griddata":
+				if not hasattr(scipy.interpolate, "griddata"):
+					print "LabPlot.draw() with field_int_mode='griddata' requires scipy > 0.9, try field_int_mode='kd'"
+					raise
 				label = r"$B_%s$ (kG)"%field_component
 				field_map_data = np.array(self.field_map_data)
 				points = field_map_data[:,0:3:2]
@@ -452,7 +456,7 @@ class LabPlot(object):
 				self.lpd.draw_line(xs, ys, **self.style["track"])
 
 		if draw_field_points:
-			for track in self.tracks:
+			for track in self.mag_tracks:
 				for p in track:
 					xs, ys, by, bz, bx = p
 					if by is None: continue
@@ -474,7 +478,7 @@ class LabPlot(object):
 		self.lpd.save(fname)
 
 
-	def add_tracks(self, ftrack=None, ptrack=None):
+	def add_tracks(self, ftrack=None, ptrack=None, draw=1, field=1):
 		"Add tracks from plt or fai files."
 		#tracks = []
  		# find the list of particles and laps/passes
@@ -544,7 +548,8 @@ class LabPlot(object):
 							by, bz, bx = 0, 0, 0 # ignore tiny fields
 						xt, yt = self.elements[el_ind].transform(x,y)
 						this_track.append([xt,yt, by, bz, bx])
-						self.field_map_data.append([xt,z,yt,by, bz, bx])
+						if field:
+							self.field_map_data.append([xt,z,yt,by, bz, bx])
 					for t in ftrack_ppn:
 						if t['IEX'] != 1: break
 						# fai has no x coord, and takes label from element before it
@@ -557,7 +562,11 @@ class LabPlot(object):
 
 				#print this_track
 				if len(this_track) > 0 :
-					self.tracks.append(this_track)
+					if draw:
+						self.tracks.append(this_track)
+					if field:
+						self.mag_tracks.append(this_track)
+
 
 					
 

@@ -17,7 +17,6 @@ from zgoubi.rel_conv import *
 import itertools
 from zgoubi.core import zlog, dep_warn, Line
 from StringIO import StringIO
-from collections import Counter
 import copy
 
 # use these to convert things to metres and tesla
@@ -1121,16 +1120,23 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 				# To account for range of acos=(0,Pi), check sign of sin(angle) to know when to change from angle to (2*Pi-angle) etc.	
 				sine_angle = R12_list[i]/sqrt(beta_y*beta_y_0)
 				if abs(sine_angle) > 1: 
-					mu_y_list.append(mu_y_list[i-1])
+					if i!=0:
+						mu_y_list.append(mu_y_list[i-1])
+					else:
+						mu_y_list.append(0)
 				else:
 					sign_sine_y = numpy.sign(asin(sine_angle))
 					if sign_sine_y - sign_sine_y_old == -2:
 						n_pi_y = n_pi_y + 1
 					sign_sine_y_old = sign_sine_y
-					if sign_sine_y >= 0:
-						mu_y_list.append(n_pi_y*2*pi+acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
-					else:
-						mu_y_list.append(n_pi_y*2*pi-acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+					try:
+						if sign_sine_y >= 0:
+							mu_y_list.append(n_pi_y*2*pi+acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+						else:
+							mu_y_list.append(n_pi_y*2*pi-acos(sqrt(beta_y_0/beta_y)*R11_list[i]-alpha_y_0*R12_list[i]/(beta_y*beta_y_0)**0.5))
+					except ValueError:
+						zlog.warn("Failed to calculate mu_y at i=%s"%i)
+						mu_y_list.append(0.0)
 
 				alpha_y_list.append(-R11_list[i]*R21_list[i]*beta_y_0 + (R11_list[i]*R22_list[i]+R12_list[i]*R21_list[i])*alpha_y_0 \
 					- R12_list[i]*R22_list[i]*gamma_y_0)
@@ -1152,16 +1158,23 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 				# Vertical phase advance calculation
 				sine_angle = R34_list[i]/sqrt(beta_z*beta_z_0)
 				if abs(sine_angle) > 1:
-					mu_z_list.append(mu_z_list[i-1])
+					if i!=0:
+						mu_z_list.append(mu_z_list[i-1])
+					else:
+						mu_y_list.append(0)
 				else:
 					sign_sine_z = numpy.sign(asin(sine_angle))
 					if sign_sine_z - sign_sine_z_old == -2:
 						n_pi_z = n_pi_z + 1
 					sign_sine_z_old = sign_sine_z
-					if sign_sine_z >= 0:
-						mu_z_list.append(n_pi_z*2*pi+acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
-					else: 
-						mu_z_list.append(n_pi_z*2*pi-acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
+					try:
+						if sign_sine_z >= 0:
+							mu_z_list.append(n_pi_z*2*pi+acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
+						else: 
+							mu_z_list.append(n_pi_z*2*pi-acos(sqrt(beta_z_0/beta_z)*R33_list[i]-alpha_z_0*R34_list[i]/(beta_z*beta_z_0)**0.5))
+					except ValueError:
+						zlog.warn("Failed to calculate mu_z at i=%s"%i)
+						mu_y_list.append(0.0)
 
 				alpha_z_list.append(-R33_list[i]*R43_list[i]*beta_z_0 + (R33_list[i]*R44_list[i]+R34_list[i]*R43_list[i])*alpha_z_0 \
 					- R34_list[i]*R44_list[i]*gamma_z_0)
@@ -2150,8 +2163,10 @@ def uniquify_labels(line):
 	
 	Note: New line contains deep copies of original elements.
 	"""
+	from collections import defaultdict
+
 	max_label = 10 # FIXME this was 8 in old zgoubi version, but is now 10. probably should be a global option
-	label1s = Counter()
+	label1s = defaultdict(int)
 	dup_names = set()
 
 	# dont need to rename if already unique
@@ -2163,7 +2178,7 @@ def uniquify_labels(line):
 				if label1s[lab1] > 1:
 					dup_names.add(lab1)
 	
-	label1s = Counter() # reset counter
+	label1s = defaultdict(int) # reset counter
 	# new line with copy of elements
 	# avoids issues if a line contains the same element instance multiple times
 	new_line = Line(line.name)

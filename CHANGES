@@ -1,3 +1,16 @@
+Changes from 0.4.1 -> 0.4.9
+
+Version 0.4.9 is a prerelease for the 0.5 release. It introduces some changes that make break scripts writen for the 0.4.x versions.
+
+New features and changes
+Get cell properties (gcp) module, contains functions for quick analysis of a periodic cell.
+Lab Plot module, for making plots in lab coordinates
+Element definisions are processed at install time not runtime
+Fixes for running on windows and Mac OS
+Improve reliability of closed orbit search
+Fix file parsing when zgoubi gives oddly formated exponents (eg 1.5741247399232311-101)
+
+
 Changes from 0.4.0 -> 0.4.1
 Tue Nov  1 12:15:19 GMT 2011
 

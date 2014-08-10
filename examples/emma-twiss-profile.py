@@ -34,13 +34,13 @@ emma.add(DRIFT('ld', XL=ld*cm_/2))
 emma.add(CHANGREF(ALE=angle))
 
 emma.add(CHANGREF(YCE=d_offset*cm_))
-emma.add(QUADRUPO('defoc', XL=dq*cm_, R_0=dr*cm_, B_0=db*kgauss_, XPAS=xpas, IL=2))
+emma.add(QUADRUPO('defoc', XL=dq*cm_, R_0=dr*cm_, B_0=db*kgauss_, XPAS=xpas, IL=2,KPOS=1))
 emma.add(CHANGREF(YCE=-d_offset*cm_))
 
 emma.add(DRIFT('sd', XL=sd*cm_))
 
 emma.add(CHANGREF(YCE=f_offset*cm_))
-emma.add(QUADRUPO('foc', XL=fq*cm_, R_0=fr*cm_, B_0=fb*kgauss_, XPAS=xpas, IL=2))
+emma.add(QUADRUPO('foc', XL=fq*cm_, R_0=fr*cm_, B_0=fb*kgauss_, XPAS=xpas, IL=2, KPOS=1))
 emma.add(CHANGREF(YCE=-f_offset*cm_))
 
 emma.add(DRIFT('ld', XL=ld*cm_/2))
@@ -48,7 +48,7 @@ emma.add(DRIFT('ld', XL=ld*cm_/2))
 emma.add(FAISCNL(FNAME='zgoubi.fai'))
 
 #add REBELOTE like this to allow a later modification 
-reb=REBELOTE(K=99, NPASS=1)
+reb=REBELOTE(K=99, NPASS=20)
 emma.add(reb)
 
 

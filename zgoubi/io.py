@@ -6,6 +6,7 @@ import csv
 import hashlib
 import os
 import struct
+import sys
 
 from zgoubi.exceptions import OldFormatError, BadFormatError, EmptyFileError
 from zgoubi.core import zlog
@@ -105,6 +106,12 @@ def define_file(fname, allow_lookup=False):
 		file_mode = 'ascii'
 	else:
 		file_mode = 'binary'
+		if sys.platform == "win32":
+			# reopen as binary
+			fh = open_file_or_name(fname, mode="rb")
+			fh.seek(0)
+			first_bytes = fh.read(30)
+			
 	
 	if "COORDINATES" in first_bytes:
 		file_type = "fai"
@@ -218,7 +225,10 @@ def read_file(fname):
 	file_def = define_file(fname)
 
 	data_type = zip(file_def['names'], file_def['types'])
-	fh = open_file_or_name(fname)
+	if file_def["file_mode"] == "binary" and sys.platform == "win32":
+		fh = open_file_or_name(fname, mode="rb")
+	else:
+		fh = open_file_or_name(fname)
 	fh.seek(0)
 
 	

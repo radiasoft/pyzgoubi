@@ -589,14 +589,13 @@ The path to the zgoubi binary file. Note that this can also be set with the comm
 
 Debugging and Profiling
 """""""""""""""""""""""
+PyZgoubi can be run with pythons interactive mode (same as "python -i") so that in the event of an error the user is given a python prompt to inspect variables at the point of the exception.::
 
-When installing PyZgoubi it will suggest adding some aliases to your .bashrc file. These are::
+    pyzgoubi -i script.py
 
-	pyzgoubi - run PyZgoubi normally
-	pyzgoubii - run PyZgoubi, and start an interactive python shell when its done, or fails
-	pyzgoubip - run PyZgoubi, and save profiling information to prof.log
+PyZgoubi can generate profiles using the cProfile module. use::
 
-The interactive shell can be used to check the values of variables at the point of a crash.
+    pyzgoubi --profile script.py
 
 The profiling information can be read with the python pstats module (part of cProfile). For example to see in which functions most time was spent run::
 

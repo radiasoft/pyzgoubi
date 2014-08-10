@@ -138,7 +138,8 @@ cd = chris_data
 
 
 print "#element\tdistance\tbetah\talphah\tbetav\talphav"
-for n, tp in enumerate (zgoubi_data):
+for n, tp in enumerate (chris_data):
+	tp = zgoubi_data[n]
 	cd = [chris_data[n][0]] + [float(x) for x in chris_data[n][1:]]
 
 	print "%s\t%s\t%s\t%s\t%s\t%s" %  (tp[0],tp[1], tp[2], tp[3],tp[4],tp[5])

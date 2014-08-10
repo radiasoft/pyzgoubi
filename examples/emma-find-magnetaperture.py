@@ -35,8 +35,8 @@ kinenergy_ev = 15e6
 mom_ev = sqrt((kinenergy_ev+mass_ev)**2-mass_ev**2)
 
 
-qd = QUADRUPO('defoc', XL=dq*cm_, R_0=dr*cm_, B_0=db*kgauss_, XPAS=xpas)
-qf = QUADRUPO('foc', XL=fq*cm_, R_0=fr*cm_, B_0=fb*kgauss_, XPAS=xpas)
+qd = QUADRUPO('defoc', XL=dq*cm_, R_0=dr*cm_, B_0=db*kgauss_, XPAS=xpas, KPOS=1)
+qf = QUADRUPO('foc', XL=fq*cm_, R_0=fr*cm_, B_0=fb*kgauss_, XPAS=xpas, KPOS=1)
 
 ob = OBJET2()
 emma.add(ob)

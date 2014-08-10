@@ -5,9 +5,10 @@ This is an interface to zgoubi. It is tested with zgoubi 5.1.0 from http://sourc
 
 Requirements
 Python 2.5 or newer (not ported to 3.x yet)(2.6 or 2.7 recomended)
-Numpy 1.0 or newer (Tested with 1.3.0, 1.4.1 and 1.5.1)
-Scipy (Tested with 0.7, 0.7.2 and 0.9)
-Matplotlib (Tested with 0.98.5.2, 1.0.0 and 1.0.1)
+Numpy 1.4 or newer (1.4.1 and 1.8)
+Scipy (Tested with 0.9 and 0.12.1)
+Matplotlib (Tested with 0.99 and 1.3.1)
+Some features may require the new versions
 
 To run tests run
 ./run_tests

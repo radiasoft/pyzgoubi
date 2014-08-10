@@ -52,6 +52,9 @@ def make_element_classes(definitions_paths, compiled_path):
 		print "Cant create file: " + compiled_path + "\n"
 		print "Check that you have permission to modify files in that directory\n"
 		raise
+	
+	out_file.write("# Generated definitions file\n")
+	out_file.write("from zgoubi.core import zgoubi_element\n\n")
 
 		
 	def_lines = []
