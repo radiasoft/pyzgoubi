@@ -59,7 +59,7 @@ rigidity = ke_to_rigidity(ke, 0.51099892e6)
 ob.set(BORO=-rigidity)
 
 #first step is to find closed orbit
-closedorb_YTZP = find_closed_orbit(emma, init_YTZP=[1,2,3,4], tol=1e-6)
+closedorb_YTZP = find_closed_orbit(emma, init_YTZP=[0,0,0,0], tol=1e-6)
 
 #find tof, used for phase slip calculation
 ob.add(Y=closedorb_YTZP[0],T=closedorb_YTZP[1],Z=closedorb_YTZP[2],P=closedorb_YTZP[3])
@@ -111,7 +111,11 @@ print "gamma Y,Z at end of cell ",gammayz
 s = twiss_profiles['s']
 beta_y = twiss_profiles['beta_y']
 beta_z = twiss_profiles['beta_z']
-plot_data_xy_multi(s,[beta_y,beta_z], 'beta_profiles', labels=["beta profile","s [m]","beta_y [m]"],style=['k+','b.'],legend=['beta_y','beta_z'])
+alpha_y = twiss_profiles['alpha_y']
+alpha_z = twiss_profiles['alpha_z']
+
+plot_data_xy_multi(s,[beta_y,beta_z], 'beta_profiles', labels=["beta profile","s [m]","beta [m]"],style=['k+','b.'],legend=['beta_y','beta_z'])
+plot_data_xy_multi(s,[alpha_y,alpha_z], 'alpha_profiles', labels=["alpha profile","s [m]","alpha [m]"],style=['k+','b.'],legend=['alpha_y','alpha_z'])
 
 #plot horizontal phase advance mu_y
 mu_y = twiss_profiles['mu_y']
