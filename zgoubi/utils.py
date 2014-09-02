@@ -689,6 +689,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 			objet = e
 		if t == 'MATRIX':
 			has_matrix = True
+			matrix = e
 	if not (has_object5 and (has_matrix or input_twiss_parameters != None)):
 		raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
 
@@ -1044,6 +1045,9 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		ob2 = zg.OBJET2()
 		line.replace(objet, ob2)
 		ob2.set(BORO=rig)
+		
+		reb = zg.REBELOTE(K=99, NPASS=5)
+		line.replace(matrix, reb)
 
 		#reference index
 		ind0 = ref_indices[0]
@@ -1062,6 +1066,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 			ob2.add(Y=Y0[ind0] + del_p*disp_y_0*cm_, T=T0[ind0] + del_p*disp_py_0*mm_, 
 				Z=Z0[ind0] + del_p*disp_z_0*cm_, P=P0[ind0] + del_p*disp_pz_0*mm_, D=(1+ D0[ind0])*(1+del_p))
 		
+		reb.set(NPASS=1)
 		#restore full_tracking if necessary 
 		if track_type == 'plt':
 		    line.full_tracking(True)
@@ -1079,7 +1084,16 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		z_disp = transpose_plt_track_disp[3]
 		p_disp = transpose_plt_track_disp[4]
 		s_disp = transpose_plt_track_disp[5]
-
+		
+		if X_exists and interpolate:
+			X1d = r.get_track('plt','X')
+			x_disp = map(list, zip(*X1d))[0]
+			y_disp = numpy.interp(X_alltracks_m[0], x_disp, y_disp)
+			t_disp = numpy.interp(X_alltracks_m[0], x_disp, t_disp)
+			z_disp = numpy.interp(X_alltracks_m[0], x_disp, z_disp)
+			p_disp = numpy.interp(X_alltracks_m[0], x_disp, p_disp)
+			s_disp = numpy.interp(X_alltracks_m[0], x_disp, s_disp)
+				
 		disp_y_list = [xd*cm/del_p for xd in map(numpy.subtract, y_disp, Y_alltracks[0])]
 		disp_py_list = [xd*mm/del_p for xd in map(numpy.subtract, t_disp, T_alltracks[0])]
 		disp_z_list = [xd*mm/del_p for xd in map(numpy.subtract, z_disp, Z_alltracks[0])]
