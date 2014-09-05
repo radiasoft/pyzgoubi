@@ -41,11 +41,13 @@ else:
 	install_res = subprocess.Popen(["./setup.py", "install", "--prefix=%s"%install_dir], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=pyzgoubi_root_dir)
 
 	for line in install_res.communicate()[0].split('\n'):
-		if line.startswith('alias pyzgoubi='):
-			pyzgoubi_cmd = line.partition('=')[2]
-			pyzgoubi_cmd = pyzgoubi_cmd.strip('"')
+		#if line.startswith('alias pyzgoubi='):
+		#	pyzgoubi_cmd = line.partition('=')[2]
+		#	pyzgoubi_cmd = pyzgoubi_cmd.strip('"')
+		if line.startswith('export PYTHONPATH'):
+			pyzgoubi_sys_path = line.rpartition(":")[2]
 
-	pyzgoubi_sys_path = pyzgoubi_cmd.partition(" ")[0].partition("=")[2].partition(":")[0] 
+	#pyzgoubi_sys_path = pyzgoubi_cmd.partition(" ")[0].partition("=")[2].partition(":")[0] 
 	sys.path.append(pyzgoubi_sys_path)
 	# take the pyzgoubi source directory off the path
 	sys.path.pop(0)

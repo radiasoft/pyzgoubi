@@ -744,6 +744,37 @@ Open an xterm in the temp working folder, and have a look at the files zgoubi ha
 From here you can modify the zgoubi.dat and run zgoubi again.
 
 
+Memory Issues
+"""""""""""""
+
+Zgoubi uses statically allocated arrays with sizes set at compile time for storage of elements, particle, field maps etc. When it starts it will allocate several GB of memory that it may not actually use. If you are on a low memory machine (less that 4GB) you may see the message::
+
+    Check that you have sufficient RAM or enable memory overcommit
+
+If you are on Linux you maybe able to work around this by adjusting your memory overcommit settings. This allows programs to make allocations larger than the available memory, they will be stopped if they actually try to use all of this memory. Unless you are using large field maps you are unlikely to use all the memory that Zgoubi allocates. To allow over committing adjust the sysctl value vm.overcommit_memory with the command::
+
+    sysctl vm.overcommit_memory=1
+
+Or by editing the file /etc/sysctl.conf. See https://www.kernel.org/doc/Documentation/vm/overcommit-accounting for more details.
+
+Matplotlib Issues
+"""""""""""""""""
+
+If you see the error::
+
+    ImportError: No module named backend_tkagg
+
+You need to install the matplotlib tk backend, for example the package python-matplotlib-tk. If this is not possible you can switch to a different default plotting backend by editing (or creating) a matplotlib config file (.config/matplotlib/matplotlibrc or .matplotlib/matplotlibrc on linux), for example add the line::
+
+    backend : Agg
+
+There are a range of backends to choose from, see http://matplotlib.org/faq/usage_faq.html#what-is-a-backend .
+
+
+
+
+
+
 
 
 

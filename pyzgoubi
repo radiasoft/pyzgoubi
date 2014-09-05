@@ -196,6 +196,26 @@ def show_version():
 	if show_path:
 		print "python sys.path", str(sys.path)
 
+	import platform
+	if hasattr(platform, "linux_distribution"):
+		li = platform.linux_distribution()
+		if li[0]:
+			print li[0], li[1], 
+	elif hasattr(platform, "dist"):
+		li = platform.dist()
+		if li[0]:
+			print li[0], li[1], 
+	if hasattr(platform, "win32_ver"):
+		wi = platform.win32_ver()
+		if wi[0]:
+			print "Windows", wi[0], wi[1], wi[2],
+	if hasattr(platform, "mac_ver"):
+		mi = platform.mac_ver()
+		if mi[0]:
+			print "MacOS", mi[0], mi[1][0], mi[1][1], mi[2],
+
+	print "(", " ".join(platform.uname()), ")"
+
 
 
 if __name__ == '__main__':

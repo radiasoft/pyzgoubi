@@ -46,6 +46,14 @@ def check_for_programs():
 		subprocess.call(['patch', '--version'], stdout=devnull)
 	except OSError:
 		raise ZgoubiBuildError("patch not found: install patch")
+	try:
+		subprocess.call(['make', '--version'], stdout=devnull)
+	except OSError:
+		raise ZgoubiBuildError("make not found: install make")
+	try:
+		subprocess.call(['gfortran', '--version'], stdout=devnull)
+	except OSError:
+		raise ZgoubiBuildError("gfortran not found: install gfortran")
 
 
 def get_zgoubi_svn():
