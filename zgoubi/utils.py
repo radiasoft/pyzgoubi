@@ -648,7 +648,7 @@ def plot_find_closed_orbit(data_fname, outfile=None):
 				pylab.show()
 
 
-def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc_dispersion = True):
+def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc_dispersion = True, interpolate = True):
 	""" Calculates the twiss parameters at all points written to zgoubi.plt. 11 particle trajectories are used to calculate the
 	transfer matrix, just as is done in zgoubi. The code mirrors that found in mat1.f, mksa.f. The twiss parameters are first
 	calculated at the end of the cell using either input_twiss_parameters (format given below) or, if this is not supplied, 
@@ -665,6 +665,8 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	twiss_profiles = get_twiss_profiles(line2, input_twiss_parameters = twiss_line1)
 
 	Dispersion and dispersion-prime are also calculated if calc_dispersion is True (default). 
+	
+	interpolate: If a azimuthal coordinate X exists, interpolate onto the reference X. X is azimuthal angle in the case of radial elements. 
 
 	The results are stored a in structured numpy array called twiss_profiles containing the following elements at every point tracked in the magnets 
 	(i.e. a point in zgoubi.plt)
@@ -677,7 +679,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	Note - This calculation uses trajectories as measured in the local coordinate system of the magnet."""
 	
 	import zgoubi.core as zg
-
+	
 	has_object5 = False
 	has_matrix = False
 	for e in line.element_list:
@@ -687,6 +689,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 			objet = e
 		if t == 'MATRIX':
 			has_matrix = True
+			matrix = e
 	if not (has_object5 and (has_matrix or input_twiss_parameters != None)):
 		raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
 
@@ -736,11 +739,12 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 			plt_track = r.get_track('fai', ['LET', 'D0-1', 'Y0', 'T0', 'Z0', 'P0', 'D-1', 'Y', 'T', 'Z', 'P', 'S'])
 			track_type = 'fai'
 		
-	incl_theta = False
-	#try to get polar angle theta (e.g. in radial FFAG magnet)
+	X_exists = False
+	#try to get azimuthal coordinate X
 	try:
-		theta = r.get_track('plt','X')
-		incl_theta = True
+		X1 = r.get_track('plt','X')
+		X = map(list, zip(*X1))[0]
+		X_exists = True
 	except IOError:
 		pass
 
@@ -781,15 +785,15 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	P_alltracks = []
 	P0_alltracks = []		
 	S_alltracks = []
-	theta_alltracks = []
+	X_alltracks = []
 	label_ref = []
 	Y_track = []
 	T_track = []
 	Z_track = []
 	P_track = []
 	S_track = []
-	if incl_theta:
-		theta_track = []
+	if X_exists:
+		X_track = []
 	#first add track coords for reference track
 	ref_indices = find_indices(track_tag, 'O')
 	D0_alltracks.append(D0[ref_indices[0]])
@@ -803,16 +807,16 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		Z_track.append(Z[i])
 		P_track.append(P[i])
 		S_track.append(S[i])
-		if incl_theta:
-			theta_track.append(theta[i])
+		if X_exists:
+			X_track.append(X[i])
 		label_ref.append(label[i])
 	Y_alltracks.append(Y_track)
 	T_alltracks.append(T_track)
 	Z_alltracks.append(Z_track)
 	P_alltracks.append(P_track)
 	S_alltracks.append(S_track)
-	if incl_theta:
-		theta_alltracks.append(theta_track)
+	if X_exists:
+		X_alltracks.append(X_track)
 	#add other tracks
 	for track_tag_name in alphabet:
 		Y_track = []
@@ -820,8 +824,8 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		Z_track = []
 		P_track = []
 		S_track = []
-		if incl_theta:	
-			theta_track = []
+		if X_exists:	
+			X_track = []
 		indices = find_indices(track_tag, track_tag_name)
 		if len(indices) == 0:
 			break
@@ -837,24 +841,22 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 				Z_track.append(Z[i])
 				P_track.append(P[i])
 				S_track.append(S[i])
-				if incl_theta:
-					theta_track.append(theta[i])
+				if X_exists:
+					X_track.append(X[i])
 			Y_alltracks.append(Y_track)
 			T_alltracks.append(T_track)
 			Z_alltracks.append(Z_track)
 			P_alltracks.append(P_track)
 			S_alltracks.append(S_track)
-			if incl_theta:
-				theta_alltracks.append(theta_track)
+			if X_exists:
+				X_alltracks.append(X_track)
 
 	#check all trajectories have equal number of elements
 	len_trajs = [len(s) for s  in S_alltracks]
 	len_trajs_equal = len_trajs and all(len_trajs[0] == elem for elem in len_trajs)
 
-	import pylab as plt
-
 	
-	if not len_trajs_equal:
+	if not len_trajs_equal and not X_exists:
 		#interpolate all trajectories onto reference s
 		Y_alltracks_interp = [Y_alltracks[0]]
 		T_alltracks_interp = [T_alltracks[0]]
@@ -871,7 +873,43 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		Z_alltracks = Z_alltracks_interp
 		P_alltracks = P_alltracks_interp
 		S_alltracks = [S_alltracks[0] for s in range(len(S_alltracks))]
+	
+	if X_exists and interpolate:
+		#interpolate all trajectories onto reference X
+		
+		
+		#force X to increase monotonically. 
+		#At the start of each new element, add X from the end of the previous element. Also add 1e-15 to avoid degeneracy problems when
+		#interpolating
+		X_alltracks_m = []
+		for xt in X_alltracks:
+			offset = 0
+			xt_m = []
+			for ind, th in enumerate(xt):
+				if ind > 1:
+					if th < xt[ind-1]:
+						offset = offset + xt[ind-1] + 1e-15
+				xt_m.append(th+offset)
+			X_alltracks_m.append(xt_m)
 
+		Y_alltracks_interp = [Y_alltracks[0]]
+		T_alltracks_interp = [T_alltracks[0]]
+		Z_alltracks_interp = [Z_alltracks[0]]
+		P_alltracks_interp = [P_alltracks[0]]
+		S_alltracks_interp = [S_alltracks[0]]
+		for index in range(1,len(S_alltracks)):
+			Y_alltracks_interp.append(numpy.interp(X_alltracks_m[0], X_alltracks_m[index], Y_alltracks[index]))
+			T_alltracks_interp.append(numpy.interp(X_alltracks_m[0], X_alltracks_m[index], T_alltracks[index]))
+			Z_alltracks_interp.append(numpy.interp(X_alltracks_m[0], X_alltracks_m[index], Z_alltracks[index]))
+			P_alltracks_interp.append(numpy.interp(X_alltracks_m[0], X_alltracks_m[index], P_alltracks[index]))
+			S_alltracks_interp.append(numpy.interp(X_alltracks_m[0], X_alltracks_m[index], S_alltracks[index]))
+		
+		Y_alltracks = list(Y_alltracks_interp)
+		T_alltracks = list(T_alltracks_interp)
+		Z_alltracks = list(Z_alltracks_interp)
+		P_alltracks = list(P_alltracks_interp)
+		S_alltracks = list(S_alltracks_interp)
+		
 	#11 coordinate in Y0_alltracks,T0_alltracks etc correspond to 11 starting conditions required by MATRIX
 
 #!-----------------------------------------------------------------------------------------
@@ -974,7 +1012,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	R36_list = [x*unit_list[2]/unit_list[5] for x in R36_list]
 	R46_list = [x*unit_list[3]/unit_list[5] for x in R46_list]
 	R56_list = [x*unit_list[4]/unit_list[5] for x in R56_list]
-
+	
 #! Get inital twiss paramters. If no input_twiss_parameters supplied, assume cell is periodic and find results using get_twiss_parameters
 	if input_twiss_parameters == None:
 		twissparam = r.get_twiss_parameters()
@@ -1007,6 +1045,9 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		ob2 = zg.OBJET2()
 		line.replace(objet, ob2)
 		ob2.set(BORO=rig)
+		
+		reb = zg.REBELOTE(K=99, NPASS=5)
+		line.replace(matrix, reb)
 
 		#reference index
 		ind0 = ref_indices[0]
@@ -1025,6 +1066,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 			ob2.add(Y=Y0[ind0] + del_p*disp_y_0*cm_, T=T0[ind0] + del_p*disp_py_0*mm_, 
 				Z=Z0[ind0] + del_p*disp_z_0*cm_, P=P0[ind0] + del_p*disp_pz_0*mm_, D=(1+ D0[ind0])*(1+del_p))
 		
+		reb.set(NPASS=1)
 		#restore full_tracking if necessary 
 		if track_type == 'plt':
 		    line.full_tracking(True)
@@ -1042,7 +1084,16 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		z_disp = transpose_plt_track_disp[3]
 		p_disp = transpose_plt_track_disp[4]
 		s_disp = transpose_plt_track_disp[5]
-
+		
+		if X_exists and interpolate:
+			X1d = r.get_track('plt','X')
+			x_disp = map(list, zip(*X1d))[0]
+			y_disp = numpy.interp(X_alltracks_m[0], x_disp, y_disp)
+			t_disp = numpy.interp(X_alltracks_m[0], x_disp, t_disp)
+			z_disp = numpy.interp(X_alltracks_m[0], x_disp, z_disp)
+			p_disp = numpy.interp(X_alltracks_m[0], x_disp, p_disp)
+			s_disp = numpy.interp(X_alltracks_m[0], x_disp, s_disp)
+				
 		disp_y_list = [xd*cm/del_p for xd in map(numpy.subtract, y_disp, Y_alltracks[0])]
 		disp_py_list = [xd*mm/del_p for xd in map(numpy.subtract, t_disp, T_alltracks[0])]
 		disp_z_list = [xd*mm/del_p for xd in map(numpy.subtract, z_disp, Z_alltracks[0])]
@@ -1204,7 +1255,6 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 				print eval("R%s%s_list[i]"%(ai,aj)),"\t",
 			print
 		raise
-
 
 	if file_result != None:
 		fresults.close()

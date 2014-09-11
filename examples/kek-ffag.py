@@ -89,7 +89,9 @@ ffagex.add(ffag_trip)
 
 ffagex.add(FAISCNL(FNAME='zgoubi.fai'))
 
-ffagex.add(REBELOTE(K=99, NPASS=10))
+#add REBELOTE like this to allow a later modification 
+reb=REBELOTE(K=99, NPASS=10)
+ffagex.add(reb)
 
 ffagex.add(END())
 
@@ -98,11 +100,67 @@ ob.set(BORO=rigidity)
 ob.add(Y=517, T=0, D=1)
 
 print ffagex.output()
-res = ffagex.run(xterm = True)
+res = ffagex.run(xterm = False)
 print res.res()
 res.clean()
 
-#must give reasonable initial guess at closed orbit
-find_closed_orbit(ffagex, init_YTZP=[479.7,0,0,0], D=0.52, tol=1e-10)
+#must give reasonable initial guess at closed orbit 
+closedorb_YTZP = find_closed_orbit(ffagex, init_YTZP=[517,0,0,0], D=1.0, tol=1e-6)
 
-find_closed_orbit(ffagex, init_YTZP=[517,0,0,0], D=1.0, tol=1e-6)
+#track along closed orbit for one turn
+ob.clear()
+ob.add(Y=closedorb_YTZP[0],T=closedorb_YTZP[1],Z=closedorb_YTZP[2],P=closedorb_YTZP[3],DR=1.0)
+reb.set(NPASS = 1)
+ffagex.full_tracking(True)
+r = ffagex.run(xterm = False)
+s_co = list(numpy.transpose(r.get_track('plt', ['S']))[0])
+y_co = list(numpy.transpose(r.get_track('plt', ['Y']))[0])
+
+#Change from OBJET2 to OBJET5 so that MATRIX can compute transfer matrix etc
+ob5 = OBJET5()
+ffagex.replace(ob, ob5)
+ob5.set(BORO=rigidity)
+ob5.set(PY=1e-4,PT=1e-3,PZ=1e-4,PP=1e-3,PX=1e-3,PD=1e-3)
+ob5.set(YR=closedorb_YTZP[0],TR=closedorb_YTZP[1],ZR=closedorb_YTZP[2],PR=closedorb_YTZP[3],DR=1.0)
+matrix=MATRIX(IORD=1,IFOC=11)
+ffagex.replace(reb,matrix)
+#run zgoubi to find tune etc.
+r = ffagex.run(xterm = False)
+
+
+#find tune calculated by MATRIX over this periodic cell
+tune = r.get_tune()
+print "tune ",tune
+
+#get twiss parameters at end of cell, returns [beta_y,alpha_y,gamma_y,disp_y,disp_py,beta_z,alpha_z,gamma_z,disp_z,disp_pz]
+twissparam = r.get_twiss_parameters()
+betayz = [twissparam['beta_y'][0],twissparam['beta_z'][0]]
+alphayz = [twissparam['alpha_y'][0],twissparam['alpha_z'][0]]
+gammayz = [twissparam['gamma_y'][0],twissparam['gamma_z'][0]]
+
+#get periodic twiss parameters and dispersion
+ffagex.full_tracking(True)
+twiss_profiles = get_twiss_profiles(ffagex)
+
+
+#extract s coordinate and beta_y from twiss_profiles 
+s = twiss_profiles['s']
+beta_y = twiss_profiles['beta_y']
+beta_z = twiss_profiles['beta_z']
+
+
+import pylab as plt
+plt.subplot(211)
+plt.plot([t*cm for t in s_co], [t*cm for t in y_co],'k-')
+plt.xlim(cm*min(s_co),cm*max(s_co))
+plt.ylabel('closed orbit [m]')
+plt.title('150 MeV in KEK DFD FFAG')
+plt.subplot(212)
+plt.plot(s, beta_y, 'r-', label='horizontal')
+plt.plot(s, beta_z, 'b-', label='vertical')
+plt.xlabel('s [m]')
+plt.ylabel('beta function [m]')
+plt.ylim(ymin=0)
+plt.xlim(min(s),max(s))
+plt.legend(loc='lower center')
+plt.show()
