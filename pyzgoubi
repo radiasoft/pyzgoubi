@@ -277,7 +277,7 @@ if __name__ == '__main__':
 		shutil.rmtree(tmpdir)
 	except OSError:
 		shutil.rmtree(tmpdir)
-		print "can't zgoubi binary", zgoubi_settings['zgoubi_path']
+		print "can't find zgoubi binary", zgoubi_settings['zgoubi_path']
 		print "please modify the 'zgoubi_path' entry in ~/.pyzgoubi/settings.ini to the full path of zgoubi"
 		print "or add the direcory containing zgoubi to the $PATH"
 		sys.exit(1)
