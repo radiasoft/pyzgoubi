@@ -172,8 +172,8 @@ for test_file in tests:
 print "\nSummary:"
 print >> log,"\nSummary:"
 if zgoubi_bins[0] != None:
-	print "Using zgoubi binariesi:"
-	print>> log, "Using zgoubi binariesi:"
+	print "Using zgoubi binaries:"
+	print>> log, "Using zgoubi binaries:"
 	for zgoubi_bin in zgoubi_bins:
 		print "\t", zgoubi_bin
 		print>> log, "\t", zgoubi_bin

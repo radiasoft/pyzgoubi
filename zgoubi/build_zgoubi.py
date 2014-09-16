@@ -208,7 +208,21 @@ if sys.platform == "win32":
 	zgoubi_versions["365_32bit"]["patches"][0] = "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks2_windows.diff"
 	zgoubi_versions["365"]["patches"][0] = "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks2_windows.diff"
 
-def install_zgoubi_all(version="365"):
+zgoubi_versions["430"] = dict(svnr=430,
+patches=[
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/build_tweaks3.diff",
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/r430_impmod.diff",
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/r430_rndm.diff",
+],
+makecommands=["make -f Makefile_zgoubi_gfortran"],
+makecommands_zpop=["make -f Makefile_zpop_gfortran"],
+includes=[
+["MXSTEP.H", ["PARAMETER (MXSTEP = 10000)"]],
+],
+)
+
+
+def install_zgoubi_all(version="430"):
 	"This currently install a version of zgoubi known to work with pyzgoubi"
 	check_for_programs()
 	if sys.platform.startswith('linux'):
