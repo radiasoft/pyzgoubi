@@ -26,7 +26,7 @@ try:
 except OSError:
 	pass
 
-MAIN_VERSION = '0.4.9'
+MAIN_VERSION = '0.4.91'
 
 if ("install" in sys.argv) and not ( "--help" in sys.argv):
 	# check that we have write access to zgoubi/version.py
