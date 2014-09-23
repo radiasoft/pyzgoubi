@@ -1042,8 +1042,11 @@ class Results(object):
 				# fill dictionary with the bits that have been identified
 				#
 				p = {}
+				# for compatability with new routines that expect numpy arrays
 				if file=="fai" and old_format:
 					p = numpy.zeros([1], dtype=[('element_label2', 'S8'), ('element_label1', 'S8'), ('BORO', '<f8'), ('X0', '<f8'), ('tof', '<f8'), ('SORT', '<f8'), ('IEX', '<i8'), ('P0', '<f8'), ('D', '<f8'), ('D-1', '<f8'), ('IREP', '<i8'), ('P', '<f8'), ('S', '<f8'), ('T0', '<f8'), ('PASS', '<i8'), ('Y', '<f8'), ('X', '<f8'), ('Z', '<f8'), ('ID', '<f8'), ('KE', '<f8'), ('Z0', '<f8'), ('element_type', 'S8'), ('LET', 'S1'), ('Y0', '<f8'), ('D0', '<f8'), ('D0-1', '<f8'), ('T', '<f8')])
+				if file=="plt" and old_format:
+					p = numpy.zeros([1], dtype=[('element_label2', 'S8'), ('element_label1', 'S8'), ('KART', '<f8'), ('BORO', '<f8'), ('X0', '<f8'), ('tof', '<f8'), ('By', '<f8'), ('Bz', '<f8'), ('SORT', '<f8'), ('IEX', '<i8'), ('P0', '<f8'), ('D', '<f8'), ('IREP', '<i8'), ('P', '<f8'), ('S', '<f8'), ('T0', '<f8'), ('PASS', '<i8'), ('Y', '<f8'), ('X', '<f8'), ('Z', '<f8'), ('ID', '<f8'), ('D-1', '<f8'), ('Z0', '<f8'), ('element_type', 'S8'), ('LET', 'S1'), ('D0-1', '<f8'), ('Y0', '<f8'), ('D0', '<f8'), ('T', '<f8')])
 
 				if old_format:
 
@@ -1190,7 +1193,7 @@ class Results(object):
 
 				
 				plt_data.append(p)
-		if file=="fai":
+		if (file=="fai" or file=="plt") and old_format:
 			plt_data = numpy.array(plt_data)
 			plt_data =  plt_data.reshape([-1])
 		return plt_data
