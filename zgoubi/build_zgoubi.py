@@ -235,7 +235,21 @@ includes=[
 ],
 )
 
-def install_zgoubi_all(version="427"):
+zgoubi_versions["437"] = dict(svnr=437,
+patches=[
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/build_tweaks_r437.diff",
+#"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/makefile_funcd.diff",
+#"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/r430_impmod.diff",
+#"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/r430_rndm.diff",
+],
+makecommands=["make -f Makefile_zgoubi_gfortran"],
+makecommands_zpop=["make -f Makefile_zpop_gfortran"],
+includes=[
+["MXSTEP.H", ["PARAMETER (MXSTEP = 10000)"]],
+],
+)
+
+def install_zgoubi_all(version="437"):
 	"This currently install a version of zgoubi known to work with pyzgoubi"
 	check_for_programs()
 	if sys.platform.startswith('linux'):
