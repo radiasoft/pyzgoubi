@@ -1042,6 +1042,8 @@ class Results(object):
 				# fill dictionary with the bits that have been identified
 				#
 				p = {}
+				if file=="fai" and old_format:
+					p = numpy.zeros([1], dtype=[('element_label2', 'S8'), ('element_label1', 'S8'), ('BORO', '<f8'), ('X0', '<f8'), ('tof', '<f8'), ('SORT', '<f8'), ('IEX', '<i8'), ('P0', '<f8'), ('D', '<f8'), ('D-1', '<f8'), ('IREP', '<i8'), ('P', '<f8'), ('S', '<f8'), ('T0', '<f8'), ('PASS', '<i8'), ('Y', '<f8'), ('X', '<f8'), ('Z', '<f8'), ('ID', '<f8'), ('KE', '<f8'), ('Z0', '<f8'), ('element_type', 'S8'), ('LET', 'S1'), ('Y0', '<f8'), ('D0', '<f8'), ('D0-1', '<f8'), ('T', '<f8')])
 
 				if old_format:
 
@@ -1056,6 +1058,7 @@ class Results(object):
 						p['LET'] = l0[0] 
 						p['IEX'] = int(l0[1]) #flag
 						p['D0'] = float(l0[2]) #initial D-1
+						p['D0-1'] = float(l0[2]) #initial D-1
 						p['Y0'] = self._bad_float(l0[3]) #initial Y
 						p['T0'] = self._bad_float(l0[4]) #initial T (remember that T is dY/dX not time)
 						p['Z0'] = float(l0[5]) #initial Z
@@ -1069,6 +1072,7 @@ class Results(object):
 					else:
 						l1 = scanf(lines[1], l1_re)
 						p['D'] = float(l1[0]) #D-1
+						p['D-1'] = float(l1[0]) #D-1
 						p['Y'] = self._bad_float(l1[1]) #current corrods
 						p['T'] = self._bad_float(l1[2])
 
@@ -1186,6 +1190,9 @@ class Results(object):
 
 				
 				plt_data.append(p)
+		if file=="fai":
+			plt_data = numpy.array(plt_data)
+			plt_data =  plt_data.reshape([-1])
 		return plt_data
 
 
