@@ -68,7 +68,7 @@ def get_zgoubi_svn():
 			return
 		
 		if ret != 0 or ret2 != 0:
-			raise ZgoubiBuildError("%s already exists, but does not contain a working checkout")
+			raise ZgoubiBuildError("%s already exists, but does not contain a working checkout. Please remove it."%zgoubi_build_dir)
 
 	print "Downloading Zgoubi SVN:", zgoubi_svn_address
 	common.mkdir_p(zgoubi_build_dir)
