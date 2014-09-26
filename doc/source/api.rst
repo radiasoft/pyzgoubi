@@ -57,6 +57,12 @@ This contains the main PyZgoubi classes: Line and Results
 .. automodule:: zgoubi.exceptions
 	:members:
 
+:mod:`zgoubi.gcp`
+------------------------
+
+.. automodule:: zgoubi.gcp
+	:members:
+
 
 :mod:`zgoubi.io`
 ----------------

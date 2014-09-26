@@ -3,7 +3,7 @@ include tests/* run_tests.py
 include examples/*.py
 include doc/source/*
 include doc/source/_static/*
-recursive-include doc/build/html/ *.html *.js *.png *.css
+recursive-include doc/build/html *.html *.js *.png *.css
 include AUTHORS COPYING CHANGES
 global-exclude *~
 
