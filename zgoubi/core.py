@@ -1194,7 +1194,7 @@ class Results(object):
 				
 				plt_data.append(p)
 		if (file=="fai" or file=="plt") and old_format:
-			plt_data = numpy.array(plt_data)
+			plt_data = numpy.array(plt_data, dtype=plt_data[0].dtype)
 			plt_data =  plt_data.reshape([-1])
 		return plt_data
 
