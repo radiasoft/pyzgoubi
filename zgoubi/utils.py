@@ -473,8 +473,7 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 		if not r.run_success() and lost_lap >= 5:
 			zlog.warning("Lost on lap %d"%lost_lap)
 
-		if lost_lap < 3:
-		#if not r.run_success():
+		if not r.run_success() and lost_lap < 3:
 			if plot_search:
 				import matplotlib.pyplot as pyplot
 				for ptrack in ptracks:
