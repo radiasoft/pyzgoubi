@@ -240,7 +240,7 @@ class zgoubi_element(object):
 	
 	def reverse(self):
 		"Flip the element along the beam line direction, i.e. the entrance and exit properties are swapped"
-		if self._zgoubi_name == "DIPOLES":
+		if self._zgoubi_name in  ["DIPOLES", "FFAG"]:
 			sub_swap_pairs = "G0_E,G0_S KAPPA_E,KAPPA_S NCE,NCS CE_0,CS_0 CE_1,CS_1 CE_2,CS_2 CE_3,CS_3 CE_4,CS_4 CE_5,CS_5 SHIFT_E,SHIFT_S OMEGA_E,OMEGA_S THETA_E,THETA_S R1_E,R1_S U1_E,U1_S U2_E,U2_S R2_E,R2_S"
 			for sub_element in self._looped_data:
 				for swap_pair in sub_swap_pairs.split():
