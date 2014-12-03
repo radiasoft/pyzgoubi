@@ -1039,6 +1039,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	
 	if calc_dispersion:
 		del_p = 0.0001 #momentum shift
+		line = copy.copy(line)
 
 		#need to switch to objet2
 		ob2 = zg.OBJET2()
