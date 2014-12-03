@@ -296,6 +296,23 @@ class Line(object):
 		self.full_line = False # has an OBJET, dont allow full lines to be added to each other
 								# only a full line outputs its name into zgoubi.dat
 
+	def __copy__(self):
+		"A shallow copy, contains the same elements"
+		new_line = type(self)(self.name)
+		new_line.element_list = copy.copy(self.element_list)
+		new_line.no_more_xterm = self.no_more_xterm
+		new_line.input_files = self.input_files
+		new_line.full_line = self.full_line
+		return new_line
+	
+	def __deepcopy__(self, memo):
+		"A deep copy, contains the copies of elements"
+		new_line = type(self)(self.name)
+		new_line.element_list = copy.deepcopy(self.element_list, memo)
+		new_line.no_more_xterm = self.no_more_xterm
+		new_line.input_files = self.input_files
+		new_line.full_line = self.full_line
+		return new_line
 
 	def __neg__(self):
 		"return a reversed line"
