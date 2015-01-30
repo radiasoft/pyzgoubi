@@ -81,9 +81,15 @@ class LabPlotElement(object):
 			self.dip_rs = self.z_element.RS # radius at exit
 			self.dip_te = self.z_element.TE # radius at entry
 			self.dip_ts = self.z_element.TS # radius at exit
-			self.width = min(self.dip_re, 500) # FIXME need proper method for setting widths
+			self.width_p = min(self.dip_re, 250) # FIXME need proper method for setting widths
+			self.width_m = min(self.dip_re, 250)
 			if sector_width:
-				self.width = float(sector_width)
+				try:
+					self.width_p = float(sector_width)/2
+					self.width_m = float(sector_width)/2
+				except TypeError:
+					self.width_p = float(sector_width[0])
+					self.width_m = float(sector_width[1])
 
 			if self.dip_te != 0 or self.dip_ts != 0:
 				raise ValueError("Non zero TE or TS not implemented for %s"%self.element_type)
@@ -196,13 +202,12 @@ class LabPlotElement(object):
 		if self.element_type in ["DIPOLE", "DIPOLES","POLARMES", "FFAG"]:
 			# in polar
 			re = self.dip_re
-			w = self.width
 			if self.element_type in ["POLARMES"]:
 				wp = self.width
 				wm = 0
 			else:
-				wp = self.width/2
-				wm = -self.width/2
+				wp = self.width_p
+				wm = -self.width_m
 			a = self.dip_at
 			arcsteps = 20
 			points = [ t(0, re + wm),
@@ -307,8 +312,8 @@ class LabPlot(object):
 	"""
 	def __init__(self, line, boro=None, sector_width=None, aspect="equal", style=None):
 		"""Creates a new plot from the line.
-		If using an element that adjusts it shape based on BORO, then it must be passed in
-		if sector_width is a number it used for the width of sector elements
+		If using an element that adjusts it shape based on BORO, then it must be passed in.
+		If sector_width is a number it used for the width of sector elements, alternatively if sector_width is a list of 2 values they are used as the distance to the boundary in the positive and negative directions
 
 		"""
 		
