@@ -71,10 +71,10 @@ install_res = subprocess.Popen(["python", "./setup.py", "install", "--prefix=%s"
 for line in install_res.communicate()[0].split('\n'):
 	print >>log, line
 	if line.startswith('export PYTHONPATH='):
-		env_pythonpath = line.rpartition(':')[2]
+		env_pythonpath = line.rpartition('=')[2].rpartition(':')[0]
 		os.environ["PYTHONPATH"] = os.pathsep + env_pythonpath
 	if line.startswith('export PATH='):
-		env_path = line.rpartition(':')[2]
+		env_path = line.rpartition('=')[2].rpartition(':')[0]
 		os.environ["PATH"] = os.pathsep + env_path
 	if line:
 		last_line = line.strip()

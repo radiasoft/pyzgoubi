@@ -121,8 +121,8 @@ if ("install" in sys.argv) and not ( "--help" in sys.argv):
 			bat_file.close()
 		else:
 			print "\nyou may need to add the following to your .bashrc"
-			print "export PYTHONPATH=$PYTHONPATH:%s"%lib_path
-			print "export PATH=$PATH:%s"%bin_path
+			print "export PYTHONPATH=%s:$PYTHONPATH"%lib_path
+			print "export PATH=%s:$PATH"%bin_path
 	except NameError:
 		print "Could not find all paths in logfile"
 
