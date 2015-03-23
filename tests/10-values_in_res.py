@@ -54,11 +54,11 @@ print
 rv=[-1,-1,-1]
 for line in res_lines[quad_line:quad_line + 7]:
 	if "Length  of  element" in line:
-		rv[0] = float(line.split()[-2])
+		rv[0] = float(line.partition("=")[2].split()[0])
 	if "Bore  radius" in line:
-		rv[1] = float(line.split()[-2])
+		rv[1] = float(line.partition("=")[2].split()[0])
 	if "B-QUADRUPOLE" in line:
-		rv[2] = float(line.split()[-2])
+		rv[2] = float(line.partition("=")[2].split()[0])
 
 print rv
 
