@@ -482,10 +482,12 @@ class Bunch(object):
 			# this is quite optimised
 			# rather than call the general io.write_fortran_record(), use a fast special case
 			#header
-			io.write_fortran_record(fh, "Binary bunch coordinates from pyzgoubi".ljust(80))
-			io.write_fortran_record(fh, "Y,T,Z,P,S,D".ljust(80))
-			io.write_fortran_record(fh, " "*80)
-			io.write_fortran_record(fh, " "*80)
+			header_len = 270 # header length changed from 80  to 270 in Zgoubi svn483
+			                 # but old and new version will tolerate the longer header
+			io.write_fortran_record(fh, "Binary bunch coordinates from pyzgoubi".ljust(header_len))
+			io.write_fortran_record(fh, "Y,T,Z,P,S,D".ljust(header_len))
+			io.write_fortran_record(fh, " "*header_len)
+			io.write_fortran_record(fh, " "*header_len)
 			# record length is always the same
 			rec_len_r = struct.pack("i", 6*8)
 			rec_len_r2 = rec_len_r + rec_len_r

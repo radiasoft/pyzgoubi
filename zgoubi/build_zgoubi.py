@@ -121,13 +121,15 @@ def edit_includes(includes):
 
 
 
-def make_zgoubi(makecommands, threads=2, clean=True):
+def make_zgoubi(makecommands, makecleancommands=None, threads=2):
 	"Build zgoubi source code"
 	print "building zgoubi"
-	if clean:
-		ret = subprocess.call(['make', 'clean'], cwd=zgoubi_build_dir2)
-		if ret != 0:
-			raise ZgoubiBuildError("Make clean failed")
+	if makecleancommands:
+		for makecleancommand in makecleancommands:
+			command = makecleancommand.split()
+			ret = subprocess.call(command, cwd=zgoubi_build_dir2)
+			if ret != 0:
+				raise ZgoubiBuildError("Make clean failed")
 	for makecommand in makecommands:
 		command = makecommand.split()+ ['-j%d'%threads]
 		ret = subprocess.call(command, cwd=zgoubi_build_dir2)
@@ -263,7 +265,19 @@ includes=[
 ],
 )
 
-def install_zgoubi_all(version="437"):
+zgoubi_versions["535"] = dict(svnr=535,
+patches=[
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/build_tweaks_r532.diff",
+],
+makecommands=["make -f Makefile_zgoubi_gfortran"],
+makecleancommands=["make -f Makefile_zgoubi_gfortran clean"],
+makecommands_zpop=["make -f Makefile_zpop_gfortran"],
+includes=[
+["MXSTEP.H", ["PARAMETER (MXSTEP = 10000)"]],
+],
+)
+
+def install_zgoubi_all(version="535"):
 	"This currently install a version of zgoubi known to work with pyzgoubi"
 	check_for_programs()
 	if sys.platform.startswith('linux'):
@@ -283,11 +297,11 @@ def install_zgoubi_all(version="437"):
 	if zgoubi_versions[version].has_key("includes"):
 		edit_includes(zgoubi_versions[version]["includes"])
 	
-	make_zgoubi(zgoubi_versions[version].get("makecommands", ['make']))
+	make_zgoubi(zgoubi_versions[version].get("makecommands", ['make']), zgoubi_versions[version].get("makecleancommands", ['make', "clean"]) )
 	if build_zpop:
 		makecommands_zpop = zgoubi_versions[version].get("makecommands_zpop", None)
 		if makecommands_zpop:
-			make_zgoubi(makecommands_zpop, clean=False)
+			make_zgoubi(makecommands_zpop)
 
 
 	install_zgoubi("_"+version, build_zpop)
