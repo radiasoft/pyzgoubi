@@ -1066,7 +1066,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 			ob2.add(Y=Y0[ind0] + del_p*disp_y_0*cm_, T=T0[ind0] + del_p*disp_py_0*mm_, 
 				Z=Z0[ind0] + del_p*disp_z_0*cm_, P=P0[ind0] + del_p*disp_pz_0*mm_, D=(1+ D0[ind0])*(1+del_p))
 		
-		reb.set(NPASS=1)
+		reb.set(NPASS=0)
 		#restore full_tracking if necessary 
 		if track_type == 'plt':
 		    line.full_tracking(True)
