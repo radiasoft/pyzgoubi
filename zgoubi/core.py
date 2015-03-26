@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 #		pyzgoubi - python interface to zgoubi
-#		Copyright 2008 Sam Tygier <Sam.Tygier@hep.manchester.ac.uk>
+#		Copyright 2008-2015 Sam Tygier <Sam.Tygier@hep.manchester.ac.uk>
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
 #       the Free Software Foundation; either version 2 of the License, or

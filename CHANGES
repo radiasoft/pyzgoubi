@@ -1,14 +1,26 @@
-Changes from 0.4.1 -> 0.4.9
+Changes from 0.4.1 -> 0.5.0
+Thu 2015-03-26
 
-Version 0.4.9 is a prerelease for the 0.5 release. It introduces some changes that make break scripts writen for the 0.4.x versions.
+Version 0.5.0 is a major release. It introduces some changes that make break scripts writen for the 0.4.x versions.
 
 New features and changes
 Get cell properties (gcp) module, contains functions for quick analysis of a periodic cell.
 Lab Plot module, for making plots in lab coordinates
-Element definisions are processed at install time not runtime
-Fixes for running on windows and Mac OS
+Element definitions are processed at install time not runtime
+Fixes for running on Windows and Mac OS
 Improve reliability of closed orbit search
 Fix file parsing when zgoubi gives oddly formated exponents (eg 1.5741247399232311-101)
+Negation operator reverse a line (and some elements)
+Removed some deprecated functions
+Error message improvements
+get_twiss_profiles improvements
+Many small fixes
+
+This version of PyZgoubi has been tested with Zgoubi 5.1.0 through to current development versions SVN 535. Some features (binary IO do not work with 5.1.0 or older svn versions without patches listed below). To build a recent development version automatically use the command:
+pyzgoubi --install-zgoubi
+
+For full changes see http://pyzgoubi.bzr.sf.net/bzr/ or run:
+bzr log --include-merges -r tag:pyzgoubi-0.4.1..tag:pyzgoubi-0.5.0
 
 
 Changes from 0.4.0 -> 0.4.1
