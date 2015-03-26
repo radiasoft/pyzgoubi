@@ -208,7 +208,11 @@ FNAME : A8000
 ID, A, B, C : I, 3E  # if ID < 0 there should be more ABCs etc.
 IORDRE : I
 XPAS : X
-KPOS, XCE, YCE, ALE : I, 3E
+KPOS: I
+!KPOS==1
+XCE, YCE, ALE : 3E
+!KPOS==2
+RE, TE, RS, TS: 4E
 
 YMY # has no parameters
 YMY
