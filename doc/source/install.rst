@@ -55,7 +55,7 @@ Linux
 
 GCC/GFortran, Subversion and Bazaar can be installed with the package manager,for example on Fedora/Red Hat/Scientific::
 
-  sudo yum install gcc gcc-gfortran subversion bzr
+  sudo yum install gcc gcc-gfortran subversion bzr patch
 
 Or on Ubuntu/Debian::
 
@@ -186,8 +186,8 @@ Then to install::
 
 You will then nee to edit you bash set up use PyZgoubi. Edit you .bashrc, add the lines as instructed by the output of the previous command, e.g. ::
 
-  export PYTHONPATH=$PYTHONPATH:/home/sam/zgoubi/install/lib/python2.7/site-packages
-  export PATH=$PATH:/home/sam/zgoubi/install/bin
+  export PYTHONPATH=/home/sam/zgoubi/install/lib/python2.7/site-packages:$PYTHONPATH
+  export PATH=/home/sam/zgoubi/install/bin:$PATH
 
 To check your install open a new terminal and run::
 
