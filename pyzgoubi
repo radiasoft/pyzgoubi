@@ -29,10 +29,15 @@ from __future__ import division
 from math import *
 import getopt, sys, os
 try:
+	import numpy
+except ImportError:
+	print "Numpy is required for PyZGoubi"
+	sys.exit(1)
+try:
 	eval("1 if True else 2")
 except SyntaxError:
 	print "PyZgoubi requires Python 2.5 or newer (2.7 recommended)"
-	sys.exit()
+	sys.exit(1)
 import subprocess
 from zgoubi.utils import *
 from zgoubi.core import *
@@ -171,12 +176,7 @@ def show_version():
 	print "Python version", sys.version
 	show_path = False
 
-	try:
-		import numpy
-		print "numpy version", numpy.version.version
-	except ImportError:
-		print "No numpy"
-		show_path = True
+	print "numpy version", numpy.version.version
 	try:
 		import scipy
 		print "scipy version", scipy.version.version

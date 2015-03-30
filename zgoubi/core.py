@@ -48,17 +48,13 @@ zlog = logging.getLogger('PyZgoubi')
 try:
 	import numpy
 except ImportError:
-	zlog.warn("could not import numpy, some functions wont function")
+	zlog.error("Numpy is required for PyZGoubi")
+	sys.exit(1)
 try:
 	from operator import itemgetter
 except ImportError:
-	zlog.error("please use python 2.5 or newer")
+	zlog.error("PyZgoubi requires Python 2.5 or newer (2.7 recommended)")
 	sys.exit(1)
-try:
-	import cairo
-except ImportError:
-	pass
-#	print "cairo not found, no plotting available"
 
 from zgoubi.constants import *
 from zgoubi.exceptions import *

@@ -1,6 +1,5 @@
 from __future__ import division
 import numpy
-import scipy.interpolate
 from zgoubi.core import *
 from zgoubi.constants import *
 from zgoubi.common import *
@@ -749,6 +748,7 @@ def profile2d(magnet, min_y, max_y, y_steps, angle=0):
 	    returns int_field, (xmin,xmax,ymin,ymax)
 
 	"""
+	import scipy.interpolate
 	if not hasattr(scipy.interpolate, "griddata"):
 		print "profile2d() requires scipy > 0.9"
 		raise
@@ -804,6 +804,7 @@ def profile1d(magnet, min_y, max_y, y_steps, angle=0):
 	
 	returns field, ys
 	"""
+	import scipy.interpolate
 	if not hasattr(scipy.interpolate, "griddata"):
 		print "profile1d() requires scipy > 0.9"
 		raise
