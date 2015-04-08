@@ -593,7 +593,7 @@ def plot_twiss_params(data, output_prefix="results/twiss_profiles_"):
 		pylab.savefig('%s%s.pdf'%(output_prefix, particle_ke))
 
 
-def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show=False, plot_unstable=False, draw_field_midplane=False, sector_width=None, aspect="equal", style=None, draw_tracks=True, min_y=None, max_y=None, y_steps=None, angle=0):
+def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show=False, plot_unstable=False, draw_field_midplane=False, sector_width=None, aspect="equal", style=None, draw_tracks=True, min_y=None, max_y=None, y_steps=None, angle=0, plot_extents=None):
 	"""Plot particle track through cell, starting from in the closed orbits stored in data.
 
 	output_file: file to save plot
@@ -605,6 +605,7 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 	style: style for plotting, see lab_plot.LabPlot
 	draw_tracks: draw particle tracks
 	min_y, max_y, y_steps, angle: starting coordinates for test particles for sampling the midplane field
+	plot_extents: list of extents [left, right, bottom, top]
 
 	"""
 	from zgoubi.lab_plot import LabPlot
@@ -691,9 +692,9 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 
 
 	if draw_field_midplane:
-		lp.draw(draw_field_midplane=draw_field_midplane, draw_tracks=draw_tracks, field_steps=y_steps)
+		lp.draw(draw_field_midplane=draw_field_midplane, draw_tracks=draw_tracks, field_steps=y_steps, plot_extents=plot_extents)
 	else:
-		lp.draw()
+		lp.draw(plot_extents=plot_extents)
 
 	lp.save(output_file)
 	if show:

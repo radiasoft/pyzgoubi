@@ -248,9 +248,10 @@ class LabPlotElement(object):
 
 		
 class LabPlotDrawer(object):
-	def __init__(self, mode="matplotlib", aspect="equal"):
+	def __init__(self, mode="matplotlib", aspect="equal", plot_extents=None):
 		self.mode = mode
 		self.aspect = aspect
+		self.plot_extents = plot_extents
 		
 		if self.mode == "matplotlib":
 			global matplotlib,plt, Line2D
@@ -294,6 +295,9 @@ class LabPlotDrawer(object):
 			version = matplotlib.__version__.split(".")
 			if int(version[0]) >= 1 and int(version[1]) >= 1:
 				plt.tight_layout()
+			if self.plot_extents:
+				self.ax.set_xlim(self.plot_extents[0:2])
+				self.ax.set_ylim(self.plot_extents[2:4])
 
 	def show(self):
 		if self.mode == "matplotlib":
@@ -371,11 +375,13 @@ class LabPlot(object):
 		for k,v in style.items():
 			self.style[k].update(v)
 
-	def draw(self, draw_tracks=True, draw_field_points=False, draw_field_midplane=False, field_component='z', field_steps=100, field_int_mode="kd"):
+	def draw(self, draw_tracks=True, draw_field_points=False, draw_field_midplane=False, field_component='z', field_steps=100, field_int_mode="kd", plot_extents=None):
 		"""Draw the plot in memory, then use :py:meth:`show()` to display to screen or :py:meth:`save()` to save to file.
+
+		plot_extents: list of extents [left, right, bottom, top]
 		
 		"""
-		self.lpd = LabPlotDrawer(aspect=self.aspect)
+		self.lpd = LabPlotDrawer(aspect=self.aspect, plot_extents=plot_extents)
 
 		if field_component not in ['x','y','z']:
 			raise ValueError("field_component should be 'y', 'z' or 'x'")
