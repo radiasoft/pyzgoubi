@@ -75,8 +75,17 @@ class LabPlotElement(object):
 			self.exit_coord[1] += self.z_element.YCE * cos(self.exit_angle)
 
 
-		elif self.element_type in ["DIPOLE", "DIPOLES", "FFAG"]:
-			self.dip_at = radians(self.z_element.AT) # sector angle of magnet region
+		elif self.element_type in ["DIPOLE", "DIPOLES", "FFAG", "POLARMES"]:
+			if self.element_type in ["POLARMES"]:
+				# to get opening angle read the list of angles in the field map
+				self.fmap_file_path = self.z_element.FNAME
+				fmap_file = open(self.fmap_file_path)
+				for n in xrange(4): line = fmap_file.readline()
+				phi_line = fmap_file.readline()
+				phi_line = phi_line.split()
+				self.dip_at = float(phi_line[-1])
+			else:
+				self.dip_at = radians(self.z_element.AT) # sector angle of magnet region
 			self.dip_re = self.z_element.RE # radius at entry
 			self.dip_rs = self.z_element.RS # radius at exit
 			self.dip_te = self.z_element.TE # radius at entry
@@ -113,29 +122,6 @@ class LabPlotElement(object):
 					sa = sub_element["THETA_S"]
 
 					self.sub_boundaries.append(dict(e=e, s=s, ea=ea, sa=sa))
-			
-
-		elif self.element_type in ["POLARMES"]:
-			# to get opening angle read the list of angles in the field map
-			self.fmap_file_path = self.z_element.FNAME
-			fmap_file = open(self.fmap_file_path)
-			for n in xrange(4): line = fmap_file.readline()
-			phi_line = fmap_file.readline()
-			phi_line = phi_line.split()
-			self.dip_at = float(phi_line[-1])
-
-			self.dip_re = self.dip_rs = 0
-			self.width =  500
-			if sector_width:
-				self.width = float(sector_width)
-
-			self.entry_angle -= self.dip_at / 2
-			self.exit_angle -= self.dip_at
-
-			self.sector_center_coord = list(self.entry_coord)
-			self.exit_coord[0] = self.entry_coord[0]
-			self.exit_coord[1] = self.entry_coord[1]
-			
 
 		else:
 			raise ValueError("Can't handle element "+ self.element_type)
@@ -162,7 +148,7 @@ class LabPlotElement(object):
 			points = [t(0,0), t(self.length,0)]
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, **style["reference"])
-		if self.element_type in ["DIPOLE", "DIPOLES", "FFAG"]:
+		if self.element_type in ["DIPOLE", "DIPOLES", "FFAG", "POLARMES"]:
 			re = self.dip_re
 			a = self.dip_at
 			arcsteps = 20
@@ -202,12 +188,8 @@ class LabPlotElement(object):
 		if self.element_type in ["DIPOLE", "DIPOLES","POLARMES", "FFAG"]:
 			# in polar
 			re = self.dip_re
-			if self.element_type in ["POLARMES"]:
-				wp = self.width
-				wm = 0
-			else:
-				wp = self.width_p
-				wm = -self.width_m
+			wp = self.width_p
+			wm = -self.width_m
 			a = self.dip_at
 			arcsteps = 20
 			points = [ t(0, re + wm),
@@ -219,6 +201,7 @@ class LabPlotElement(object):
 			for a1 in np.linspace(a,0,arcsteps):
 				points.append(t(a1, re + wm))
 
+			print a, re, wm, wp
 			xs, ys = zip(*points)
 
 			if self.element_type in ["DIPOLES", "FFAG"]:
