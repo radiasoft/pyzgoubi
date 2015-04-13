@@ -297,7 +297,7 @@ def install_zgoubi_all(version="535"):
 	if zgoubi_versions[version].has_key("includes"):
 		edit_includes(zgoubi_versions[version]["includes"])
 	
-	make_zgoubi(zgoubi_versions[version].get("makecommands", ['make']), zgoubi_versions[version].get("makecleancommands", ['make', "clean"]) )
+	make_zgoubi(zgoubi_versions[version].get("makecommands", ['make']), zgoubi_versions[version].get("makecleancommands", ["make clean"]) )
 	if build_zpop:
 		makecommands_zpop = zgoubi_versions[version].get("makecommands_zpop", None)
 		if makecommands_zpop:
