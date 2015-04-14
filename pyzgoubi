@@ -150,6 +150,8 @@ def _show_usage():
 	print "pyzgoubi", "-i drop to interactive mode on exception"
 	print "pyzgoubi", "--profile write execution profile to prof.log "
 	print "pyzgoubi", "--install-zgoubi"
+	print "pyzgoubi", "--install-zgoubi list"
+	print "pyzgoubi", "--install-zgoubi version KEY=VALUE"
 	print "\nFor documentation see http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/"
 
 def show_version():
@@ -249,10 +251,19 @@ if __name__ == '__main__':
 			sys.exit(0)
 		if o in ['--install-zgoubi']:
 			from zgoubi import build_zgoubi
-			if args:
-				build_zgoubi.install_zgoubi_all(args[0])
+			include_opts = {}
+			arg_ver = None
+			for arg in args:
+				if "=" in arg:
+					k,dummy,v = arg.partition("=")
+					include_opts[k] = v
+				else:
+					arg_ver = arg
+
+			if arg_ver:
+				build_zgoubi.install_zgoubi_all(version=arg_ver, include_opts=include_opts)
 			else:
-				build_zgoubi.install_zgoubi_all()
+				build_zgoubi.install_zgoubi_all(include_opts=include_opts)
 			sys.exit(0)
 		if o in ["-i"]:
 			os.environ["PYTHONINSPECT"] = "1"

@@ -287,8 +287,9 @@ makecommands_zpop=["make -f Makefile_zpop_gfortran"],
 includes={"MXSTEP":10000},
 )
 
-def install_zgoubi_all(version="535"):
+def install_zgoubi_all(version="535", include_opts=None):
 	"This currently install a version of zgoubi known to work with pyzgoubi"
+	if include_opts is None: include_opts = {}
 	check_for_programs()
 	if sys.platform.startswith('linux'):
 		build_zpop = True
@@ -304,8 +305,14 @@ def install_zgoubi_all(version="535"):
 	get_zgoubi_svn()
 	set_zgoubi_version(zgoubi_versions[version]['svnr'])
 	apply_zgoubi_patches(zgoubi_versions[version]['patches'])
+
+	# edit any of the include files
+	include_opts_all = {}
 	if zgoubi_versions[version].has_key("includes"):
-		edit_includes(zgoubi_versions[version]["includes"])
+		include_opts_all.update(zgoubi_versions[version]["includes"])
+	include_opts_all.update(include_opts)
+	if include_opts_all:
+		edit_includes(include_opts_all)
 	
 	make_zgoubi(zgoubi_versions[version].get("makecommands", ['make']), zgoubi_versions[version].get("makecleancommands", ["make clean"]) )
 	if build_zpop:
