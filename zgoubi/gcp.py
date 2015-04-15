@@ -217,8 +217,9 @@ def get_cell_properties(cell, min_ke, max_ke=None, ke_steps=1, particle=None, to
 		tune = res.get_tune()
 		orbit_data['NU_Y'][n],orbit_data['NU_Z'][n] = tune
 		
-		if tune[0] == 0 or tune[1] == 0:
-			zlog.warn("tune[0] == 0 or tune[1] == 0")
+		if tune[0] == 0 or tune[1] == 0 or isnan(tune[0]) or isnan(tune[1]):
+			zlog.warn("tune is zero or nan")
+			orbit_data['stable'][n] = False
 			#tline.run(xterm=1)
 		
 		twiss = res.get_twiss_parameters()
