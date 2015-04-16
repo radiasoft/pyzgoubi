@@ -307,7 +307,7 @@ def show_file(file_path, mode):
 		command = 'xterm -e "less %s"'% file_path
 		os.system(command)
 
-def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, range_YTZP=None, count_YTZP=None, record_fname=None):
+def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, range_YTZP=None, count_YTZP=None, record_fname=None, extra_iterations=2):
 	"""Same as find_closed_orbit, but if init_YTZP is unstable, will generate a bunch or particles, with a spread of range_YTZP, and if any of those are stable will do a closed orbit search with that particle::
 
 		init_YTZP=[5,0,0,0], range_YTZP=[10,0,0,0], count_YTZP[50,0,0,0]
@@ -335,7 +335,7 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 	#first check center
 	if record_fname:
 		record_fh.write("#center\n")
-	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D, record_fname=record_fh)
+	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D, record_fname=record_fh, extra_iterations=extra_iterations)
 	if result != None:
 		zlog.debug("Found a closed orbit without needing range")
 		return result
@@ -401,14 +401,14 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 			surviving_init_coord = [surviving_particle['Y0'], surviving_particle['T0'], surviving_particle['Z0'], surviving_particle['P0']]
 		
 			# use stable particle to find closed orbit
-			result = find_closed_orbit(line=line, init_YTZP=surviving_init_coord, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D, record_fname=record_fh)
+			result = find_closed_orbit(line=line, init_YTZP=surviving_init_coord, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D, record_fname=record_fh, extra_iterations=extra_iterations)
 			if result != None:
 				return result
 		zlog.warning("Despite finding surviving particles, none were stable")	
 		return None
 
 
-def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, record_fname=None, plot_search=False):
+def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, record_fname=None, plot_search=False, extra_iterations=2):
 	"""Find a closed orbit for the line. can optionally give a list of initial coordinates, init_YTZP, eg:
 	find_closed_orbit(line, init_YTZP=[1.2,2.1,0,0])
 	otherwise [0,0,0,0] are used.
@@ -418,6 +418,7 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 	It is recommend to have a REBELOTE, with several laps. The area of the phase space ellipse is approximated from the coordinates from the FAISCNL (or MARKER with fai_label), and the center is used for the new coordinates. Once the relative variation between iterations is less that the tolerance, the function returns the closed orbit coordinates. If a coordinate is close to zero (less than the tolerance) then it is compared absolutely instead of relatively.
 	
 	record_fname is used to record search details to a file that can be used with plot_find_closed_orbit().
+	extra_iterations allows some extra iterations to improve accuracy, even after tolerance reached
 	"""
 	zlog.debug("enter function")
 	if init_YTZP == None:
@@ -450,7 +451,7 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 	coords = []
 	tracks = []
 	laps = []
-	close_orbit_found = False
+	close_orbit_found = 0
 	for iteration in xrange(max_iterations):
 		zlog.debug("start iteration: "+str(iteration)+ " with coords "+str(current_YTZP))
 		coords.append(current_YTZP)
@@ -536,20 +537,24 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 			else:
 				difs[x] = abs((prev_YTZP[x] - current_YTZP[x])/ prev_YTZP[x])
 
+		this_orbit_good = False
 		if difs.max() < tol:
-			close_orbit_found = True
+			this_orbit_good = True
 			close_orbit = current_YTZP
-			break
 
 		if area_h < tol and area_v < tol:
-			close_orbit_found = True
+			this_orbit_good = True
 			close_orbit = current_YTZP
-			break
+		
+		if this_orbit_good:
+			close_orbit_found += 1
+			if close_orbit_found > extra_iterations:
+				break
 	
 	for x in xrange(len(areas)):
 		print "it:", x, "\tYTZP", coords[x], "\tarea", areas[x], "\t laps", laps[x]
 
-	if close_orbit_found:
+	if close_orbit_found>0:
 		print "found closed orbit"
 		print "Y=%s, T=%s, Z=%s, P=%s" % tuple(current_YTZP)
 		return current_YTZP
