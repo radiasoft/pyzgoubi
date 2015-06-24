@@ -30,6 +30,7 @@ import tempfile
 import shutil
 import os
 import sys
+import time
 import re
 import struct
 from glob import glob
@@ -472,11 +473,12 @@ class Line(object):
 		return out
 
 		
-	def run(self, xterm=False, tmp_prefix=zgoubi_settings['tmp_dir'], silence=False):
+	def run(self, xterm=False, tmp_prefix=zgoubi_settings['tmp_dir'], silence=False, timer=False):
 		"""Run zgoubi on line.
 		If xterm is true, stop after running zgoubi, and open an xterm for the user in the tmp dir. From here zpop can be run.
 		Returns a :py:class:`Results` object
 		"""
+		if timer: t0 = time.time()
 		if zlog.isEnabledFor(logging.DEBUG):
 			self.check_line()
 		orig_cwd = os.getcwd()
@@ -509,12 +511,14 @@ class Line(object):
 		infile.close()
 
 		command = zgoubi_settings['zgoubi_path']
+		if timer: t1 = time.time()
 		if silence:
 			command += " > zgoubi.stdout 2> zgoubi.sdterr"
 			z_proc = subprocess.Popen(command, shell=True, cwd=tmpdir)
 		else:
 			z_proc = subprocess.Popen(command, shell=False, cwd=tmpdir)
 		exe_result = z_proc.wait()
+		if timer: t2 = time.time()
 
 		if exe_result != 0:
 			zlog.error("zgoubi failed to run\nIt returned:%s", exe_result)
@@ -549,6 +553,9 @@ class Line(object):
 		result = Results(line=self, rundir=tmpdir, element_types=element_types)
 		self.results.append(weakref.ref(result))
 		self.last_result = result
+		if timer:
+			result.timer_setup = t1-t0
+			result.timer_run = t2-t1
 
 		return result
 	
