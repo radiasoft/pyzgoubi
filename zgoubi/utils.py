@@ -336,7 +336,7 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 	if record_fname:
 		record_fh.write("#center\n")
 	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D, record_fname=record_fh, extra_iterations=extra_iterations)
-	if result != None:
+	if result is not None:
 		zlog.debug("Found a closed orbit without needing range")
 		return result
 

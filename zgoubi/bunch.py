@@ -46,7 +46,7 @@ class Bunch(object):
 		"""Bunch constructor.
 
 		"""
-		if particles != None:
+		if particles is not None:
 			self.coords = particles
 		else:
 			self.coords = numpy.zeros(nparticles, self.min_data_def)
@@ -256,10 +256,10 @@ class Bunch(object):
 		
 		while True:
 			# fill a hypercube with 3.5 times as many particles as needed
-			a1 = numpy.random.uniform(-1, 1, [npart*3.5])
-			a2 = numpy.random.uniform(-1, 1, [npart*3.5])
-			a3 = numpy.random.uniform(-1, 1, [npart*3.5])
-			a4 = numpy.random.uniform(-1, 1, [npart*3.5])
+			a1 = numpy.random.uniform(-1, 1, [int(npart*3.5)])
+			a2 = numpy.random.uniform(-1, 1, [int(npart*3.5)])
+			a3 = numpy.random.uniform(-1, 1, [int(npart*3.5)])
+			a4 = numpy.random.uniform(-1, 1, [int(npart*3.5)])
 			
 			# discard ones that fall out of hypesphere
 			r = a1**2+a2**2+a3**2+a4**2

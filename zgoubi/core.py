@@ -1635,7 +1635,7 @@ class Results(object):
 		"""
 		tm = self.parse_matrix()["matrix1"]
 
-		if tm == None:
+		if tm is None:
 			zlog.error("could not get matrix from res file")
 
 		return tm
@@ -1658,7 +1658,7 @@ class Results(object):
 		"""
 		tp = self.parse_matrix()["twiss"]
 
-		if tp == None:
+		if tp is None:
 			zlog.error("could not get twiss parameters from res file")
 
 		return tp

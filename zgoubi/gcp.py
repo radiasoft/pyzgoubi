@@ -159,7 +159,7 @@ def get_cell_properties(cell, min_ke, max_ke=None, ke_steps=1, particle=None, to
 			closed_orbit =  find_closed_orbit_range(tline, range_YTZP=closed_orbit_range, count_YTZP=closed_orbit_range_count, init_YTZP=search_coords, tol=tol, max_iterations=50, record_fname=record_fname)
 	
 		search_coords = closed_orbit
-		if closed_orbit != None:
+		if closed_orbit is not None:
 			orbit_data['Y'][n],orbit_data['T'][n],orbit_data['Z'][n], orbit_data['P'][n]= closed_orbit
 			orbit_data['found_co'][n] = True
 		else:
