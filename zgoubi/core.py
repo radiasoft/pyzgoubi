@@ -522,6 +522,16 @@ class Line(object):
 
 		if exe_result != 0:
 			zlog.error("zgoubi failed to run\nIt returned:%s", exe_result)
+
+		if xterm and not self.no_more_xterm:
+			print "Do you want an xterm? (y=yes/n=no/s=stop asking)"
+			ans = raw_input()
+			if ans.startswith('y'):
+				subprocess.Popen("xterm", shell=True, cwd=tmpdir).wait()
+			elif ans.startswith('s'):
+				self.no_more_xterm = True
+
+		if exe_result != 0:
 			if silence:
 				print open(os.path.join(tmpdir, "zgoubi.sdterr")).read()
 			if exe_result == 32512:
@@ -531,16 +541,6 @@ class Line(object):
 			if exe_result == 2:
 				raise ZgoubiRunError("Fortran runtime error")
 
-		if xterm and not self.no_more_xterm:
-			print "Do you want an xterm? (y=yes/n=no/s=stop asking)"
-			ans = raw_input()
-			if ans.startswith('y'):
-				subprocess.Popen("xterm", shell=True, cwd=tmpdir).wait()
-			elif ans.startswith('s'):
-				self.no_more_xterm = True
-		
-		#os.system('ls')
-		
 		res_file = tmpdir+"/zgoubi.res"
 		#output = outfile.read()
 		
