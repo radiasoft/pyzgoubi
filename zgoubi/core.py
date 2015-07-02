@@ -513,7 +513,7 @@ class Line(object):
 		command = zgoubi_settings['zgoubi_path']
 		if timer: t1 = time.time()
 		if silence:
-			command += " > zgoubi.stdout 2> zgoubi.sdterr"
+			command += " > zgoubi.stdout"
 			z_proc = subprocess.Popen(command, shell=True, cwd=tmpdir)
 		else:
 			z_proc = subprocess.Popen(command, shell=False, cwd=tmpdir)
@@ -592,7 +592,7 @@ class Line(object):
 		result.clean()
 		return done_bunch
 		
-	def track_bunch_mt(self, bunch, n_threads=4, max_particles=None, **kwargs):
+	def track_bunch_mt(self, bunch, n_threads=4, max_particles=None, binary=False, **kwargs):
 		"This function should be used identically to the track_bunch function, apart from the addition of the n_threads argument. This will split the bunch into several slices and run them simultaneously. Set n_threads to the number of CPU cores that you have. max_particle can be set to limit how many particles are sent at a time."
 		in_q = Queue.Queue()
 		out_q = Queue.Queue()
@@ -612,7 +612,7 @@ class Line(object):
 					continue
 				#print "Thread", name, "working"
 				try:
-					done_bunch = work_line.track_bunch(work_bunch, binary=True, **kwargs)
+					done_bunch = work_line.track_bunch(work_bunch, binary=binary, **kwargs)
 				except:
 					zlog.error("Exception in track_bunch() thread")
 					out_q.put((sys.exc_info()))
