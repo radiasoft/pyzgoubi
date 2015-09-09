@@ -287,7 +287,20 @@ makecommands_zpop=["make -f Makefile_zpop_gfortran"],
 includes={"MXSTEP":10000},
 )
 
-def install_zgoubi_all(version="535", include_opts=None):
+zgoubi_versions["570"] = dict(svnr=570,
+patches=[
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/build_tweaks_r558.diff",
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/zpop_pltopt_write.diff",
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/zgoubi_impfai_inquire.diff",
+],
+makecommands=["make -f Makefile_zgoubi_gfortran"],
+makecleancommands=["make -f Makefile_zgoubi_gfortran clean"],
+makecommands_zpop=["make -f Makefile_zpop_gfortran"],
+includes={"MXSTEP":10000},
+)
+
+
+def install_zgoubi_all(version="570", include_opts=None):
 	"This currently install a version of zgoubi known to work with pyzgoubi"
 	if include_opts is None: include_opts = {}
 	check_for_programs()
