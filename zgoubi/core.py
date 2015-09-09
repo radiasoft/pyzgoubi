@@ -545,7 +545,8 @@ class Line(object):
 		#output = outfile.read()
 		
 		for n, line in enumerate(open(res_file)):
-			if "ERROR" in line or "WARNING" in line or "SBR" in line:
+			lline = line.lower()
+			if "error" in lline or "warning" in lline or "sbr" in lline:
 				print "zgoubi.res:", n, ":", line
 				if "SBR OBJ3 -> error in  reading  file" in line:
 					raise ZgoubiRunError(line)
