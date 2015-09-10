@@ -1575,6 +1575,8 @@ class Results(object):
 		if len(matrix_lines) == 0:
 			raise BadLineError("Could not find MATRIX output in res file. Maybe beam lost.")
 
+		#print "\n".join(matrix_lines)
+
 		for n, line in enumerate(matrix_lines):
 			if line == "TRANSFER  MATRIX  ORDRE  1  (MKSA units)":
 				matrix1 = numpy.zeros([6, 6])
@@ -1584,7 +1586,17 @@ class Results(object):
 			if line == "Beam  matrix  (beta/-alpha/-alpha/gamma) and  periodic  dispersion  (MKSA units)":
 				twissmat = numpy.zeros([6, 6])
 				for x in xrange(6):
-					twissmat[x] = matrix_lines[x+n+2].split()
+					row = []
+					for rowe in matrix_lines[x+n+2].split():
+						try:
+							row.append(float(rowe))
+						except ValueError:
+							zlog.warn("Could not convert %s to float"%rowe)
+							row.append(numpy.nan)
+					if len(row) != 6:
+						zlog.warn("Could not convert get 6 values from row: %s"%matrix_lines[x+n+2] )
+						row = numpy.nan
+					twissmat[x] = row
 				tp['beta_y'] = twissmat[0, 0]
 				tp['alpha_y'] = -twissmat[1, 0]
 				tp['gamma_y'] = twissmat[1, 1]
