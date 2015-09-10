@@ -256,6 +256,12 @@ class zgoubi_element(object):
 		new_e.reverse()
 		return new_e
 
+	def set_plot_hint(self, **hints):
+		"Add hints to help lab_plot"
+		if not hasattr(self, "plot_hints"): self.plot_hints = {}
+		self.plot_hints.update(hints)
+
+
 
 from zgoubi.static_defs import *
 from zgoubi.simple_defs import *

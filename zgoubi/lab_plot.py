@@ -11,7 +11,7 @@ import scipy.spatial
 
 
 null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL REBELOTE".split()
-rect_elements = "DRIFT MULTIPOL QUADRUPO BEND".split()
+rect_elements = "DRIFT MULTIPOL QUADRUPO BEND TOSCA".split()
 
 
 
@@ -36,15 +36,29 @@ class LabPlotElement(object):
 
 		elif self.element_type in rect_elements:
 			# step by length, no angle change
-			self.length = self.z_element.XL
+			if hasattr(self.z_element, "XL"):
+				self.length = self.z_element.XL
+			else:
+				self.length = self.z_element.plot_hints['XL']
+
 			self.exit_coord = self.transform(self.length,0)
 			self.entrance_wedge_angle = 0
 			self.exit_wedge_angle = 0
 
 			if self.element_type in "MULTIPOL QUADRUPO".split():
-				self.width =  self.z_element.R_0 * 2
+				self.width_p =  self.z_element.R_0
+				self.width_m =  self.z_element.R_0
 			else:
-				self.width = 20
+				self.width_p = 10
+				self.width_m = 10
+			if hasattr(self.z_element, "plot_hints") and "width" in self.z_element.plot_hints:
+				try:
+					self.width_p = self.z_element.plot_hints['width']/2
+					self.width_m = self.z_element.plot_hints['width']/2
+				except TypeError:
+					self.width_p = self.z_element.plot_hints['width'][0]
+					self.width_m = self.z_element.plot_hints['width'][1]
+
 
 			if self.element_type in "MULTIPOL QUADRUPO".split():
 				if self.z_element.KPOS != 1:
@@ -164,23 +178,25 @@ class LabPlotElement(object):
 		if (self.element_type in rect_elements
 			and self.element_type != 'DRIFT'):
 			if self.entrance_wedge_angle == 0 and self.exit_wedge_angle == 0:
-				points = [t(0,self.width/2),
-						  t(0,-self.width/2),
-						  t(self.length,-self.width/2),
-						  t(self.length,self.width/2),
-						  t(0,self.width/2)]
+				points = [t(0,self.width_p),
+						  t(0,-self.width_m),
+						  t(self.length,-self.width_m),
+						  t(self.length,self.width_p),
+						  t(0,self.width_p)]
 			elif abs(self.entrance_wedge_angle) > pi/2:
 				raise ValueError("entrance_wedge_angle of %s greater than pi/2"%self.element_type)
 			elif abs(self.exit_wedge_angle) > pi/2:
 				raise ValueError("exit_wedge_angle of %s greater than pi/2"%self.element_type)
 			else:
-				entry_offset = self.width/2 * sin(self.entrance_wedge_angle)
-				exit_offset = self.width/2 * sin(self.exit_wedge_angle)
-				points = [t(0+entry_offset,self.width/2),
-						  t(0-entry_offset,-self.width/2),
-						  t(self.length+exit_offset,-self.width/2),
-						  t(self.length-exit_offset,self.width/2),
-						  t(0+entry_offset,self.width/2)]
+				entry_offset_p = self.width_p * sin(self.entrance_wedge_angle)
+				exit_offset_p = self.width_p * sin(self.exit_wedge_angle)
+				entry_offset_m = self.width_m * sin(self.entrance_wedge_angle)
+				exit_offset_m = self.width_m * sin(self.exit_wedge_angle)
+				points = [t(0+entry_offset_p,self.width_p),
+						  t(0-entry_offset_m,-self.width_m),
+						  t(self.length+exit_offset_m,-self.width_m),
+						  t(self.length-exit_offset_p,self.width_p),
+						  t(0+entry_offset_p,self.width_p)]
 
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, **style["magnet_outline"])
