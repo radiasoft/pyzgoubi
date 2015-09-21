@@ -83,7 +83,7 @@ def part_info(particle):
 	return part_ob, mass, charge_sign
 
 
-def get_cell_properties(cell, min_ke, max_ke=None, ke_steps=1, particle=None, tol=1e-6, stop_at_first_unstable=False, closed_orbit_range=None, closed_orbit_range_count=None, closed_orbit_init_YTZP=None, reuse_co_coords=True, closed_orbit_debug=False, full_tracking=False):
+def get_cell_properties(cell, min_ke, max_ke=None, ke_steps=1, particle=None, tol=1e-6, stop_at_first_unstable=False, closed_orbit_range=None, closed_orbit_range_count=None, closed_orbit_init_YTZP=None, reuse_co_coords=True, closed_orbit_debug=False, full_tracking=False, smart_co_search=False):
 	"""Get the closed orbits and basic properties of a periodic cell.
 
 	cell: A PyZgoubi Line object containing the beamline elements
@@ -147,6 +147,13 @@ def get_cell_properties(cell, min_ke, max_ke=None, ke_steps=1, particle=None, to
 		print "closed orbit, energy = ", particle_ke
 		rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
 		ob.set(BORO=rigidity)
+		good_cos = (orbit_data['found_co']*1).sum()
+		if smart_co_search and good_cos >= 2:
+			for coordn, coord in enumerate("Y"):
+				good_data = orbit_data[orbit_data['found_co']]
+				good_data = good_data[-5:]
+				co_poly = numpy.polyfit(good_data['KE'], good_data[coord], min(good_cos,4)-1) # get linear or quad fit
+				search_coords[coordn] = numpy.poly1d(co_poly)(particle_ke)
 
 		if closed_orbit_debug:
 			record_fname = "closedorbit_%s.log"%n
