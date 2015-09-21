@@ -670,10 +670,8 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 			try:
 				ftrack = res.get_all('fai')
 				ptrack = res.get_all('plt')
-			except IOError:
+			except (IOError, EmptyFileError):
 				zlog.error("Failed to read fai or plt files")
-				print res.res()
-				raise
 			lp.add_tracks(ftrack=ftrack, ptrack=ptrack, draw=1)
 	
 	if draw_field_midplane:
@@ -690,12 +688,10 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 
 			res = tline.run()
 			try:
-				zlog.error("Failed to read fai or plt files")
 				ftrack = res.get_all('fai')
 				ptrack = res.get_all('plt')
-			except IOError:
-				print res.res()
-				raise
+			except (IOError, EmptyFileError):
+				zlog.error("Failed to read fai or plt files")
 			lp.add_tracks(ftrack=ftrack, ptrack=ptrack, draw=0, field=1)
 
 
