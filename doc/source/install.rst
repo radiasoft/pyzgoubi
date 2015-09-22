@@ -88,6 +88,8 @@ Some features in PyZgoubi require features in the development branch of Zgoubi. 
 
   svn checkout svn://svn.code.sf.net/p/zgoubi/code/trunk zgoubi-code
 
+.. _automaticzgoubiinstall:
+
 Automatic Zgoubi install
 """"""""""""""""""""""""
 
@@ -96,6 +98,31 @@ PyZgoubi includes an automatic script for building a development version of Zgou
   pyzgoubi --install-zgoubi
 
 You will then need to edit your PyZgoubi configuration file to use this build. Edit the settings.ini file in the .pyzgoubi folder in your home directory, and add the path line given by the previous command.
+
+Specific versions can be built::
+
+  pyzgoubi --install-zgoubi 570
+  pyzgoubi --install-zgoubi list   # to see a list of avaliable versions
+
+Additional build options can be given::
+
+  pyzgoubi --install-zgoubi MXSTEP=1000
+
+This allows adjusting some of the compile time parameters found in the include/ files, for example
+
++----------------+-------------------------------------------+
+| Parameters     |                                           |
++================+===========================================+
+| MXSTEP         | Maximum steps per magnet                  |
++----------------+-------------------------------------------+
+| MXL            | Maximum elements in line                  |
++----------------+-------------------------------------------+
+| MXT            | Maximum number of particles               |
++----------------+-------------------------------------------+
+| MXX, MXY       | Maximum steps in X and Y for field maps   |
++----------------+-------------------------------------------+
+| IZ             | Maximum steps in Z for field maps         |
++----------------+-------------------------------------------+
 
 
 Automatic Zgoubi install Windows
