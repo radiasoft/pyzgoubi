@@ -13,6 +13,15 @@ import scipy.spatial
 null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL REBELOTE".split()
 rect_elements = "DRIFT MULTIPOL QUADRUPO BEND TOSCA".split()
 
+def get_param(element, name, fallback=None):
+	if hasattr(element, "plot_hints") and name in element.plot_hints:
+		return element.plot_hints[name]
+	elif hasattr(element, name):
+		return element.get(name)
+	elif fallback is not None:
+		return fallback
+	raise ValueError("Element: %s Type: %s has no atrribute or plot hint for %s"%(element.label1, element._zgoubi_name,name))
+
 
 
 class LabPlotElement(object):
@@ -30,16 +39,24 @@ class LabPlotElement(object):
 		self.exit_coord = list(self.entry_coord) # coord of the exit of the ref line
 		self.exit_angle = self.entry_angle #  angle of the exit of the ref line
 
+		if self.element_type == "TOSCA":
+			if hasattr(self.z_element, "plot_hints") and "AT" in self.z_element.plot_hints:
+				print "polar"
+				# Then is is a polar TOSCA, so change type
+				self.element_type = "TOSCAp"
+			elif hasattr(self.z_element, "plot_hints") and "XL" in self.z_element.plot_hints:
+				# Then is rectagular TOSCA
+				pass
+			else:
+				raise ValueError("TOSCA does not supply enough information for plotting. Use set_plot_hint() to set AT or XL")
+
 		if self.element_type in null_elements:
 			# does not effect locations
 			pass
 
 		elif self.element_type in rect_elements:
 			# step by length, no angle change
-			if hasattr(self.z_element, "XL"):
-				self.length = self.z_element.XL
-			else:
-				self.length = self.z_element.plot_hints['XL']
+			self.length = get_param(self.z_element,"XL")
 
 			self.exit_coord = self.transform(self.length,0)
 			self.entrance_wedge_angle = 0
@@ -49,16 +66,13 @@ class LabPlotElement(object):
 				self.width_p =  self.z_element.R_0
 				self.width_m =  self.z_element.R_0
 			else:
-				self.width_p = 10
-				self.width_m = 10
-			if hasattr(self.z_element, "plot_hints") and "width" in self.z_element.plot_hints:
+				width = get_param(self.z_element,"width", 20)
 				try:
-					self.width_p = self.z_element.plot_hints['width']/2
-					self.width_m = self.z_element.plot_hints['width']/2
+					self.width_p = float(width)/2
+					self.width_m = float(width)/2
 				except TypeError:
-					self.width_p = self.z_element.plot_hints['width'][0]
-					self.width_m = self.z_element.plot_hints['width'][1]
-
+					self.width_p = float(width[0])
+					self.width_m = float(width[1])
 
 			if self.element_type in "MULTIPOL QUADRUPO".split():
 				if self.z_element.KPOS != 1:
@@ -89,7 +103,7 @@ class LabPlotElement(object):
 			self.exit_coord[1] += self.z_element.YCE * cos(self.exit_angle)
 
 
-		elif self.element_type in ["DIPOLE", "DIPOLES", "FFAG", "POLARMES"]:
+		elif self.element_type in ["DIPOLE", "DIPOLES", "FFAG", "POLARMES", "TOSCAp"]:
 			if self.element_type in ["POLARMES"]:
 				# to get opening angle read the list of angles in the field map
 				self.fmap_file_path = self.z_element.FNAME
@@ -99,20 +113,23 @@ class LabPlotElement(object):
 				phi_line = phi_line.split()
 				self.dip_at = float(phi_line[-1])
 			else:
-				self.dip_at = radians(self.z_element.AT) # sector angle of magnet region
+				self.dip_at = radians(get_param(self.z_element,"AT"))
+
 			self.dip_re = self.z_element.RE # radius at entry
 			self.dip_rs = self.z_element.RS # radius at exit
 			self.dip_te = self.z_element.TE # radius at entry
 			self.dip_ts = self.z_element.TS # radius at exit
-			self.width_p = min(self.dip_re, 250) # FIXME need proper method for setting widths
-			self.width_m = min(self.dip_re, 250)
+
+			width = min(self.dip_re, 250)*2 # default
 			if sector_width:
-				try:
-					self.width_p = float(sector_width)/2
-					self.width_m = float(sector_width)/2
-				except TypeError:
-					self.width_p = float(sector_width[0])
-					self.width_m = float(sector_width[1])
+				width = sector_width # override with function argument
+			width = get_param(self.z_element,"width",width) # override with plot_hint
+			try:
+				self.width_p = float(width)/2
+				self.width_m = float(width)/2
+			except TypeError:
+				self.width_p = float(width[0])
+				self.width_m = float(width[1])
 
 			if self.dip_te != 0 or self.dip_ts != 0:
 				raise ValueError("Non zero TE or TS not implemented for %s"%self.element_type)
@@ -141,7 +158,7 @@ class LabPlotElement(object):
 			raise ValueError("Can't handle element "+ self.element_type)
 	
 	def transform(self, x, y):
-		if self.element_type not in ["DIPOLE", "DIPOLES", "POLARMES", "FFAG"]:
+		if self.element_type not in ["DIPOLE", "DIPOLES", "POLARMES", "FFAG","TOSCAp"]:
 			x0, y0 = self.entry_coord # FIXME how to handle transform in changref
 			a0 = self.entry_angle
 
@@ -151,6 +168,8 @@ class LabPlotElement(object):
 			# coords are in polar
 			x0, y0 = self.sector_center_coord
 			a0 = self.prev_angle
+			if self.element_type == "TOSCAp":
+				a0-=self.dip_at/2
 
 			x1 = x0 + y * sin(-a0 + x)
 			y1 = y0 + y * cos(-a0 + x)
@@ -162,13 +181,16 @@ class LabPlotElement(object):
 			points = [t(0,0), t(self.length,0)]
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, **style["reference"])
-		if self.element_type in ["DIPOLE", "DIPOLES", "FFAG", "POLARMES"]:
+		if self.element_type in ["DIPOLE", "DIPOLES", "FFAG", "POLARMES","TOSCAp"]:
 			re = self.dip_re
 			a = self.dip_at
+			ang_shift = 0
+			if self.element_type == "TOSCAp":
+				ang_shift = -self.dip_at/2
 			arcsteps = 20
 			points = []
 			for a1 in np.linspace(0,a,arcsteps):
-				points.append(t(a1, re))
+				points.append(t(a1+ang_shift, re))
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, **style["reference"])
 
@@ -201,23 +223,25 @@ class LabPlotElement(object):
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, **style["magnet_outline"])
 
-		if self.element_type in ["DIPOLE", "DIPOLES","POLARMES", "FFAG"]:
+		if self.element_type in ["DIPOLE", "DIPOLES","POLARMES", "FFAG","TOSCAp"]:
 			# in polar
 			re = self.dip_re
 			wp = self.width_p
 			wm = -self.width_m
 			a = self.dip_at
+			ang_shift = 0
+			if self.element_type == "TOSCAp":
+				ang_shift = -self.dip_at/2
 			arcsteps = 20
-			points = [ t(0, re + wm),
-			           t(0, re + wp)]
+			points = [ t(0+ang_shift, re + wm),
+			           t(0+ang_shift, re + wp)]
 			for a1 in np.linspace(0,a,arcsteps):
-				points.append(t(a1, re + wp))
-			points.append(t(a, re + wp))
-			points.append(t(a, re + wm))
+				points.append(t(a1+ang_shift, re + wp))
+			points.append(t(a+ang_shift, re + wp))
+			points.append(t(a+ang_shift, re + wm))
 			for a1 in np.linspace(a,0,arcsteps):
-				points.append(t(a1, re + wm))
+				points.append(t(a1+ang_shift, re + wm))
 
-			print a, re, wm, wp
 			xs, ys = zip(*points)
 
 			if self.element_type in ["DIPOLES", "FFAG"]:
