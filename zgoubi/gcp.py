@@ -51,6 +51,7 @@ data_def = [
 ('DA_angles', numpy.object),
 ('ftrack', numpy.object),
 ('ptrack', numpy.object),
+('phase_space', numpy.object),
 ]
 
 
@@ -1202,6 +1203,59 @@ def get_dynamic_aperture(cell, data, particle, npass, nangles=3, tol=0.01, quick
 
 		print "DA", data[n]['DA']
 		
+
+def get_phase_space(cell, data, particle, npass, emits=None):
+	"""Track particle for npass turns
+
+	"""
+
+	tline = Line('test_line')
+	tline.add_input_files(cell.input_files)
+	ob = OBJET2()
+	tline.add(ob)
+	part_ob, mass, charge_sign = part_info(particle)
+	tline.add(part_ob)
+	tline.add(cell)
+	tline.add(FAISCNL("end", FNAME='zgoubi.fai'))
+	tline.add(REBELOTE(NPASS=npass, K=99))
+	tline.add(END())
+	tline.full_tracking(False)
+
+	for n, particle_ke in enumerate(data['KE']):
+	#	if not data[n]['stable']: continue
+		if not data[n]['found_co']: continue
+		print "get_phase_space ke", particle_ke, "n"
+		rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
+		ob.set(BORO=rigidity)
+		Yc, Tc, Zc, Pc = [data[n]['Y'], data[n]['T'],data[n]['Z'],data[n]['P'] ]
+		alpha_y, beta_y, alpha_z, beta_z = data[n]['ALPHA_Y'], data[n]['BETA_Y'],data[n]['ALPHA_Z'],data[n]['BETA_Z']
+		
+		ob.clear()
+		for m, emit in enumerate(emits):
+			# horizontal particle
+			current_YTZP = emittance_to_coords(emit/sqrt(2), emit/sqrt(2), [alpha_y,alpha_z], [beta_y, beta_z])
+			Ye1, Te1, Ze1, Pe1 = current_YTZP[0][0], current_YTZP[0][1], current_YTZP[0][2], current_YTZP[0][3]
+			ob.add(Y=Yc+Ye1, T=Tc+Te1, Z=Zc+0, P=Pc+0, LET='A', D=1)
+
+			# vertical particle
+			current_YTZP = emittance_to_coords(emit*emit/sqrt(2), emit/sqrt(2), [alpha_y,alpha_z], [beta_y, beta_z])
+			Ye1, Te1, Ze1, Pe1 = current_YTZP[0][0], current_YTZP[0][1], current_YTZP[0][2], current_YTZP[0][3]
+			ob.add(Y=Yc+0, T=Tc+0, Z=Zc+Ze1, P=Pc+Pe1, LET='B', D=1)
+			
+		res = tline.run()
+		if res.test_rebelote():
+			stab = True
+			fai_data = res.get_all('fai')
+		else:
+			stab = False
+
+			try:
+				fai_data = res.get_all('fai')
+			except IOError:
+				print "No fai file"
+				continue
+		data[n]['phase_space'] = fai_data
+
 
 
 def plot_dynamic_aperture(cell, data, particle, npass, output_prefix="results/da_"):
