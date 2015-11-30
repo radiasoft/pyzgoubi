@@ -8,6 +8,7 @@ import numpy as np
 from zgoubi.core import zlog
 import scipy.interpolate
 import scipy.spatial
+import os
 
 
 null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL REBELOTE".split()
@@ -25,7 +26,7 @@ def get_param(element, name, fallback=None):
 
 
 class LabPlotElement(object):
-	def __init__(self, z_element, prev_coord, prev_angle, boro, sector_width):
+	def __init__(self, z_element, prev_coord, prev_angle, boro, sector_width, line):
 		self.z_element = z_element
 		self.prev_coord = list(prev_coord)
 		self.prev_angle = prev_angle
@@ -107,8 +108,14 @@ class LabPlotElement(object):
 			if self.element_type in ["POLARMES"]:
 				# to get opening angle read the list of angles in the field map
 				self.fmap_file_path = self.z_element.FNAME
-				fmap_file = open(self.fmap_file_path)
-				for n in xrange(4): line = fmap_file.readline()
+				try:
+					fmap_file = open(self.fmap_file_path)
+				except IOError:
+					for fname in line.input_files:
+						if os.path.basename(fname) == self.z_element.FNAME:
+							self.fmap_file_path = fname
+							fmap_file = open(self.fmap_file_path)
+				for n in xrange(4): dummy = fmap_file.readline()
 				phi_line = fmap_file.readline()
 				phi_line = phi_line.split()
 				self.dip_at = float(phi_line[-1])
@@ -381,7 +388,7 @@ class LabPlot(object):
 					#zlog.warn("Repeated label '%s'"%label)
 			else:
 				label = ""
-			lpelem = LabPlotElement(elem, position, angle, boro=self.boro, sector_width=self.sector_width)
+			lpelem = LabPlotElement(elem, position, angle, boro=self.boro, sector_width=self.sector_width, line=self.line)
 			self.elements.append(lpelem)
 			self.element_label1.append(label)
 			angle = lpelem.exit_angle
