@@ -58,6 +58,7 @@ except ImportError:
 	sys.exit(1)
 
 from zgoubi.constants import *
+from zgoubi.common import *
 from zgoubi.exceptions import *
 import zgoubi.io as io
 import zgoubi.bunch
@@ -1551,8 +1552,7 @@ class Results(object):
 		in_matrix = False
 
 		parsed_info = dict(matrix1=None, twiss=None, tune=(-1, -1))
-		tp = numpy.zeros(1, dtype=[('beta_y', 'f8'), ('alpha_y', 'f8'), ('gamma_y', 'f8'), ('disp_y', 'f8'), ('disp_py', 'f8'),
-						('beta_z', 'f8'), ('alpha_z', 'f8'), ('gamma_z', 'f8'), ('disp_z', 'f8'), ('disp_pz', 'f8')])
+		tp = twiss_param_array()
 		matrix_lines = []
 		
 		fh = self.res_fh()

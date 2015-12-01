@@ -54,6 +54,72 @@ data_def = [
 ('phase_space', numpy.object),
 ]
 
+data_def_nonperiodic = [
+('KE',numpy.float64),
+('stable',numpy.bool), # some functions skip over "unstable" orbits
+('Y',numpy.float64),
+('T',numpy.float64),
+('Z',numpy.float64),
+('P',numpy.float64),
+('BETA_Y',numpy.float64),
+('BETA_Z',numpy.float64),
+('ALPHA_Y',numpy.float64),
+('ALPHA_Z',numpy.float64),
+('GAMMA_Y',numpy.float64),
+('GAMMA_Z',numpy.float64),
+('DISP_Y',numpy.float64),
+('DISP_Z',numpy.float64),
+('DISP_PY',numpy.float64),
+('DISP_PZ',numpy.float64),
+('Y0',numpy.float64),
+('T0',numpy.float64),
+('Z0',numpy.float64),
+('P0',numpy.float64),
+('BETA_Y0',numpy.float64),
+('BETA_Z0',numpy.float64),
+('ALPHA_Y0',numpy.float64),
+('ALPHA_Z0',numpy.float64),
+('GAMMA_Y0',numpy.float64),
+('GAMMA_Z0',numpy.float64),
+('DISP_Y0',numpy.float64),
+('DISP_Z0',numpy.float64),
+('DISP_PY0',numpy.float64),
+('DISP_PZ0',numpy.float64),
+('NU_Y',numpy.float64),
+('NU_Z',numpy.float64),
+('matrix', numpy.float64, (6,6)),
+('tof',numpy.float64),
+('S',numpy.float64),
+('MAX_BY', numpy.float64),
+('MIN_BY', numpy.float64),
+('MAX_BZ', numpy.float64),
+('MIN_BZ', numpy.float64),
+('twiss_profile', numpy.object),
+('full_twiss_profile', numpy.object),
+('ftrack', numpy.object),
+('ptrack', numpy.object),
+]
+
+
+class GCPData(numpy.ndarray):
+	"Subclass of numpy.ndarray to add an info field"
+	# based on example in https://docs.scipy.org/doc/numpy/user/basics.subclassing.html
+	def __new__(subtype, shape, dtype=None, buffer=None, offset=0, strides=None, order=None, info=None):
+		info2 = dict(periodic=True, particle="")
+		info2.update(info)
+		if dtype is None:
+			if info2["periodic"]:
+				dtype = data_def
+			else:
+				dtype = data_def_nonperiodic
+
+		obj = numpy.ndarray.__new__(subtype, shape, dtype, buffer, offset, strides,order)
+		obj.info = info2
+		return obj
+
+	def __array_finalize__(self, obj):
+		if obj is None: return
+		self.info = getattr(obj, 'info', None)
 
 
 
@@ -109,7 +175,8 @@ def get_cell_properties(cell, min_ke, max_ke=None, ke_steps=1, particle=None, to
 
 	if max_ke==None: max_ke = min_ke
 	ke_list = numpy.linspace(min_ke, max_ke, ke_steps)
-	orbit_data =  numpy.zeros(ke_steps, data_def)
+
+	orbit_data = GCPData(ke_steps, info=dict(periodic=True, particle=particle))
 	for n, particle_ke in enumerate(ke_list):
 		orbit_data['KE'][n] = particle_ke
 
@@ -265,6 +332,133 @@ def get_cell_properties(cell, min_ke, max_ke=None, ke_steps=1, particle=None, to
 	return orbit_data
 
 
+def get_cell_properties_nonperiodic(cell, min_ke, max_ke=None, ke_steps=1, particle=None, init_YTZP=None, init_twiss=None, full_tracking=False):
+	"""Get the basic properties of a non-periodic cell. 
+
+	Works similarly to get_cell_properties(), but rather than finding a periodic solution for closed orbit and twiss parameters, takes them as input:
+	init_YTZP: list of the Y, T, Z and P at the start of the cell
+	init_twiss: initial twiss params, use twiss_param_array() to create
+
+	cell: A PyZgoubi Line object containing the beamline elements
+	min_ke, max_ke, ke_steps: kinetic energy in eV. For a single step just set min_ke
+	particle: "p", "e", "mu-", "mu+", or "Bismuth"
+	full_tracking=True is required in order get minimum and maximum magnetic fields along orbit
+
+	returns orbit_data, an array with ke_steps elements, with the following data
+	KE : particle KE in eV
+	stable : boolean stability flags, always true, but useful for controlling which orbits are processed by other functions
+	Y0, T0, Z0, P0 : position and angles at start of cell, in cm and mrad
+	Y, T, Z, P : position and angles at end of cell, in cm and mrad
+	BETA_Y0, BETA_Z0, ALPHA_Y0, ALPHA_Z0, GAMMA_Y0, GAMMA_Z0, DISP_Y0, DISP_Z0, DISP_PY0, DISP_PZ0, NU_Y0, NU_Z0: twiss functions at start of cell
+	BETA_Y, BETA_Z, ALPHA_Y, ALPHA_Z, GAMMA_Y, GAMMA_Z, DISP_Y, DISP_Z, DISP_PY, DISP_PZ, NU_Y, NU_Z: twiss functions at end of cell
+	tof, S: time of flight and path length along closed orbit
+	matrix, matrix_trace_YT, matrix_trace_ZP: transfer matrix and traces
+	MAX_BY, MIN_BY, MAX_BZ, MIN_BZ: minimum and maximum fields seen along closed orbit (requires full_tracking=True)
+	"""
+
+	if max_ke==None: max_ke = min_ke
+	if init_YTZP==None: init_YTZP=[0,0,0,0]
+	ke_list = numpy.linspace(min_ke, max_ke, ke_steps)
+
+	orbit_data = GCPData(ke_steps, info=dict(periodic=False, particle=particle))
+	for n, particle_ke in enumerate(ke_list):
+		orbit_data['KE'][n] = particle_ke
+		orbit_data['Y0'][n],orbit_data['T0'][n],orbit_data['Z0'][n], orbit_data['P0'][n] = init_YTZP
+	orbit_data["BETA_Y0"] = init_twiss["beta_y"]
+	orbit_data["ALPHA_Y0"] = init_twiss["alpha_y"]
+	orbit_data["GAMMA_Y0"] = init_twiss["gamma_y"]
+	orbit_data["DISP_Y0"] = init_twiss["disp_y"]
+	orbit_data["BETA_Z0"] = init_twiss["beta_z"]
+	orbit_data["ALPHA_Z0"] = init_twiss["alpha_z"]
+	orbit_data["GAMMA_Z0"] = init_twiss["gamma_z"]
+	orbit_data["DISP_Z0"] = init_twiss["disp_z"]
+	orbit_data["stable"] = True
+
+	part_ob, mass, charge_sign = part_info(particle)
+
+	# get tunes and twiss
+	tline = Line('test_line')
+	tline.add_input_files(cell.input_files)
+	ob = OBJET5()
+	tline.add(ob)
+	tline.add(part_ob)
+	tline.add(DRIFT("fco", XL=0* cm_))
+	tline.add(FAISCNL(FNAME='zgoubi.fai',))
+
+	tline.add(cell)
+
+	tline.add(DRIFT("end", XL=0* cm_))
+	tline.add(FAISCNL("end",FNAME='zgoubi.fai',))
+	tline.add(MATRIX(IORD=1, IFOC=11))
+	tline.add(END())
+
+	for n, particle_ke in enumerate(ke_list):
+		print "twiss, energy = ", particle_ke
+		
+		rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
+		ob.set(BORO=rigidity)
+		
+		ref_Y,ref_T,ref_Z,ref_P = orbit_data['Y0'][n],orbit_data['T0'][n],orbit_data['Z0'][n], orbit_data['P0'][n]
+		#print "ref_Y,ref_T,ref_Z,ref_P", ref_Y,ref_T,ref_Z,ref_P
+		ob.set(YR=ref_Y, TR=ref_T, ZR=ref_Z, PR=ref_P, XR=0, DR=1)
+		step_disp = 0.001 #cm
+		step_ang =  0.01 #mrad
+		ob.set(PY=step_disp, PT=step_ang, PZ=step_disp, PP=step_ang, PX=step_disp, PD=0.001)
+		tline.full_tracking(full_tracking)
+
+		res =tline.run()
+		try:
+			orbit_data['matrix'][n] = res.get_transfer_matrix()
+		except BadLineError:
+			continue
+		
+		tune = res.get_tune()
+		orbit_data['NU_Y'][n],orbit_data['NU_Z'][n] = tune
+
+		if full_tracking:
+			ptrack = res.get_all('plt')
+			by = ptrack['BY']
+			bz = ptrack['BZ']
+			orbit_data['MAX_BY'][n] = by.max()
+			orbit_data['MIN_BY'][n] = by.min()
+			orbit_data['MAX_BZ'][n] = bz.max()
+			orbit_data['MIN_BZ'][n] = bz.min()
+
+		orbit_data['BETA_Y0'][n] = init_twiss['beta_y']
+		orbit_data['ALPHA_Y0'][n] = init_twiss['alpha_y']
+		orbit_data['GAMMA_Y0'][n] = init_twiss['gamma_y']
+		orbit_data['DISP_Y0'][n] = init_twiss['disp_y']
+		orbit_data['DISP_PY0'][n] = init_twiss['disp_py']
+		orbit_data['BETA_Z0'][n] = init_twiss['beta_z']
+		orbit_data['ALPHA_Z0'][n] = init_twiss['alpha_z']
+		orbit_data['GAMMA_Z0'][n] = init_twiss['gamma_z']
+		orbit_data['DISP_Z0'][n] = init_twiss['disp_z']
+		orbit_data['DISP_PZ0'][n] = init_twiss['disp_pz']
+
+		# FIXME: can probably just propergate these thought the matrix
+		# see SY Lee pg 48
+		twiss_profiles = get_twiss_profiles(tline,None, input_twiss_parameters=init_twiss, calc_dispersion=0)
+		orbit_data['BETA_Y'][n] = twiss_profiles['beta_y'][-1]
+		orbit_data['ALPHA_Y'][n] = twiss_profiles['alpha_y'][-1]
+		orbit_data['GAMMA_Y'][n] = twiss_profiles['gamma_y'][-1]
+		orbit_data['DISP_Y'][n] = twiss_profiles['disp_y'][-1]
+		orbit_data['DISP_PY'][n] = twiss_profiles['disp_py'][-1]
+		orbit_data['BETA_Z'][n] = twiss_profiles['beta_z'][-1]
+		orbit_data['ALPHA_Z'][n] = twiss_profiles['alpha_z'][-1]
+		orbit_data['GAMMA_Z'][n] = twiss_profiles['gamma_z'][-1]
+		orbit_data['DISP_Z'][n] = twiss_profiles['disp_z'][-1]
+		orbit_data['DISP_PZ'][n] = twiss_profiles['disp_pz'][-1]
+
+
+		ftrack = res.get_all('fai')
+		ftrack = ftrack[ftrack['ID']==1]
+		for key in "tof S Y T Z P".split():
+			orbit_data[key][n] = ftrack[key][-1]
+		res.clean()
+		
+	return orbit_data
+
+
 def get_cell_tracks(cell, data, particle, full_tracking=False):
 	"""Get tracks along the closed orbit for values in data
 	cell: periodic cell
@@ -276,7 +470,11 @@ def get_cell_tracks(cell, data, particle, full_tracking=False):
 	
 	"""
 	for n, particle_ke in enumerate(data['KE']):
-		ref_Y,ref_T,ref_Z,ref_P = data[n]['Y'], data[n]['T'], data[n]['Z'], data[n]['P']
+		if data.info["periodic"]:
+			ref_Y,ref_T,ref_Z,ref_P = data[n]['Y'], data[n]['T'], data[n]['Z'], data[n]['P']
+		else:
+			ref_Y,ref_T,ref_Z,ref_P = data[n]['Y0'], data[n]['T0'], data[n]['Z0'], data[n]['P0']
+
 		tracks = get_tracks(cell=cell, start_YTZP=[ref_Y,ref_T,ref_Z,ref_P],
 		                    particle=particle, ke=particle_ke, full_tracking=full_tracking)
 		data[n]['ftrack'] = tracks['ftrack']
@@ -518,6 +716,7 @@ def get_twiss_params(cell, data, particle, output_prefix="results/twiss_profiles
 	tline.add(part_ob)
 	
 	tline.add(DRIFT('start', XL=0))
+	tline.add(FAISCNL(FNAME='zgoubi.fai',))
 
 	for e in cell.elements():
 		isphysical = False
@@ -534,6 +733,7 @@ def get_twiss_params(cell, data, particle, output_prefix="results/twiss_profiles
 			tline.add(FAISCNL(FNAME='zgoubi.fai',))
 
 	tline.add(DRIFT('end', XL=0))
+	tline.add(FAISCNL(FNAME='zgoubi.fai',))
 	tline.add(MATRIX(IORD=1,IFOC=11))	
 	tline.add(END())
 
@@ -545,18 +745,20 @@ def get_twiss_params(cell, data, particle, output_prefix="results/twiss_profiles
 
 		ref_Y,ref_T,ref_Z,ref_P = data[n]['Y'], data[n]['T'], data[n]['Z'], data[n]['P']
 		ob.set(YR=ref_Y, TR=ref_T, ZR=0, PR=0, XR=0)
-		init_twiss = numpy.zeros(1,dtype=[('beta_y','f8'),('alpha_y','f8'),('gamma_y','f8'),('disp_y','f8'),('disp_py','f8'),
-		                         ('beta_z','f8'),('alpha_z','f8'),('gamma_z','f8'),('disp_z','f8'),('disp_pz','f8')])
-		init_twiss["beta_y"] = data[n]["BETA_Y"]
-		init_twiss['alpha_y'] = data[n]['ALPHA_Y']
-		init_twiss['gamma_y'] = data[n]['GAMMA_Y']
-		init_twiss['disp_y'] = data[n]['DISP_Y']
-		init_twiss['disp_py'] = data[n]['DISP_PY']
-		init_twiss['beta_z'] = data[n]['BETA_Z']
-		init_twiss['alpha_z'] = data[n]['ALPHA_Z']
-		init_twiss['gamma_z'] = data[n]['GAMMA_Z']
-		init_twiss['disp_z'] = data[n]['DISP_Z']
-		init_twiss['disp_pz'] = data[n]['DISP_PZ']
+		init_twiss = twiss_param_array()
+		pn = ""
+		if not data.info["periodic"]:
+			pn="0"
+		init_twiss["beta_y"] = data[n]["BETA_Y"+pn]
+		init_twiss['alpha_y'] = data[n]['ALPHA_Y'+pn]
+		init_twiss['gamma_y'] = data[n]['GAMMA_Y'+pn]
+		init_twiss['disp_y'] = data[n]['DISP_Y'+pn]
+		init_twiss['disp_py'] = data[n]['DISP_PY'+pn]
+		init_twiss['beta_z'] = data[n]['BETA_Z'+pn]
+		init_twiss['alpha_z'] = data[n]['ALPHA_Z'+pn]
+		init_twiss['gamma_z'] = data[n]['GAMMA_Z'+pn]
+		init_twiss['disp_z'] = data[n]['DISP_Z'+pn]
+		init_twiss['disp_pz'] = data[n]['DISP_PZ'+pn]
 		#data[n][["BETA_Y", "ALPHA_Y", "GAMMA_Y", "DISP_Y", "DISP_PY", "BETA_Z", "ALPHA_Z", "GAMMA_Z", "DISP_Z", "DISP_PZ"]]
 	
 		tline.full_tracking(False)
@@ -573,7 +775,7 @@ def plot_twiss_params(data, output_prefix="results/twiss_profiles_"):
 
 	"""
 	import pylab
-	stable_data =  numpy.extract(data['stable'], data)
+	stable_data =  data[data['stable']].copy()
 	full_tracking_message = 0
 	for n, particle_ke in enumerate(stable_data['KE']):
 		if stable_data[n]['full_twiss_profile'] != 0:
@@ -624,12 +826,11 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 
 	if plot_unstable==False:
 		# drop rows that dont start with zero
-		stable_data =  numpy.extract(data['stable'], data)
+		stable_data =  data[data['stable']].copy()
 	else:
 		stable_data = data
-
-
-	cell = uniquify_labels(cell)
+	
+	cell = copy.deepcopy(cell)
 
 	tline = Line('test_line')
 	tline.add_input_files(cell.input_files)
@@ -638,14 +839,13 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 	part_ob, mass, charge_sign = part_info(particle)
 	tline.add(part_ob)
 	tline.add(DRIFT("gcpstart", XL=0* cm_))
-	#add(FAISCEAU("fco"))
 	tline.add(FAISCNL("gcpstart",FNAME='zgoubi.fai',))
 	tline.add(cell)
 	tline.add(DRIFT("gcpend", XL=0* cm_))
 	tline.add(FAISCNL("gcpend", FNAME='zgoubi.fai'))
-	#add(REBELOTE(NPASS=9, K=99))
 	tline.add(END())
 	tline.full_tracking(True, drift_to_multi=True)
+	tline = uniquify_labels(tline)
 
 	# if line contains BENDS, then line will be drawn with first energy, but zgoubi will adjust angles for other particles
 	if len(data['KE']>0):
@@ -658,24 +858,18 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 	
 
 	if draw_tracks:
-		for n, particle_ke in enumerate(stable_data['KE']):
-			print "energy = ", particle_ke
-			rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
-			ob.set(BORO=rigidity)
-
-			ref_Y,ref_T,ref_Z,ref_P = stable_data[n]['Y'], stable_data[n]['T'],stable_data[n]['Z'],stable_data[n]['P']
-			ob.clear()
-			ob.add(Y=ref_Y, T=ref_T, Z=0, P=0, X=0, D=1)
-
-			res = tline.run()
-			try:
-				ftrack = res.get_all('fai')
-				ptrack = res.get_all('plt')
-			except (IOError, EmptyFileError):
+		cell.full_tracking(True, drift_to_multi=True)
+		get_cell_tracks(cell, stable_data, particle, full_tracking=True)
+		for d in stable_data:
+			ftrack = d["ftrack"]
+			ptrack = d["ptrack"]
+			if ftrack is None or ptrack is None:
 				zlog.error("Failed to read fai or plt files")
 			lp.add_tracks(ftrack=ftrack, ptrack=ptrack, draw=1)
 	
 	if draw_field_midplane:
+		# FIXME should use get_tracks 
+		# then can remove tline
 		if min_y is None or max_y is None or y_steps is None:
 			raise ValueError("When using draw_field_midplane, you must set min_y, max_y and y_steps")
 
