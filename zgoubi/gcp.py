@@ -141,6 +141,14 @@ def part_info(particle):
 		part_ob = IMMORTAL_MUON()
 		mass = MUON_MASS
 		charge_sign = +1
+	elif particle == "pi+":
+		part_ob = IMMORTAL_PION()
+		mass = PION_MASS
+		charge_sign = +1
+	elif particle == "pi-":
+		part_ob = IMMORTAL_PION()
+		mass = PION_MASS
+		charge_sign = -1
 	elif particle == "Bismuth":
 		part_ob = PARTICUL(M=ATOMIC_MASS_UNIT*238/1e6, Q=PROTON_CHARGE*4)
 		mass = ATOMIC_MASS_UNIT*238

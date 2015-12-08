@@ -371,6 +371,24 @@ class IMMORTAL_MUON(zgoubi_particul):
 		out += f(MUON_MASS/1e6) +' '+ f(self.anti * MUON_CHARGE) +' '+ f(MUON_ANOM_MAG_MOM) +' '+ f(0) +' 0' +nl
 		return out
 
+class IMMORTAL_PION(zgoubi_particul):
+	"non decaying pion +/-"
+	def __init__(self):
+		self.anti = 1 # 1=particle, -1=anti particle
+		self._params = {}
+		self.label1 = ""
+		self.label2 = ""
+		self._zgoubi_name = "PARTICUL"
+		self._class_name = "IMMORTAL_PION"
+               
+	def output(self):
+		f = self.f2s
+		i = self.i2s
+
+		out = "'PARTICUL'" +nl
+		out += f(PION_MASS/1e6) +' '+ f(self.anti * PION_CHARGE) +' '+ f(0) +' '+ f(0) +' 0' +nl
+		return out
+
 
 class CHANGREF_NEW(zgoubi_element):
 	""" updated CHANGREF works with format XS,YS,ZS for longitudinal, horizontal and vertical shifts

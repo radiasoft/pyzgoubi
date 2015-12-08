@@ -30,6 +30,13 @@ MUON_ANOM_MAG_MOM = (2.0023318396 -2)/2 # from http://en.wikipedia.org/wiki/G-fa
 #: Muon lifetime
 MUON_MEAN_LIFE = 2.197029e-6
 
+#: Pion mass (eV) 
+PION_MASS = 139.57018e6 #PDG2015
+#: Pion charge (C)
+PION_CHARGE = 1.60217653e-19
+#: Pion lifetime
+PION_MEAN_LIFE = 2.6033e-8 #PDG2015
+
 #: Speed of light (m/s)
 SPEED_OF_LIGHT = 299792458
 
