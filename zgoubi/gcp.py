@@ -707,7 +707,7 @@ def cell_properties_table(data, keys, sep="\t"):
 	return out
 
 
-def get_twiss_params(cell, data, particle, output_prefix="results/twiss_profiles_", full_tracking=False):
+def get_twiss_params(cell, data, particle, output_prefix="results/twiss_profiles_", full_tracking=False, calc_dispersion=False):
 	"""Get the periodic Twiss (Courant and Snyder) parameters for the cell. Tracks a bunch of particles containing pairs offset in each plane.
 
 	Must pass in data returned from get_cell_properties() to give initial conditions. The profile is added to the 'twiss_profile' key in the data structure. If full_tracking is enabled, the Twiss parameters are every integration step are recorded, otherwise parameters are recorded at the end of each magnetic element.
@@ -770,25 +770,42 @@ def get_twiss_params(cell, data, particle, output_prefix="results/twiss_profiles
 		#data[n][["BETA_Y", "ALPHA_Y", "GAMMA_Y", "DISP_Y", "DISP_PY", "BETA_Z", "ALPHA_Z", "GAMMA_Z", "DISP_Z", "DISP_PZ"]]
 	
 		tline.full_tracking(False)
-		twiss_profiles = get_twiss_profiles(tline,'%s%s.txt'%(output_prefix, particle_ke), input_twiss_parameters=init_twiss, calc_dispersion=0)
+		twiss_profiles = get_twiss_profiles(tline,'%s%s.txt'%(output_prefix, particle_ke), input_twiss_parameters=init_twiss, calc_dispersion=calc_dispersion)
 		data[n]['twiss_profile'] = twiss_profiles
 		if full_tracking:
 			tline.full_tracking(True)
-			twiss_profiles = get_twiss_profiles(tline, '%s%s_full.txt'%(output_prefix, particle_ke), calc_dispersion=False, input_twiss_parameters=init_twiss)
+			twiss_profiles = get_twiss_profiles(tline, '%s%s_full.txt'%(output_prefix, particle_ke), calc_dispersion=calc_dispersion, input_twiss_parameters=init_twiss)
 			data[n]['full_twiss_profile'] = twiss_profiles
 
 
-def plot_twiss_params(data, output_prefix="results/twiss_profiles_"):
+def plot_twiss_params(data, output_prefix="results/twiss_profiles_", fields=None):
 	"""Plot the Twiss profiles found with get_twiss_params()
 
+	fields: list of fields to plot, beta_y, beta_z, alpha_y, alpha_z, gamma_y, gamma_z, disp_y, disp_z, disp_py, disp_pz
 	"""
-	import pylab
+	from matplotlib import pyplot
+	if fields is None:
+		fields = ["beta_y", "beta_z", "alpha_y", "alpha_z"]
+
 	stable_data =  data[data['stable']].copy()
+
+	field_cats = []
+	for f in fields:
+		if f not in stable_data[0]['twiss_profile'].dtype.names:
+			raise ValueError("Not a valid twiss key: %s"%f)
+		cat = f[:-1]
+		if cat not in field_cats: field_cats.append(cat)
+	
+	if len(field_cats) > 2:
+		raise ValueError("More than 2 types of field not currently supported")
+		
+
 	full_tracking_message = 0
 	for n, particle_ke in enumerate(stable_data['KE']):
-		if stable_data[n]['full_twiss_profile'] != 0:
+		if stable_data[n]['full_twiss_profile'] is not None:
+			print stable_data[n]['full_twiss_profile']
 			twiss_profiles = stable_data[n]['full_twiss_profile']
-		elif stable_data[n]['twiss_profile'] != 0:
+		elif stable_data[n]['twiss_profile'] is not None:
 			if full_tracking_message == 0:
 				zlog.warn("get_twiss_params() called without full_tracking=True, so only plotting twiss at element ends")
 				full_tracking_message = 1
@@ -797,19 +814,28 @@ def plot_twiss_params(data, output_prefix="results/twiss_profiles_"):
 			zlog.error("Call get_twiss_params() before plot_twiss_params()")
 			raise ValueError
 
-		pylab.clf()
-		ax1 = pylab.axes()
-		ax2 = ax1.twinx()
-		l2 = ax1.plot(twiss_profiles['s'],twiss_profiles['beta_y'],"-b", label=r"$\beta_y$")
-		l4 = ax1.plot(twiss_profiles['s'],twiss_profiles['beta_z'],"-c", label=r"$\beta_z$")
-		l6 = ax2.plot(twiss_profiles['s'],twiss_profiles['alpha_y'],"-r", label=r"$\alpha_y$")
-		l8 = ax2.plot(twiss_profiles['s'],twiss_profiles['alpha_z'],"-m", label=r"$\alpha_z$")
-		lns = l2+l4+l6+l8
+
+		pyplot.clf()
+		lns = []
+		ax1 = pyplot.axes()
+		for f in fields:
+			if f.startswith(field_cats[0]):
+				l = ax1.plot(twiss_profiles['s'],twiss_profiles[f],"-", label=f)
+				lns.append(l)
 		ax1.set_xlabel("Path length (m)")
-		ax1.set_ylabel(r"$\beta$ (m)", color='k')
-		ax2.set_ylabel(r"$\alpha$", color='k')
-		pylab.legend(lns, [l.get_label() for l in lns],loc="best") # stackoverflow.com/questions/5484922
-		pylab.savefig('%s%s.pdf'%(output_prefix, particle_ke))
+		ax1.set_ylabel(field_cats[0].partition("_")[0], color='k')
+
+		if len(field_cats) > 1:
+			ax2 = ax1.twinx()
+			for f in fields:
+				if f.startswith(field_cats[1]):
+					l = ax2.plot(twiss_profiles['s'],twiss_profiles[f],"--", label=f)
+					lns.append(l)
+			ax2.set_ylabel(field_cats[1].partition("_")[0], color='k')
+
+		lns = sum(lns, [])
+		pyplot.legend(lns, [l.get_label() for l in lns],loc="best") # stackoverflow.com/questions/5484922
+		pyplot.savefig('%s%s.pdf'%(output_prefix, particle_ke))
 
 
 def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show=False, plot_unstable=False, draw_field_midplane=False, sector_width=None, aspect="equal", style=None, draw_tracks=True, min_y=None, max_y=None, y_steps=None, angle=0, plot_extents=None):
