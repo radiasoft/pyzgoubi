@@ -798,6 +798,13 @@ class Line(object):
 				indices.append(n)
 
 		return indices
+	
+	def get_objet(self):
+		"Find the OBJET element"
+		for e in self.elements():
+			if e._zgoubi_name == "OBJET":
+				return e
+		raise ValueError("Line has no OBJET element")
 			
 	
 class Results(object):

@@ -872,8 +872,8 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 	tline.add(ob)
 	part_ob, mass, charge_sign = part_info(particle)
 	tline.add(part_ob)
-	tline.add(DRIFT("gcpstart", XL=0* cm_))
-	tline.add(FAISCNL("gcpstart",FNAME='zgoubi.fai',))
+	tline.add(DRIFT("gcpstar", XL=0* cm_))
+	tline.add(FAISCNL("gcpstar",FNAME='zgoubi.fai',))
 	tline.add(cell)
 	tline.add(DRIFT("gcpend", XL=0* cm_))
 	tline.add(FAISCNL("gcpend", FNAME='zgoubi.fai'))
@@ -912,6 +912,7 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 			ob.set(BORO=rigidity)
 
 			ref_Y,ref_T,ref_Z,ref_P = Y, angle, 0, 0
+			ob = tline.get_objet()
 			ob.clear()
 			ob.add(Y=ref_Y, T=ref_T, Z=0, P=0, X=0, D=1)
 
@@ -921,6 +922,7 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 				ptrack = res.get_all('plt')
 			except (IOError, EmptyFileError):
 				zlog.error("Failed to read fai or plt files")
+
 			lp.add_tracks(ftrack=ftrack, ptrack=ptrack, draw=0, field=1)
 
 
@@ -1309,6 +1311,7 @@ def get_dynamic_aperture(cell, data, particle, npass, nangles=3, tol=0.01, quick
 			print >>debug_log, "dY, dT, dZ, dP", dY, dT, dZ, dP
 
 		#print dY, dT, dZ, dP
+		ob = tline.get_objet()
 		ob.clear()
 		pn = 0
 		if quick_mode:
@@ -1454,6 +1457,7 @@ def get_phase_space(cell, data, particle, npass, emits=None):
 		if not data[n]['found_co']: continue
 		print "get_phase_space ke", particle_ke, "n"
 		rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
+		ob = tline.get_objet()
 		ob.set(BORO=rigidity)
 		Yc, Tc, Zc, Pc = [data[n]['Y'], data[n]['T'],data[n]['Z'],data[n]['P'] ]
 		alpha_y, beta_y, alpha_z, beta_z = data[n]['ALPHA_Y'], data[n]['BETA_Y'],data[n]['ALPHA_Z'],data[n]['BETA_Z']
@@ -1511,6 +1515,7 @@ def plot_dynamic_aperture(cell, data, particle, npass, output_prefix="results/da
 		pyplot.clf()
 		print "energy = ", particle_ke
 		rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
+		ob = tline.get_objet()
 		ob.set(BORO=rigidity)
 		Yc, Tc, Zc, Pc = [data[n]['Y'], data[n]['T'],data[n]['Z'],data[n]['P'] ]
 		alpha_y, beta_y, alpha_z, beta_z = data[n]['ALPHA_Y'], data[n]['BETA_Y'],data[n]['ALPHA_Z'],data[n]['BETA_Z']
