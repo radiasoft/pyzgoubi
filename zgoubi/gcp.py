@@ -949,7 +949,7 @@ def profile_get_tracks(magnet, min_y, max_y, y_steps, angle=0):
 	tline.add(magnet)
 
 	# test bunch of high rigidity particles
-	testparticles = numpy.zeros([y_steps], dtype=data_def)
+	testparticles = GCPData(y_steps, info=dict(periodic=True, particle="p"))
 	testparticles['Y'] = numpy.linspace(min_y, max_y, y_steps)
 	testparticles['T'] = angle
 	testparticles['KE'] = 1e20
@@ -1165,7 +1165,7 @@ def plot_element_fields(cell, min_y, max_y, y_steps, angle=None, output_prefix_r
 				mask = numpy.logical_and(ys>=min_y, ys<=max_y)
 				pyplot.plot(ys[mask], bz[mask], '-b')
 			elif rad_method == "max":
-				testparticles = numpy.zeros([ecount], dtype=data_def)
+				testparticles = GCPData(ecount, info=dict(periodic=True, particle="p"))
 				testparticles['Y'] = numpy.linspace(min_y, max_y, y_steps)
 				testparticles['T'] = this_angle
 				testparticles['KE'] = 1e15
@@ -1185,7 +1185,7 @@ def plot_element_fields(cell, min_y, max_y, y_steps, angle=None, output_prefix_r
 			pyplot.clf()
 
 			if output_prefix_long:
-				testparticles = numpy.zeros([y_steps], dtype=data_def)
+				testparticles = GCPData(y_steps, info=dict(periodic=True, particle="p"))
 				testparticles['Y'] = numpy.linspace(min_y, max_y, y_steps)
 				testparticles['T'] = this_angle
 				testparticles['KE'] = 1e15
