@@ -121,6 +121,15 @@ class GCPData(numpy.ndarray):
 		if obj is None: return
 		self.info = getattr(obj, 'info', None)
 
+	@classmethod
+	def from_ndarray(cls, data):
+		if "Y0" in data.dtype.names:
+			nc = cls(data.shape, info={"periodic":False})
+		else:
+			nc = cls(data.shape, info={"periodic":True})
+		nc[:] = data[:]
+		return nc
+
 
 
 def part_info(particle):
@@ -477,6 +486,8 @@ def get_cell_tracks(cell, data, particle, full_tracking=False):
 	tracks are added in the data structures ftrack and ptrack fields
 	
 	"""
+	if not isinstance(data, GCPData):
+		data = GCPData.from_ndarray(data)
 	for n, particle_ke in enumerate(data['KE']):
 		if data.info["periodic"]:
 			ref_Y,ref_T,ref_Z,ref_P = data[n]['Y'], data[n]['T'], data[n]['Z'], data[n]['P']
@@ -714,6 +725,8 @@ def get_twiss_params(cell, data, particle, output_prefix="results/twiss_profiles
 
 
 	"""
+	if not isinstance(data, GCPData):
+		data = GCPData.from_ndarray(data)
 	mkdir_p(os.path.dirname(output_prefix))
 
 	tline = Line('test_line')
