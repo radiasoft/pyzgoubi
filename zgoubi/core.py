@@ -920,6 +920,16 @@ class Results(object):
 		"save binary plt file to path"
 		return self._save_file("b_zgoubi.plt", path)
 
+	def impdev_fh(self):
+		"return file handle for impdev file"
+		return self._get_fh("zgoubi.impdev.out")
+	def impdev(self):
+		"return impdev file as string"
+		return self._get_str("zgoubi.impdev.out")
+	def save_impdev(self, path):
+		"save impdev file to path"
+		return self._save_file("zgoubi.impdev.out", path)
+
 	def _bad_float(self, text):
 		"""A wrapper around float to deal with zgoubi output numbers like
 		2.67116100-102 when it means 2.67116100e-102
