@@ -293,6 +293,8 @@ class LabPlotDrawer(object):
 			self.fig.clf()
 			self.ax = self.fig.add_subplot(111)
 			self.ax.set_aspect(self.aspect, adjustable='datalim')
+			if plot_extents is not None:
+				self.ax.set_aspect(self.aspect, adjustable='box')
 		else:
 			raise ValueError("Can't handle mode "+ self.mode)
 
@@ -336,7 +338,10 @@ class LabPlotDrawer(object):
 
 	def save(self,fname):
 		if self.mode == "matplotlib":
-			plt.savefig(fname)
+			if self.plot_extents is not None:
+				plt.savefig(fname, bbox_inches="tight")
+			else:
+				plt.savefig(fname)
 		else: ValueError("Can't handle mode "+ self.mode)
 
 
