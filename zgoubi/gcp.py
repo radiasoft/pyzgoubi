@@ -190,7 +190,7 @@ def get_cell_properties(cell, min_ke, max_ke=None, ke_steps=1, particle=None, to
 	MAX_BY, MIN_BY, MAX_BZ, MIN_BZ: minimum and maximum fields seen along closed orbit (requires full_tracking=True)
 	"""
 
-	if max_ke==None: max_ke = min_ke
+	if max_ke is None: max_ke = min_ke
 	ke_list = numpy.linspace(min_ke, max_ke, ke_steps)
 
 	orbit_data = GCPData(ke_steps, info=dict(periodic=True, particle=particle))
@@ -373,8 +373,8 @@ def get_cell_properties_nonperiodic(cell, min_ke, max_ke=None, ke_steps=1, parti
 	MAX_BY, MIN_BY, MAX_BZ, MIN_BZ: minimum and maximum fields seen along closed orbit (requires full_tracking=True)
 	"""
 
-	if max_ke==None: max_ke = min_ke
-	if init_YTZP==None: init_YTZP=[0,0,0,0]
+	if max_ke is None: max_ke = min_ke
+	if init_YTZP is None: init_YTZP=[0,0,0,0]
 	ke_list = numpy.linspace(min_ke, max_ke, ke_steps)
 
 	orbit_data = GCPData(ke_steps, info=dict(periodic=False, particle=particle))

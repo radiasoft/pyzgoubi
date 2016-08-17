@@ -180,7 +180,7 @@ class OBJET_bunch(zgoubi_element):
 			self.bunch.write_YTZPSD(os.path.join(rundir, "coords.dat"), binary=False)
 
 	def output(self):
-		if self.bunch == None:
+		if self.bunch is None:
 			raise BadLineError, "OBJET_bunch has no bunch set"
 
 		f = self.f2s
@@ -401,7 +401,7 @@ class CHANGREF_NEW(zgoubi_element):
 		self._params = {}
 		self.label1 = ""
 		self.label2 = ""
-		if label1 != None:
+		if label1 is not None:
 			self.label1 = label1
 		self._params['XS'] = None
 		self._params['YS'] = None
@@ -421,17 +421,17 @@ class CHANGREF_NEW(zgoubi_element):
 
 		out = "'CHANGREF'" +' '+self.label1+nl
 		for elem in self.order:
-			if elem == "XS" and self.XS != None:
+			if elem == "XS" and self.XS is not None:
 				out += "XS " + f(self.XS)+' '
-			if elem == "YS" and self.YS != None:
+			if elem == "YS" and self.YS is not None:
 				out += "YS " + f(self.YS)+' '
-			if elem == "ZS" and self.ZS != None:
+			if elem == "ZS" and self.ZS is not None:
 				out += "ZS " + f(self.ZS)+' '
-			if elem == "XR" and self.XR != None:
+			if elem == "XR" and self.XR is not None:
 				out += "XR " + f(self.XR)+' '
-			if elem == "YR" and self.YR != None:
+			if elem == "YR" and self.YR is not None:
 				out += "YR " + f(self.YR)+' '
-			if elem == "ZR" and self.ZR != None:
+			if elem == "ZR" and self.ZR is not None:
 				out += "ZR " + f(self.ZR)+' '
 		out += '\n'
 

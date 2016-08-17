@@ -133,7 +133,7 @@ for test_file in tests:
 	print >> log,"running test %s, %d of %d"%(test_file, tests_run, number_of_tests)
 	log.flush()
 	for zgoubi_bin in zgoubi_bins:
-		if zgoubi_bin == None:
+		if zgoubi_bin is None:
 			command = pyzgoubi_cmd + " " + full_test_file
 			test_name = test_file
 		else:
@@ -171,7 +171,7 @@ for test_file in tests:
 
 print "\nSummary:"
 print >> log,"\nSummary:"
-if zgoubi_bins[0] != None:
+if zgoubi_bins[0] is not None:
 	print "Using zgoubi binaries:"
 	print>> log, "Using zgoubi binaries:"
 	for zgoubi_bin in zgoubi_bins:

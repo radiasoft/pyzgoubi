@@ -15,7 +15,7 @@ def assert_eval_raises(code, loc=None, exc="any"):
 		assert_eval_raises("b = BEND(XX=1)", locals(), ValueError)
 
 	"""
-	if loc == None:
+	if loc is None:
 		loc = locals()
 	try:
 		exec(code, loc)
@@ -32,7 +32,7 @@ def assert_eval_raises(code, loc=None, exc="any"):
 	# exception, correct     # good
 
 	# no exception
-	if raised_exc == None:
+	if raised_exc is None:
 		raise AssertionError('Code: "%s" did not raise any exception, expected "%s"'%(code, exc))
 	# exception
 	else:

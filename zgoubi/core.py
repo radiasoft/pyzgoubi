@@ -166,7 +166,7 @@ def scanf(in_str, fmt):
 		res = fmt.search(in_str)
 	else:
 		res = trans_to_regex(fmt).search(in_str)
-	if res == None:
+	if res is None:
 		return None
 	else:
 		return res.groups()
@@ -604,7 +604,7 @@ class Line(object):
 		"This function should be used identically to the track_bunch function, apart from the addition of the n_threads argument. This will split the bunch into several slices and run them simultaneously. Set n_threads to the number of CPU cores that you have. max_particle can be set to limit how many particles are sent at a time."
 		in_q = Queue.Queue()
 		out_q = Queue.Queue()
-		if max_particles == None:
+		if max_particles is None:
 			max_particles = 1e3
 
 		def worker(in_q, out_q, work_line, name, stop_flag):
@@ -722,13 +722,13 @@ class Line(object):
 		Will use symlinks when avaliable (Linux/UNIX), falls back to copying otherwise.
 		"""
 
-		if file_paths == None:
+		if file_paths is None:
 			file_paths = []
 
 		if hasattr(file_paths, "lower"):
 			file_paths = [file_paths]
 
-		if pattern != None:
+		if pattern is not None:
 			globbed_files = glob(pattern)
 			file_paths += globbed_files
 		self.input_files += file_paths
@@ -1079,7 +1079,7 @@ class Results(object):
 		plt_data = []
 		for lines in yield_n_lines(fh, n_lines):
 			
-			if id != None:
+			if id is not None:
 				try:
 					if lines[3].split()[1] != id:
 						continue # escape quickly if this is not a point we are interested in
@@ -1291,9 +1291,9 @@ class Results(object):
 		for p in alldata:
 			this_coord = []
 			for n, c in enumerate(coord_list):
-				if multi_list == None:
+				if multi_list is None:
 					this_coord.append(p[c])
-				elif multi_list[n] == None:
+				elif multi_list[n] is None:
 					this_coord.append(p[c])
 				else:
 					this_coord.append(p[c] * multi_list[n])
@@ -1310,7 +1310,7 @@ class Results(object):
 			loss = res.loss_summary(all) # if you already have got the coordinates
 			
 		"""
-		if coords == None:
+		if coords is None:
 			coords = self.get_all(file)
 	
 		if all(coords["IEX"] == 1):
@@ -1344,14 +1344,14 @@ class Results(object):
 		except IOError:
 			zlog.warn("Could not read %s. returning empty bunch", file)
 			empty_bunch = zgoubi.bunch.Bunch(nparticles=0, rigidity=0)
-			if old_bunch != None:
+			if old_bunch is not None:
 				empty_bunch.mass = old_bunch.mass
 				empty_bunch.charge = old_bunch.charge
 			return empty_bunch
 		except EmptyFileError:
 			zlog.warn("%s empty. returning empty bunch", file)
 			empty_bunch = zgoubi.bunch.Bunch(nparticles=0, rigidity=0)
-			if old_bunch != None:
+			if old_bunch is not None:
 				empty_bunch.mass = old_bunch.mass
 				empty_bunch.charge = old_bunch.charge
 			return empty_bunch
@@ -1381,7 +1381,7 @@ class Results(object):
 
 		# Create a new bunch and copy the values arcoss (with conversion to SI)
 		last_bunch = zgoubi.bunch.Bunch(nparticles=last_lap.size, rigidity=last_lap[0]['BORO']/1000)
-		if old_bunch != None:
+		if old_bunch is not None:
 			last_bunch.mass = old_bunch.mass
 			last_bunch.charge = old_bunch.charge
 		particles = last_bunch.particles()
@@ -1402,7 +1402,7 @@ class Results(object):
 		"""
 		# FIXME could be done better with numpy
 		all = self.get_all(file, id=id)
-		if element_label == None:
+		if element_label is None:
 			el_points = all
 		else:
 			el_points = [p for p in all if (p['element_label1'] == element_label or p['element_label2'] == element_label)]
@@ -1441,7 +1441,7 @@ class Results(object):
 		"""
 		check if particle exceeded bounds in this element. pass bounds in zgoubi's default unit for that coordinate
 		"""
-		if id != None:
+		if id is not None:
 			part_list = [id]
 		else:
 			part_list = self.list_particles(file)
@@ -1471,7 +1471,7 @@ class Results(object):
 		returns numpy arrays
 		note: lost particles dont crash
 		"""
-		if part_ids == None:
+		if part_ids is None:
 			particle_ids = self.list_particles(file)
 		else:
 			particle_ids = part_ids

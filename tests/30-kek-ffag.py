@@ -105,10 +105,10 @@ res.clean()
 #must give reasonable initial guess at closed orbit
 #co1 = find_closed_orbit(ffagex, init_YTZP=[479.7,0,0,0], D=0.52, tol=1e-10)
 co1 = find_closed_orbit(ffagex, init_YTZP=[480,0,0,0], D=0.52, tol=1e-10)
-assert (co1 != None)
+assert (co1 is not None)
 #co2 = find_closed_orbit(ffagex, init_YTZP=[517,0,0,0], D=1.0, tol=1e-6)
 co2 = find_closed_orbit(ffagex, init_YTZP=[510,0,0,0], D=1.0, tol=1e-10)
-assert (co2 != None)
+assert (co2 is not None)
 
 
 print co1

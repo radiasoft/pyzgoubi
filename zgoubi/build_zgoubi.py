@@ -80,7 +80,7 @@ def get_zgoubi_svn():
 def set_zgoubi_version(version=None):
 	"Set downloaded SVN to a given version. or, if no version given, to latest version"
 	ret = subprocess.call(['svn', 'revert', '-R', '.'], cwd=zgoubi_build_dir2)
-	if version == None:
+	if version is None:
 		ret = subprocess.call(['svn', 'update', '--non-interactive'], cwd=zgoubi_build_dir2)
 	else:
 		ret = subprocess.call(['svn', 'update', '-r', '%s'%version, '--non-interactive'], cwd=zgoubi_build_dir2)

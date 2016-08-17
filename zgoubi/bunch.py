@@ -54,7 +54,7 @@ class Bunch(object):
 		self.mass = mass
 		self.charge = charge
 		self.rigidity = rigidity
-		if ke != None:
+		if ke is not None:
 			self.set_bunch_ke(ke)
 
 	def split_bunch(self, max_particles, n_slices):
@@ -141,7 +141,7 @@ class Bunch(object):
 		ry = sqrt(emit_y) 
 		rz = sqrt(emit_z) 
 
-		if seed != None:
+		if seed is not None:
 			numpy.random.seed(seed)
 
 		u1 = numpy.random.random_sample([npart]) * pi * 2
@@ -188,7 +188,7 @@ class Bunch(object):
 			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
 			raise ValueError
 
-		if seed != None:
+		if seed is not None:
 			numpy.random.seed(seed)
 
 		ry = sqrt(emit_y)
@@ -243,7 +243,7 @@ class Bunch(object):
 			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
 			raise ValueError
 
-		if seed != None:
+		if seed is not None:
 			numpy.random.seed(seed)
 
 		ry = sqrt(emit_y)
@@ -317,7 +317,7 @@ class Bunch(object):
 			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
 			raise ValueError
 
-		if seed != None:
+		if seed is not None:
 			numpy.random.seed(seed)
 
 
@@ -362,7 +362,7 @@ class Bunch(object):
 			raise ValueError
 
 
-		if seed != None:
+		if seed is not None:
 			numpy.random.seed(seed)
 
 		#generate momentum distribution
@@ -558,12 +558,12 @@ class Bunch(object):
 		fmt can be a list of formats in matplotlib style, eg ['rx', 'bo']
 		"""
 		import pylab
-		if fmt == None:
+		if fmt is None:
 			fmt = [',']
 
 		self.check_bunch()
 		bunches = [self]
-		if add_bunch != None:
+		if add_bunch is not None:
 			try:
 				# if add_bunch is iterable, append all is memebers
 				for a_bunch in add_bunch:
@@ -591,12 +591,12 @@ class Bunch(object):
 				pylab.plot(abunch.coords[coordsz[x]], abunch.coords[coordsz[y]], f)
 				pylab.xlabel(coords[x])
 				pylab.ylabel(coords[y])
-			if lims != None and n != 4:
+			if lims is not None and n != 4:
 				pylab.xlim(-lims[x], lims[x])
 				pylab.ylim(-lims[y], lims[y])
 			#pylab.title(title)
 
-		if fname == None:
+		if fname is None:
 			pylab.show()
 		else:
 			pylab.savefig(fname, dpi=300)

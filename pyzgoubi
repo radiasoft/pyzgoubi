@@ -63,7 +63,7 @@ def make_line(*a, **k):
 def run(*a, **k):
 	"Wrapper to run a zgoubi Line, and store the result in a global variable"
 	global default_line, default_result
-	if default_line == None:
+	if default_line is None:
 		zlog.error("Use make_line to create a line before using run()")
 		raise ValueError
 	default_result = default_line.run(*a, **k)
@@ -95,7 +95,7 @@ for func_name in res_funcs:
 
 def _show_help(help_arg):
 	"Show some help"
-	if help_arg == None:
+	if help_arg is None:
 		_show_usage()
 		sys.exit(0)
 	if help_arg.lower() == "elements":

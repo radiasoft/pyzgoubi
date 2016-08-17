@@ -79,7 +79,7 @@ class LabPlotElement(object):
 				if self.z_element.KPOS != 1:
 					raise ValueError("Only %s with KPOS=1 is currently implemented"%self.element_type)
 			elif self.element_type in "BEND":
-				if boro == None : raise ValueError("Must set boro for %s"%self.element_type)
+				if boro is None : raise ValueError("Must set boro for %s"%self.element_type)
 				angle = asin(self.z_element.B1 * self.z_element.XL / 2 / boro)
 				self.entrance_wedge_angle = self.z_element.W_E - angle
 				self.exit_wedge_angle = self.z_element.W_S - angle 
@@ -539,7 +539,7 @@ class LabPlot(object):
 			pids |= set(np.unique(ptrack['ID']))
 			passes  |= set(np.unique(ptrack['PASS']))
 			noels  |= set(np.unique(ptrack['NOEL']))
-		if ftrack == ptrack == None:
+		if ftrack is None and ptrack is None:
 			raise ValueError("Must pass a fai track or plt track (or both)")
 
 		pids = sorted(list(pids))
