@@ -214,5 +214,13 @@ XCE, YCE, ALE : 3E
 !KPOS==2
 RE, TE, RS, TS: 4E
 
+UNIPOT
+UNIPOT
+IL: I
+X1, D, X2, X3, R0 : 5E
+V1, V2: 2E
+XPAS : E
+KPOS, XCE, YCE, ALE : I,3E
+
 YMY # has no parameters
 YMY
