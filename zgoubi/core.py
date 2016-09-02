@@ -964,6 +964,7 @@ class Results(object):
 		else:
 			raise ValueError("get_all_bin() expects name to be 'bplt' or 'bfai'")
 
+		warnings.warn("Support for reading zgoubi <6.0 formats will be removed in the future")
 		plt_data = []
 		for pos in xrange(head_len, file_len, chunk_len):
 			fh.seek(pos)
@@ -1048,6 +1049,7 @@ class Results(object):
 		old_format = False
 		if test_version == '...':
 			old_format = True
+			warnings.warn("Support for reading zgoubi <6.0 formats will be removed in the future")
 		else:
 			return io.read_file(fh)
 
