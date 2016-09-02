@@ -4,7 +4,7 @@
 PyZgoubi Documentation
 ======================
 
-The latest version of PyZgoubi and this document can be found at http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/
+The latest version of PyZgoubi and this document can be found at http://www.hep.manchester.ac.uk/u/samt/pyzgoubi/
 
 
 
