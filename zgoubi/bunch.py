@@ -613,10 +613,6 @@ class Bunch(object):
 		else:
 			pylab.savefig(fname, dpi=300)
 			pylab.clf()
-	
-	def get_emmitance(self):
-		warnings.warn("Bunch.get_emmitance() has been renamed to Bunch.get_emittance(). get_emmitance()"+dep_warn, DeprecationWarning)
-		return self.get_emittance()
 
 	def get_emittance(self):
 		"return emittance h and v in m rad. Uses the bunch full width, so should only be used for a hard edge distribution"
@@ -645,10 +641,6 @@ class Bunch(object):
 		emittance_v = rot_z.max() * rot_p.max()
 		#print "Emittance (h, v):", emittance_h, emittance_v
 		return (emittance_h, emittance_v)
-
-	def get_emmitance_rms(self):
-		warnings.warn("Bunch.get_emmitance_rms() has been renamed to Bunch.get_emittance_rms(). get_emmitance_rms()"+dep_warn, DeprecationWarning)
-		return self.get_emittance_rms()
 
 	def get_emittance_rms(self):
 		"return emittance h and v in m rad. Uses the RMS quantities"
