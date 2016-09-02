@@ -49,6 +49,7 @@ class Bunch(object):
 		if particles is not None:
 			self.coords = particles
 		else:
+			nparticles = int(nparticles)
 			self.coords = numpy.zeros(nparticles, self.min_data_def)
 			self.coords['D'] = 1
 		self.mass = mass
@@ -138,6 +139,8 @@ class Bunch(object):
 			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
 			raise ValueError
 
+		npart = int(npart)
+
 		ry = sqrt(emit_y) 
 		rz = sqrt(emit_z) 
 
@@ -190,6 +193,8 @@ class Bunch(object):
 
 		if seed is not None:
 			numpy.random.seed(seed)
+
+		npart = int(npart)
 
 		ry = sqrt(emit_y)
 		rz = sqrt(emit_z)
@@ -245,6 +250,8 @@ class Bunch(object):
 
 		if seed is not None:
 			numpy.random.seed(seed)
+
+		npart = int(npart)
 
 		ry = sqrt(emit_y)
 		rz = sqrt(emit_z)
@@ -320,6 +327,7 @@ class Bunch(object):
 		if seed is not None:
 			numpy.random.seed(seed)
 
+		npart = int(npart)
 
 		coords = numpy.zeros([npart, 6], numpy.float64)
 		coords[:, 0:4] = numpy.random.normal(0, 0.5, [npart, 4])
@@ -364,6 +372,8 @@ class Bunch(object):
 
 		if seed is not None:
 			numpy.random.seed(seed)
+
+		npart=int(npart)
 
 		#generate momentum distribution
 		if mom_spread > 0.0:
@@ -445,7 +455,9 @@ class Bunch(object):
 		
 		"""
 		dist = numpy.loadtxt(fname)
-		nparts = dist.size / 6
+		if ((dist.size % 6) != 0):
+			raise ValueError("Number of values in %s not a multiple of 6"%fname)
+		nparts = dist.size // 6
 		dist = dist.reshape(nparts, 6)
 		coords = numpy.zeros(nparts, Bunch.min_data_def)
 		#self.coords['KE'] = ke
