@@ -36,7 +36,7 @@ Note that there are some know failures, see CHANGES for more info.
 Documentation is available at http://www.hep.manchester.ac.uk/u/samt/pyzgoubi/doc.html or in the doc/ directory.
 To build the documentation run (you will need sphinx installed)
 
-./setup.py build_doc
+./setup.py build_sphinx
 
 More information can be found at http://www.hep.manchester.ac.uk/u/samt/pyzgoubi/ or https://sourceforge.net/projects/pyzgoubi/
 

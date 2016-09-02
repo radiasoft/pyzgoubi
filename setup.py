@@ -1,30 +1,11 @@
 #!/usr/bin/env python
-from distutils.core import setup
-from distutils.sysconfig import get_python_lib
+#from distutils.core import setup
+from setuptools import setup 
 import sys
 import os
 import shutil
 import errno
 from glob import glob
-
-# if sphinx is available add a build_doc option
-# if not, make a fake option to warn you
-try:
-	from sphinx.setup_command import BuildDoc
-except:
-	from distutils.cmd import Command
-	class BuildDoc(Command):
-		description = "Please install sphinx to use this"
-		user_options = []
-		def initialize_options(self):
-			print "sphinx is not installed"
-			exit()
-
-# sphinx gets upset if this dir does not exist
-try:
-	os.mkdir("doc/build")
-except OSError:
-	pass
 
 MAIN_VERSION = '0.6.0'
 
@@ -76,7 +57,6 @@ setup(name='pyzgoubi',
 	            ('share/pyzgoubi/test',glob('tests/*.py')),
 	          #  ('share/pyzgoubi/doc', glob('doc'))
 	            ],
-	cmdclass={'build_doc': BuildDoc},
 	author="Sam Tygier",
 	author_email="sam.tygier@hep.manchester.ac.uk",
 	url="http://sourceforge.net/projects/pyzgoubi/",

@@ -66,7 +66,7 @@ print >> log, "installing to", install_dir
 #subprocess.Popen(["./setup.py", "clean", "--all"])
 clean_proc = subprocess.Popen(["python", "./setup.py", "clean", "--all"], stdout=log, stderr=subprocess.STDOUT)
 clean_proc.wait()
-install_res = subprocess.Popen(["python", "./setup.py", "install", "--prefix=%s"%install_dir], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+install_res = subprocess.Popen(["python", "./setup.py", "install", "--single-version-externally-managed", "--prefix=%s"%install_dir], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 for line in install_res.communicate()[0].split('\n'):
 	print >>log, line
