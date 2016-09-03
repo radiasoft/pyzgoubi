@@ -11,7 +11,7 @@ The latest version of PyZgoubi and this document can be found at http://www.hep.
 Introduction
 ------------
 
-`Zgoubi <http://sourceforge.net/projects/zgoubi>`_ is a particle tracking code maintained by François Méot. PyZgoubi is an interface to Zgoubi writing in python. It aims to make input files that are easy to read and can contain calculations, loops, and any other python program feature.
+`Zgoubi <http://sourceforge.net/projects/zgoubi>`_ is a particle tracking code maintained by François Méot. PyZgoubi is an interface to Zgoubi written in python. It aims to make input files that are easy to read and can contain calculations, loops, and any other python program feature.
 
 A basic knowledge of `Python <http://python.org/>`_ is useful to use PyZgoubi. Python is a general purpose, high level, interpreted programming language. I recommend the `Official Python Tutorial <http://docs.python.org/tutorial/>`_.
 
