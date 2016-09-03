@@ -603,7 +603,11 @@ class LabPlot(object):
 						x = 0
 
 						# index error here may mean plt track passed as fai track, maybe there should be some way to check
-						xt, yt = self.elements[el_ind+1].transform(x,y)
+						try:
+							xt, yt = self.elements[el_ind+1].transform(x,y)
+						except IndexError:
+							#FIXME: need to understand why we hit this. see example5_kurri.py
+							pass
 						this_track.append([xt,yt,None,None,None])
 
 				#print this_track

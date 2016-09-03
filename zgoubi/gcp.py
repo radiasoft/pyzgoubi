@@ -476,7 +476,7 @@ def get_cell_properties_nonperiodic(cell, min_ke, max_ke=None, ke_steps=1, parti
 	return orbit_data
 
 
-def get_cell_tracks(cell, data, particle, full_tracking=False):
+def get_cell_tracks(cell, data, particle, full_tracking=False, xterm=False):
 	"""Get tracks along the closed orbit for values in data
 	cell: periodic cell
 	data: the data structure return from get_cell_properties()
@@ -495,7 +495,7 @@ def get_cell_tracks(cell, data, particle, full_tracking=False):
 			ref_Y,ref_T,ref_Z,ref_P = data[n]['Y0'], data[n]['T0'], data[n]['Z0'], data[n]['P0']
 
 		tracks = get_tracks(cell=cell, start_YTZP=[ref_Y,ref_T,ref_Z,ref_P],
-		                    particle=particle, ke=particle_ke, full_tracking=full_tracking)
+		                    particle=particle, ke=particle_ke, full_tracking=full_tracking, xterm=xterm)
 		data[n]['ftrack'] = tracks['ftrack']
 		data[n]['ptrack'] = tracks['ptrack']
 
@@ -875,38 +875,32 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 		# drop rows that dont start with zero
 		stable_data =  data[data['stable']].copy()
 	else:
-		stable_data = data
+		stable_data = data.copy()
 	
 	cell = copy.deepcopy(cell)
+	cell.full_tracking(True, drift_to_multi=True)
+	cell = uniquify_labels(cell)
+	
+	cell2 = Line("test_line")
+	#cell2.add(DRIFT("gcpstar", XL=0* cm_)) # not sure if needed, but they probably show up a bug in labplot when using an FFAG
+	cell2.add(cell)
+	#cell2.add(DRIFT("gcpend", XL=0* cm_))
 
-	tline = Line('test_line')
-	tline.add_input_files(cell.input_files)
-	ob = OBJET2()
-	tline.add(ob)
 	part_ob, mass, charge_sign = part_info(particle)
-	tline.add(part_ob)
-	tline.add(DRIFT("gcpstar", XL=0* cm_))
-	tline.add(FAISCNL("gcpstar",FNAME='zgoubi.fai',))
-	tline.add(cell)
-	tline.add(DRIFT("gcpend", XL=0* cm_))
-	tline.add(FAISCNL("gcpend", FNAME='zgoubi.fai'))
-	tline.add(END())
-	tline.full_tracking(True, drift_to_multi=True)
-	tline = uniquify_labels(tline)
 
 	# if line contains BENDS, then line will be drawn with first energy, but zgoubi will adjust angles for other particles
 	if len(data['KE']>0):
 		boro = ke_to_rigidity(data['KE'][0],mass) * charge_sign
 	else:
 		boro = None
-	lp = LabPlot(tline, boro=boro, sector_width=sector_width, aspect=aspect)
+	
+	lp = LabPlot(cell2, boro=boro, sector_width=sector_width, aspect=aspect)
 	if style:
 		lp.set_style(style)
 	
 
 	if draw_tracks:
-		cell.full_tracking(True, drift_to_multi=True)
-		get_cell_tracks(cell, stable_data, particle, full_tracking=True)
+		get_cell_tracks(cell2, stable_data, particle, full_tracking=True)
 		for d in stable_data:
 			ftrack = d["ftrack"]
 			ptrack = d["ptrack"]
@@ -915,28 +909,12 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 			lp.add_tracks(ftrack=ftrack, ptrack=ptrack, draw=1)
 	
 	if draw_field_midplane:
-		# FIXME should use get_tracks 
-		# then can remove tline
 		if min_y is None or max_y is None or y_steps is None:
 			raise ValueError("When using draw_field_midplane, you must set min_y, max_y and y_steps")
 
 		for Y in numpy.linspace(min_y, max_y, y_steps):
-			rigidity = ke_to_rigidity(1e15, mass) * charge_sign
-			ob.set(BORO=rigidity)
-
-			ref_Y,ref_T,ref_Z,ref_P = Y, angle, 0, 0
-			ob = tline.get_objet()
-			ob.clear()
-			ob.add(Y=ref_Y, T=ref_T, Z=0, P=0, X=0, D=1)
-
-			res = tline.run()
-			try:
-				ftrack = res.get_all('fai')
-				ptrack = res.get_all('plt')
-			except (IOError, EmptyFileError):
-				zlog.error("Failed to read fai or plt files")
-
-			lp.add_tracks(ftrack=ftrack, ptrack=ptrack, draw=0, field=1)
+			track = get_tracks(cell2, [Y, angle, 0, 0], particle, 1e15, full_tracking=True)
+			lp.add_tracks(ftrack=track["ftrack"], ptrack=track["ptrack"], draw=0, field=1)
 
 
 	if draw_field_midplane:
