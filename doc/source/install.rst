@@ -184,6 +184,13 @@ Installation
 
 Once the requirements are installed, PyZgoubi itself can be installed.
 
+Installing from the Python Package Index
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+PyZgoubi can be installed with the tool pip::
+
+  pip install --user pyzgoubi
+
 
 Linux and Mac OS X
 ^^^^^^^^^^^^^^^^^^
