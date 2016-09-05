@@ -205,7 +205,7 @@ BNORM, XN, YN, ZN : 4E
 TIT : A80
 IX, IY, IZ, MOD : 4I  #zgoubi manual says 3I, i think its a mistake
 FNAME : A8000
-ID, A, B, C : I, 3E  # if ID < 0 there should be more ABCs etc.
+ID, A, B, C, Ap, Bp, Cp, App, Bpp, Cpp : I, 9E  # if ID < 0 there should be more ABCs etc.
 IORDRE : I
 XPAS : X
 KPOS: I
@@ -213,6 +213,14 @@ KPOS: I
 XCE, YCE, ALE : 3E
 !KPOS==2
 RE, TE, RS, TS: 4E
+
+UNIPOT
+UNIPOT
+IL: I
+X1, D, X2, X3, R0 : 5E
+V1, V2: 2E
+XPAS : E
+KPOS, XCE, YCE, ALE : I,3E
 
 YMY # has no parameters
 YMY

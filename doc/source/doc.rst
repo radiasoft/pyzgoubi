@@ -4,14 +4,14 @@
 PyZgoubi Documentation
 ======================
 
-The latest version of PyZgoubi and this document can be found at http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/
+The latest version of PyZgoubi and this document can be found at http://www.hep.manchester.ac.uk/u/samt/pyzgoubi/
 
 
 
 Introduction
 ------------
 
-`Zgoubi <http://sourceforge.net/projects/zgoubi>`_ is a particle tracking code maintained by François Méot. PyZgoubi is an interface to Zgoubi writing in python. It aims to make input files that are easy to read and can contain calculations, loops, and any other python program feature.
+`Zgoubi <http://sourceforge.net/projects/zgoubi>`_ is a particle tracking code maintained by François Méot. PyZgoubi is an interface to Zgoubi written in python. It aims to make input files that are easy to read and can contain calculations, loops, and any other python program feature.
 
 A basic knowledge of `Python <http://python.org/>`_ is useful to use PyZgoubi. Python is a general purpose, high level, interpreted programming language. I recommend the `Official Python Tutorial <http://docs.python.org/tutorial/>`_.
 
@@ -770,6 +770,17 @@ You need to install the matplotlib tk backend, for example the package python-ma
 
 There are a range of backends to choose from, see http://matplotlib.org/faq/usage_faq.html#what-is-a-backend .
 
+
+Limit issues
+""""""""""""
+
+Zgoubi stores many things in fixed sized arrays. If you reach the limit of these you might see an error such as::
+
+    Y-dim of map is too large, max is  200   Occured in element # 4,  at pass # 1
+    
+    PROCEDURE STOPPED: too many elements
+
+If so you can rebuild Zgoubi with larger settings, see :ref:`automaticzgoubiinstall`. 
 
 
 

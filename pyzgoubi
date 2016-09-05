@@ -29,10 +29,15 @@ from __future__ import division
 from math import *
 import getopt, sys, os
 try:
+	import numpy
+except ImportError:
+	print "Numpy is required for PyZGoubi"
+	sys.exit(1)
+try:
 	eval("1 if True else 2")
 except SyntaxError:
 	print "PyZgoubi requires Python 2.5 or newer (2.7 recommended)"
-	sys.exit()
+	sys.exit(1)
 import subprocess
 from zgoubi.utils import *
 from zgoubi.core import *
@@ -58,7 +63,7 @@ def make_line(*a, **k):
 def run(*a, **k):
 	"Wrapper to run a zgoubi Line, and store the result in a global variable"
 	global default_line, default_result
-	if default_line == None:
+	if default_line is None:
 		zlog.error("Use make_line to create a line before using run()")
 		raise ValueError
 	default_result = default_line.run(*a, **k)
@@ -90,7 +95,7 @@ for func_name in res_funcs:
 
 def _show_help(help_arg):
 	"Show some help"
-	if help_arg == None:
+	if help_arg is None:
 		_show_usage()
 		sys.exit(0)
 	if help_arg.lower() == "elements":
@@ -145,6 +150,8 @@ def _show_usage():
 	print "pyzgoubi", "-i drop to interactive mode on exception"
 	print "pyzgoubi", "--profile write execution profile to prof.log "
 	print "pyzgoubi", "--install-zgoubi"
+	print "pyzgoubi", "--install-zgoubi list"
+	print "pyzgoubi", "--install-zgoubi version KEY=VALUE"
 	print "\nFor documentation see http://www.hep.manchester.ac.uk/u/sam/pyzgoubi/"
 
 def show_version():
@@ -171,12 +178,7 @@ def show_version():
 	print "Python version", sys.version
 	show_path = False
 
-	try:
-		import numpy
-		print "numpy version", numpy.version.version
-	except ImportError:
-		print "No numpy"
-		show_path = True
+	print "numpy version", numpy.version.version
 	try:
 		import scipy
 		print "scipy version", scipy.version.version
@@ -249,10 +251,19 @@ if __name__ == '__main__':
 			sys.exit(0)
 		if o in ['--install-zgoubi']:
 			from zgoubi import build_zgoubi
-			if args:
-				build_zgoubi.install_zgoubi_all(args[0])
+			include_opts = {}
+			arg_ver = None
+			for arg in args:
+				if "=" in arg:
+					k,dummy,v = arg.partition("=")
+					include_opts[k] = v
+				else:
+					arg_ver = arg
+
+			if arg_ver:
+				build_zgoubi.install_zgoubi_all(version=arg_ver, include_opts=include_opts)
 			else:
-				build_zgoubi.install_zgoubi_all()
+				build_zgoubi.install_zgoubi_all(include_opts=include_opts)
 			sys.exit(0)
 		if o in ["-i"]:
 			os.environ["PYTHONINSPECT"] = "1"
@@ -277,7 +288,7 @@ if __name__ == '__main__':
 		shutil.rmtree(tmpdir)
 	except OSError:
 		shutil.rmtree(tmpdir)
-		print "can't zgoubi binary", zgoubi_settings['zgoubi_path']
+		print "can't find zgoubi binary", zgoubi_settings['zgoubi_path']
 		print "please modify the 'zgoubi_path' entry in ~/.pyzgoubi/settings.ini to the full path of zgoubi"
 		print "or add the direcory containing zgoubi to the $PATH"
 		sys.exit(1)

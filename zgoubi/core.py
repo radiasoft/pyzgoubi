@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 #		pyzgoubi - python interface to zgoubi
-#		Copyright 2008 Sam Tygier <Sam.Tygier@hep.manchester.ac.uk>
+#		Copyright 2008-2015 Sam Tygier <Sam.Tygier@hep.manchester.ac.uk>
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
 #       the Free Software Foundation; either version 2 of the License, or
@@ -30,6 +30,7 @@ import tempfile
 import shutil
 import os
 import sys
+import time
 import re
 import struct
 from glob import glob
@@ -48,19 +49,16 @@ zlog = logging.getLogger('PyZgoubi')
 try:
 	import numpy
 except ImportError:
-	zlog.warn("could not import numpy, some functions wont function")
+	zlog.error("Numpy is required for PyZGoubi")
+	sys.exit(1)
 try:
 	from operator import itemgetter
 except ImportError:
-	zlog.error("please use python 2.5 or newer")
+	zlog.error("PyZgoubi requires Python 2.5 or newer (2.7 recommended)")
 	sys.exit(1)
-try:
-	import cairo
-except ImportError:
-	pass
-#	print "cairo not found, no plotting available"
 
 from zgoubi.constants import *
+from zgoubi.common import *
 from zgoubi.exceptions import *
 import zgoubi.io as io
 import zgoubi.bunch
@@ -168,7 +166,7 @@ def scanf(in_str, fmt):
 		res = fmt.search(in_str)
 	else:
 		res = trans_to_regex(fmt).search(in_str)
-	if res == None:
+	if res is None:
 		return None
 	else:
 		return res.groups()
@@ -240,7 +238,7 @@ class zgoubi_element(object):
 	
 	def reverse(self):
 		"Flip the element along the beam line direction, i.e. the entrance and exit properties are swapped"
-		if self._zgoubi_name == "DIPOLES":
+		if self._zgoubi_name in  ["DIPOLES", "FFAG"]:
 			sub_swap_pairs = "G0_E,G0_S KAPPA_E,KAPPA_S NCE,NCS CE_0,CS_0 CE_1,CS_1 CE_2,CS_2 CE_3,CS_3 CE_4,CS_4 CE_5,CS_5 SHIFT_E,SHIFT_S OMEGA_E,OMEGA_S THETA_E,THETA_S R1_E,R1_S U1_E,U1_S U2_E,U2_S R2_E,R2_S"
 			for sub_element in self._looped_data:
 				for swap_pair in sub_swap_pairs.split():
@@ -258,6 +256,12 @@ class zgoubi_element(object):
 		new_e = copy.deepcopy(self)
 		new_e.reverse()
 		return new_e
+
+	def set_plot_hint(self, **hints):
+		"Add hints to help lab_plot"
+		if not hasattr(self, "plot_hints"): self.plot_hints = {}
+		self.plot_hints.update(hints)
+
 
 
 from zgoubi.static_defs import *
@@ -296,6 +300,23 @@ class Line(object):
 		self.full_line = False # has an OBJET, dont allow full lines to be added to each other
 								# only a full line outputs its name into zgoubi.dat
 
+	def __copy__(self):
+		"A shallow copy, contains the same elements"
+		new_line = type(self)(self.name)
+		new_line.element_list = copy.copy(self.element_list)
+		new_line.no_more_xterm = self.no_more_xterm
+		new_line.input_files = self.input_files
+		new_line.full_line = self.full_line
+		return new_line
+	
+	def __deepcopy__(self, memo):
+		"A deep copy, contains the copies of elements"
+		new_line = type(self)(self.name)
+		new_line.element_list = copy.deepcopy(self.element_list, memo)
+		new_line.no_more_xterm = self.no_more_xterm
+		new_line.input_files = self.input_files
+		new_line.full_line = self.full_line
+		return new_line
 
 	def __neg__(self):
 		"return a reversed line"
@@ -459,11 +480,12 @@ class Line(object):
 		return out
 
 		
-	def run(self, xterm=False, tmp_prefix=zgoubi_settings['tmp_dir'], silence=False):
+	def run(self, xterm=False, tmp_prefix=zgoubi_settings['tmp_dir'], silence=False, timer=False):
 		"""Run zgoubi on line.
 		If xterm is true, stop after running zgoubi, and open an xterm for the user in the tmp dir. From here zpop can be run.
 		Returns a :py:class:`Results` object
 		"""
+		if timer: t0 = time.time()
 		if zlog.isEnabledFor(logging.DEBUG):
 			self.check_line()
 		orig_cwd = os.getcwd()
@@ -496,19 +518,17 @@ class Line(object):
 		infile.close()
 
 		command = zgoubi_settings['zgoubi_path']
+		if timer: t1 = time.time()
 		if silence:
-			command += " > zgoubi.stdout 2> zgoubi.sdterr"
+			command += " > zgoubi.stdout"
 			z_proc = subprocess.Popen(command, shell=True, cwd=tmpdir)
 		else:
 			z_proc = subprocess.Popen(command, shell=False, cwd=tmpdir)
 		exe_result = z_proc.wait()
+		if timer: t2 = time.time()
 
 		if exe_result != 0:
 			zlog.error("zgoubi failed to run\nIt returned:%s", exe_result)
-			if exe_result == 32512:
-				raise ZgoubiRunError("Check that fortran runtime libraries are installed")
-			if exe_result == -9:
-				raise ZgoubiRunError("Check that you have sufficient RAM or enable memory overcommit")
 
 		if xterm and not self.no_more_xterm:
 			print "Do you want an xterm? (y=yes/n=no/s=stop asking)"
@@ -517,14 +537,23 @@ class Line(object):
 				subprocess.Popen("xterm", shell=True, cwd=tmpdir).wait()
 			elif ans.startswith('s'):
 				self.no_more_xterm = True
-		
-		#os.system('ls')
-		
+
+		if exe_result != 0:
+			if silence:
+				print open(os.path.join(tmpdir, "zgoubi.sdterr")).read()
+			if exe_result == 32512:
+				raise ZgoubiRunError("Check that fortran runtime libraries are installed")
+			if exe_result == -9:
+				raise ZgoubiRunError("Check that you have sufficient RAM or enable memory overcommit")
+			if exe_result == 2:
+				raise ZgoubiRunError("Fortran runtime error")
+
 		res_file = tmpdir+"/zgoubi.res"
 		#output = outfile.read()
 		
 		for n, line in enumerate(open(res_file)):
-			if "ERROR" in line or "WARNING" in line or "SBR" in line:
+			lline = line.lower()
+			if "error" in lline or "warning" in lline or "sbr" in lline:
 				print "zgoubi.res:", n, ":", line
 				if "SBR OBJ3 -> error in  reading  file" in line:
 					raise ZgoubiRunError(line)
@@ -536,6 +565,9 @@ class Line(object):
 		result = Results(line=self, rundir=tmpdir, element_types=element_types)
 		self.results.append(weakref.ref(result))
 		self.last_result = result
+		if timer:
+			result.timer_setup = t1-t0
+			result.timer_run = t2-t1
 
 		return result
 	
@@ -568,11 +600,11 @@ class Line(object):
 		result.clean()
 		return done_bunch
 		
-	def track_bunch_mt(self, bunch, n_threads=4, max_particles=None, **kwargs):
+	def track_bunch_mt(self, bunch, n_threads=4, max_particles=None, binary=False, **kwargs):
 		"This function should be used identically to the track_bunch function, apart from the addition of the n_threads argument. This will split the bunch into several slices and run them simultaneously. Set n_threads to the number of CPU cores that you have. max_particle can be set to limit how many particles are sent at a time."
 		in_q = Queue.Queue()
 		out_q = Queue.Queue()
-		if max_particles == None:
+		if max_particles is None:
 			max_particles = 1e3
 
 		def worker(in_q, out_q, work_line, name, stop_flag):
@@ -588,7 +620,7 @@ class Line(object):
 					continue
 				#print "Thread", name, "working"
 				try:
-					done_bunch = work_line.track_bunch(work_bunch, binary=True, **kwargs)
+					done_bunch = work_line.track_bunch(work_bunch, binary=binary, **kwargs)
 				except:
 					zlog.error("Exception in track_bunch() thread")
 					out_q.put((sys.exc_info()))
@@ -690,13 +722,13 @@ class Line(object):
 		Will use symlinks when avaliable (Linux/UNIX), falls back to copying otherwise.
 		"""
 
-		if file_paths == None:
+		if file_paths is None:
 			file_paths = []
 
 		if hasattr(file_paths, "lower"):
 			file_paths = [file_paths]
 
-		if pattern != None:
+		if pattern is not None:
 			globbed_files = glob(pattern)
 			file_paths += globbed_files
 		self.input_files += file_paths
@@ -766,6 +798,13 @@ class Line(object):
 				indices.append(n)
 
 		return indices
+	
+	def get_objet(self):
+		"Find the OBJET element"
+		for e in self.elements():
+			if e._zgoubi_name == "OBJET":
+				return e
+		raise ValueError("Line has no OBJET element")
 			
 	
 class Results(object):
@@ -881,6 +920,16 @@ class Results(object):
 		"save binary plt file to path"
 		return self._save_file("b_zgoubi.plt", path)
 
+	def impdev_fh(self):
+		"return file handle for impdev file"
+		return self._get_fh("zgoubi.impdev.out")
+	def impdev(self):
+		"return impdev file as string"
+		return self._get_str("zgoubi.impdev.out")
+	def save_impdev(self, path):
+		"save impdev file to path"
+		return self._save_file("zgoubi.impdev.out", path)
+
 	def _bad_float(self, text):
 		"""A wrapper around float to deal with zgoubi output numbers like
 		2.67116100-102 when it means 2.67116100e-102
@@ -915,6 +964,7 @@ class Results(object):
 		else:
 			raise ValueError("get_all_bin() expects name to be 'bplt' or 'bfai'")
 
+		warnings.warn("Support for reading zgoubi <6.0 formats will be removed in the future")
 		plt_data = []
 		for pos in xrange(head_len, file_len, chunk_len):
 			fh.seek(pos)
@@ -999,6 +1049,7 @@ class Results(object):
 		old_format = False
 		if test_version == '...':
 			old_format = True
+			warnings.warn("Support for reading zgoubi <6.0 formats will be removed in the future")
 		else:
 			return io.read_file(fh)
 
@@ -1030,7 +1081,7 @@ class Results(object):
 		plt_data = []
 		for lines in yield_n_lines(fh, n_lines):
 			
-			if id != None:
+			if id is not None:
 				try:
 					if lines[3].split()[1] != id:
 						continue # escape quickly if this is not a point we are interested in
@@ -1042,6 +1093,11 @@ class Results(object):
 				# fill dictionary with the bits that have been identified
 				#
 				p = {}
+				# for compatability with new routines that expect numpy arrays
+				if file=="fai" and old_format:
+					p = numpy.zeros([1], dtype=[('element_label2', 'S8'), ('element_label1', 'S8'), ('BORO', '<f8'), ('X0', '<f8'), ('tof', '<f8'), ('SORT', '<f8'), ('IEX', '<i8'), ('P0', '<f8'), ('D', '<f8'), ('D-1', '<f8'), ('IREP', '<i8'), ('P', '<f8'), ('S', '<f8'), ('T0', '<f8'), ('PASS', '<i8'), ('Y', '<f8'), ('X', '<f8'), ('Z', '<f8'), ('ID', '<f8'), ('KE', '<f8'), ('Z0', '<f8'), ('element_type', 'S8'), ('LET', 'S1'), ('Y0', '<f8'), ('D0', '<f8'), ('D0-1', '<f8'), ('T', '<f8')])
+				if file=="plt" and old_format:
+					p = numpy.zeros([1], dtype=[('element_label2', 'S8'), ('element_label1', 'S8'), ('KART', '<f8'), ('BORO', '<f8'), ('X0', '<f8'), ('tof', '<f8'), ('By', '<f8'), ('Bz', '<f8'), ('SORT', '<f8'), ('IEX', '<i8'), ('P0', '<f8'), ('D', '<f8'), ('IREP', '<i8'), ('P', '<f8'), ('S', '<f8'), ('T0', '<f8'), ('PASS', '<i8'), ('Y', '<f8'), ('X', '<f8'), ('Z', '<f8'), ('ID', '<f8'), ('D-1', '<f8'), ('Z0', '<f8'), ('element_type', 'S8'), ('LET', 'S1'), ('D0-1', '<f8'), ('Y0', '<f8'), ('D0', '<f8'), ('T', '<f8')])
 
 				if old_format:
 
@@ -1056,6 +1112,7 @@ class Results(object):
 						p['LET'] = l0[0] 
 						p['IEX'] = int(l0[1]) #flag
 						p['D0'] = float(l0[2]) #initial D-1
+						p['D0-1'] = float(l0[2]) #initial D-1
 						p['Y0'] = self._bad_float(l0[3]) #initial Y
 						p['T0'] = self._bad_float(l0[4]) #initial T (remember that T is dY/dX not time)
 						p['Z0'] = float(l0[5]) #initial Z
@@ -1069,6 +1126,7 @@ class Results(object):
 					else:
 						l1 = scanf(lines[1], l1_re)
 						p['D'] = float(l1[0]) #D-1
+						p['D-1'] = float(l1[0]) #D-1
 						p['Y'] = self._bad_float(l1[1]) #current corrods
 						p['T'] = self._bad_float(l1[2])
 
@@ -1186,6 +1244,9 @@ class Results(object):
 
 				
 				plt_data.append(p)
+		if (file=="fai" or file=="plt") and old_format:
+			plt_data = numpy.array(plt_data, dtype=plt_data[0].dtype)
+			plt_data =  plt_data.reshape([-1])
 		return plt_data
 
 
@@ -1232,9 +1293,9 @@ class Results(object):
 		for p in alldata:
 			this_coord = []
 			for n, c in enumerate(coord_list):
-				if multi_list == None:
+				if multi_list is None:
 					this_coord.append(p[c])
-				elif multi_list[n] == None:
+				elif multi_list[n] is None:
 					this_coord.append(p[c])
 				else:
 					this_coord.append(p[c] * multi_list[n])
@@ -1251,7 +1312,7 @@ class Results(object):
 			loss = res.loss_summary(all) # if you already have got the coordinates
 			
 		"""
-		if coords == None:
+		if coords is None:
 			coords = self.get_all(file)
 	
 		if all(coords["IEX"] == 1):
@@ -1285,14 +1346,14 @@ class Results(object):
 		except IOError:
 			zlog.warn("Could not read %s. returning empty bunch", file)
 			empty_bunch = zgoubi.bunch.Bunch(nparticles=0, rigidity=0)
-			if old_bunch != None:
+			if old_bunch is not None:
 				empty_bunch.mass = old_bunch.mass
 				empty_bunch.charge = old_bunch.charge
 			return empty_bunch
 		except EmptyFileError:
 			zlog.warn("%s empty. returning empty bunch", file)
 			empty_bunch = zgoubi.bunch.Bunch(nparticles=0, rigidity=0)
-			if old_bunch != None:
+			if old_bunch is not None:
 				empty_bunch.mass = old_bunch.mass
 				empty_bunch.charge = old_bunch.charge
 			return empty_bunch
@@ -1322,7 +1383,7 @@ class Results(object):
 
 		# Create a new bunch and copy the values arcoss (with conversion to SI)
 		last_bunch = zgoubi.bunch.Bunch(nparticles=last_lap.size, rigidity=last_lap[0]['BORO']/1000)
-		if old_bunch != None:
+		if old_bunch is not None:
 			last_bunch.mass = old_bunch.mass
 			last_bunch.charge = old_bunch.charge
 		particles = last_bunch.particles()
@@ -1343,7 +1404,7 @@ class Results(object):
 		"""
 		# FIXME could be done better with numpy
 		all = self.get_all(file, id=id)
-		if element_label == None:
+		if element_label is None:
 			el_points = all
 		else:
 			el_points = [p for p in all if (p['element_label1'] == element_label or p['element_label2'] == element_label)]
@@ -1382,7 +1443,7 @@ class Results(object):
 		"""
 		check if particle exceeded bounds in this element. pass bounds in zgoubi's default unit for that coordinate
 		"""
-		if id != None:
+		if id is not None:
 			part_list = [id]
 		else:
 			part_list = self.list_particles(file)
@@ -1412,7 +1473,7 @@ class Results(object):
 		returns numpy arrays
 		note: lost particles dont crash
 		"""
-		if part_ids == None:
+		if part_ids is None:
 			particle_ids = self.list_particles(file)
 		else:
 			particle_ids = part_ids
@@ -1510,8 +1571,7 @@ class Results(object):
 		in_matrix = False
 
 		parsed_info = dict(matrix1=None, twiss=None, tune=(-1, -1))
-		tp = numpy.zeros(1, dtype=[('beta_y', 'f8'), ('alpha_y', 'f8'), ('gamma_y', 'f8'), ('disp_y', 'f8'), ('disp_py', 'f8'),
-						('beta_z', 'f8'), ('alpha_z', 'f8'), ('gamma_z', 'f8'), ('disp_z', 'f8'), ('disp_pz', 'f8')])
+		tp = twiss_param_array()
 		matrix_lines = []
 		
 		fh = self.res_fh()
@@ -1540,6 +1600,8 @@ class Results(object):
 		if len(matrix_lines) == 0:
 			raise BadLineError("Could not find MATRIX output in res file. Maybe beam lost.")
 
+		#print "\n".join(matrix_lines)
+
 		for n, line in enumerate(matrix_lines):
 			if line == "TRANSFER  MATRIX  ORDRE  1  (MKSA units)":
 				matrix1 = numpy.zeros([6, 6])
@@ -1549,7 +1611,17 @@ class Results(object):
 			if line == "Beam  matrix  (beta/-alpha/-alpha/gamma) and  periodic  dispersion  (MKSA units)":
 				twissmat = numpy.zeros([6, 6])
 				for x in xrange(6):
-					twissmat[x] = matrix_lines[x+n+2].split()
+					row = []
+					for rowe in matrix_lines[x+n+2].split():
+						try:
+							row.append(float(rowe))
+						except ValueError:
+							zlog.warn("Could not convert %s to float"%rowe)
+							row.append(numpy.nan)
+					if len(row) != 6:
+						zlog.warn("Could not convert get 6 values from row: %s"%matrix_lines[x+n+2] )
+						row = numpy.nan
+					twissmat[x] = row
 				tp['beta_y'] = twissmat[0, 0]
 				tp['alpha_y'] = -twissmat[1, 0]
 				tp['gamma_y'] = twissmat[1, 1]
@@ -1605,7 +1677,7 @@ class Results(object):
 		"""
 		tm = self.parse_matrix()["matrix1"]
 
-		if tm == None:
+		if tm is None:
 			zlog.error("could not get matrix from res file")
 
 		return tm
@@ -1628,7 +1700,7 @@ class Results(object):
 		"""
 		tp = self.parse_matrix()["twiss"]
 
-		if tp == None:
+		if tp is None:
 			zlog.error("could not get twiss parameters from res file")
 
 		return tp

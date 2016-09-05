@@ -46,15 +46,16 @@ class Bunch(object):
 		"""Bunch constructor.
 
 		"""
-		if particles != None:
+		if particles is not None:
 			self.coords = particles
 		else:
+			nparticles = int(nparticles)
 			self.coords = numpy.zeros(nparticles, self.min_data_def)
 			self.coords['D'] = 1
 		self.mass = mass
 		self.charge = charge
 		self.rigidity = rigidity
-		if ke != None:
+		if ke is not None:
 			self.set_bunch_ke(ke)
 
 	def split_bunch(self, max_particles, n_slices):
@@ -138,10 +139,12 @@ class Bunch(object):
 			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
 			raise ValueError
 
+		npart = int(npart)
+
 		ry = sqrt(emit_y) 
 		rz = sqrt(emit_z) 
 
-		if seed != None:
+		if seed is not None:
 			numpy.random.seed(seed)
 
 		u1 = numpy.random.random_sample([npart]) * pi * 2
@@ -188,8 +191,10 @@ class Bunch(object):
 			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
 			raise ValueError
 
-		if seed != None:
+		if seed is not None:
 			numpy.random.seed(seed)
+
+		npart = int(npart)
 
 		ry = sqrt(emit_y)
 		rz = sqrt(emit_z)
@@ -243,8 +248,10 @@ class Bunch(object):
 			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
 			raise ValueError
 
-		if seed != None:
+		if seed is not None:
 			numpy.random.seed(seed)
+
+		npart = int(npart)
 
 		ry = sqrt(emit_y)
 		rz = sqrt(emit_z)
@@ -256,10 +263,10 @@ class Bunch(object):
 		
 		while True:
 			# fill a hypercube with 3.5 times as many particles as needed
-			a1 = numpy.random.uniform(-1, 1, [npart*3.5])
-			a2 = numpy.random.uniform(-1, 1, [npart*3.5])
-			a3 = numpy.random.uniform(-1, 1, [npart*3.5])
-			a4 = numpy.random.uniform(-1, 1, [npart*3.5])
+			a1 = numpy.random.uniform(-1, 1, [int(npart*3.5)])
+			a2 = numpy.random.uniform(-1, 1, [int(npart*3.5)])
+			a3 = numpy.random.uniform(-1, 1, [int(npart*3.5)])
+			a4 = numpy.random.uniform(-1, 1, [int(npart*3.5)])
 			
 			# discard ones that fall out of hypesphere
 			r = a1**2+a2**2+a3**2+a4**2
@@ -317,9 +324,10 @@ class Bunch(object):
 			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
 			raise ValueError
 
-		if seed != None:
+		if seed is not None:
 			numpy.random.seed(seed)
 
+		npart = int(npart)
 
 		coords = numpy.zeros([npart, 6], numpy.float64)
 		coords[:, 0:4] = numpy.random.normal(0, 0.5, [npart, 4])
@@ -362,8 +370,10 @@ class Bunch(object):
 			raise ValueError
 
 
-		if seed != None:
+		if seed is not None:
 			numpy.random.seed(seed)
+
+		npart=int(npart)
 
 		#generate momentum distribution
 		if mom_spread > 0.0:
@@ -445,7 +455,9 @@ class Bunch(object):
 		
 		"""
 		dist = numpy.loadtxt(fname)
-		nparts = dist.size / 6
+		if ((dist.size % 6) != 0):
+			raise ValueError("Number of values in %s not a multiple of 6"%fname)
+		nparts = dist.size // 6
 		dist = dist.reshape(nparts, 6)
 		coords = numpy.zeros(nparts, Bunch.min_data_def)
 		#self.coords['KE'] = ke
@@ -482,10 +494,12 @@ class Bunch(object):
 			# this is quite optimised
 			# rather than call the general io.write_fortran_record(), use a fast special case
 			#header
-			io.write_fortran_record(fh, "Binary bunch coordinates from pyzgoubi".ljust(80))
-			io.write_fortran_record(fh, "Y,T,Z,P,S,D".ljust(80))
-			io.write_fortran_record(fh, " "*80)
-			io.write_fortran_record(fh, " "*80)
+			header_len = 270 # header length changed from 80  to 270 in Zgoubi svn483
+			                 # but old and new version will tolerate the longer header
+			io.write_fortran_record(fh, "Binary bunch coordinates from pyzgoubi".ljust(header_len))
+			io.write_fortran_record(fh, "Y,T,Z,P,S,D".ljust(header_len))
+			io.write_fortran_record(fh, " "*header_len)
+			io.write_fortran_record(fh, " "*header_len)
 			# record length is always the same
 			rec_len_r = struct.pack("i", 6*8)
 			rec_len_r2 = rec_len_r + rec_len_r
@@ -556,12 +570,12 @@ class Bunch(object):
 		fmt can be a list of formats in matplotlib style, eg ['rx', 'bo']
 		"""
 		import pylab
-		if fmt == None:
+		if fmt is None:
 			fmt = [',']
 
 		self.check_bunch()
 		bunches = [self]
-		if add_bunch != None:
+		if add_bunch is not None:
 			try:
 				# if add_bunch is iterable, append all is memebers
 				for a_bunch in add_bunch:
@@ -589,20 +603,16 @@ class Bunch(object):
 				pylab.plot(abunch.coords[coordsz[x]], abunch.coords[coordsz[y]], f)
 				pylab.xlabel(coords[x])
 				pylab.ylabel(coords[y])
-			if lims != None and n != 4:
+			if lims is not None and n != 4:
 				pylab.xlim(-lims[x], lims[x])
 				pylab.ylim(-lims[y], lims[y])
 			#pylab.title(title)
 
-		if fname == None:
+		if fname is None:
 			pylab.show()
 		else:
 			pylab.savefig(fname, dpi=300)
 			pylab.clf()
-	
-	def get_emmitance(self):
-		warnings.warn("Bunch.get_emmitance() has been renamed to Bunch.get_emittance(). get_emmitance()"+dep_warn, DeprecationWarning)
-		return self.get_emittance()
 
 	def get_emittance(self):
 		"return emittance h and v in m rad. Uses the bunch full width, so should only be used for a hard edge distribution"
@@ -631,10 +641,6 @@ class Bunch(object):
 		emittance_v = rot_z.max() * rot_p.max()
 		#print "Emittance (h, v):", emittance_h, emittance_v
 		return (emittance_h, emittance_v)
-
-	def get_emmitance_rms(self):
-		warnings.warn("Bunch.get_emmitance_rms() has been renamed to Bunch.get_emittance_rms(). get_emmitance_rms()"+dep_warn, DeprecationWarning)
-		return self.get_emittance_rms()
 
 	def get_emittance_rms(self):
 		"return emittance h and v in m rad. Uses the RMS quantities"

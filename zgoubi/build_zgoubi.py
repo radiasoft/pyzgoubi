@@ -68,7 +68,7 @@ def get_zgoubi_svn():
 			return
 		
 		if ret != 0 or ret2 != 0:
-			raise ZgoubiBuildError("%s already exists, but does not contain a working checkout")
+			raise ZgoubiBuildError("%s already exists, but does not contain a working checkout. Please remove it."%zgoubi_build_dir)
 
 	print "Downloading Zgoubi SVN:", zgoubi_svn_address
 	common.mkdir_p(zgoubi_build_dir)
@@ -80,12 +80,15 @@ def get_zgoubi_svn():
 def set_zgoubi_version(version=None):
 	"Set downloaded SVN to a given version. or, if no version given, to latest version"
 	ret = subprocess.call(['svn', 'revert', '-R', '.'], cwd=zgoubi_build_dir2)
-	if version == None:
-		ret = subprocess.call(['svn', 'update'], cwd=zgoubi_build_dir2)
+	if version is None:
+		ret = subprocess.call(['svn', 'update', '--non-interactive'], cwd=zgoubi_build_dir2)
 	else:
-		ret = subprocess.call(['svn', 'update', '-r', '%s'%version], cwd=zgoubi_build_dir2)
+		ret = subprocess.call(['svn', 'update', '-r', '%s'%version, '--non-interactive'], cwd=zgoubi_build_dir2)
 	if ret != 0:
 		raise ZgoubiBuildError("SVN update failed")
+	ret = subprocess.call(['svn', 'revert', '-R', '.'], cwd=zgoubi_build_dir2)
+	if ret != 0:
+		raise ZgoubiBuildError("SVN update failed at final revert")
 
 
 def apply_zgoubi_patches(patches):
@@ -104,30 +107,58 @@ def apply_zgoubi_patches(patches):
 		if ret != 0:
 			raise ZgoubiBuildError("Patch application failed: %s" % patch)
 
-def edit_includes(includes):
-	"Set compile time variables, e.g. max magnet steps"
-	for fname, sourcelines in includes:
-		print "Editing", os.path.join("include", fname)
-		file_content = open(os.path.join(zgoubi_build_dir2, "include", fname)).readlines()
-		newfile = open(os.path.join(zgoubi_build_dir2, "include", fname), "w")
-		for line in file_content:
-			if not line.startswith("C"):
-				newfile.write("C      Commented out by pyzgoubi build script\n")
-				line = "C"+line
-			newfile.write(line)
-		for sourceline in sourcelines:
-			newfile.write("       "+sourceline+"\n")
+include_files = "zgoubi/PARIZ.H include/FILPLT.H include/FILSPN.H include/MAXTRA.H include/MXFS.H include/MXLD.H include/MXSCL.H include/MXSTEP.H".split()
 
+def edit_includes(new_params):
+	# read each inlcude file
+	for ifile_name in include_files:
+		if not os.path.exists(os.path.join(zgoubi_build_dir2, ifile_name)): continue
+		org_file_content = open(os.path.join(zgoubi_build_dir2, ifile_name)).readlines()
+		newfile = open(os.path.join(zgoubi_build_dir2, ifile_name), "w")
+		for line in org_file_content:
+			# find the parameter lines
+			if not line.lower().startswith("c") and line.strip().startswith("PARAMETER"):
+				params = line.strip()[9:]
+				params = params.lstrip("( ").rstrip(") ")
+				params = params.split(",")
+				params_d = {}
+				# get the old parameters
+				for p in params:
+					k,dummy,v = p.partition("=")
+					k = k.strip()
+					v = v.strip()
+					params_d[k] = v
+				comments = []
+				# update with new_params
+				for k,v in params_d.items():
+					if k in new_params.keys():
+						params_d[k] = new_params[k]
+						comments.append("changed %s from %s to %s"%(k,v,new_params[k]))
+						print "in", ifile_name ,comments[-1]
+				# if a change was made write it to the file
+				if comments:
+					params_s = ",".join(["%s=%s"%(k,v) for k,v in params_d.items()])
+					newline = "      PARAMETER (%s)\n" % params_s
+					for comment in comments:
+						newfile.write("C   pyzgoubi build script:" + comment+"\n")
+					newfile.write("C"+line)
+					newfile.write(newline)
+				else:
+					# otherwise write the original line
+					newfile.write(line)
+			else:
+				# non active parameter lines are passed through
+				newfile.write(line)
 
-
-
-def make_zgoubi(makecommands, threads=2, clean=True):
+def make_zgoubi(makecommands, makecleancommands=None, threads=2):
 	"Build zgoubi source code"
 	print "building zgoubi"
-	if clean:
-		ret = subprocess.call(['make', 'clean'], cwd=zgoubi_build_dir2)
-		if ret != 0:
-			raise ZgoubiBuildError("Make clean failed")
+	if makecleancommands:
+		for makecleancommand in makecleancommands:
+			command = makecleancommand.split()
+			ret = subprocess.call(command, cwd=zgoubi_build_dir2)
+			if ret != 0:
+				raise ZgoubiBuildError("Make clean failed")
 	for makecommand in makecommands:
 		command = makecommand.split()+ ['-j%d'%threads]
 		ret = subprocess.call(command, cwd=zgoubi_build_dir2)
@@ -162,9 +193,7 @@ patches=[
 ],
 makecommands=["make -f Makefile_zgoubi_gfortran"],
 makecommands_zpop=["make -f Makefile_zpop_gfortran"],
-includes=[
-["MXSTEP.H", ["PARAMETER (MXSTEP = 10000)"]]
-],
+includes={"MXSTEP":10000},
 )
 
 zgoubi_versions["360+patches"] = dict(svnr=360,
@@ -174,9 +203,7 @@ patches=[
 ],
 makecommands=["make -f Makefile_zgoubi_gfortran"],
 makecommands_zpop=["make -f Makefile_zpop_gfortran"],
-includes=[
-["MXSTEP.H", ["PARAMETER (MXSTEP = 10000)"]],
-],
+includes={"MXSTEP":10000},
 )
 
 zgoubi_versions["365"] = dict(svnr=365,
@@ -186,9 +213,7 @@ patches=[
 ],
 makecommands=["make -f Makefile_zgoubi_gfortran"],
 makecommands_zpop=["make -f Makefile_zpop_gfortran"],
-includes=[
-["MXSTEP.H", ["PARAMETER (MXSTEP = 10000)"]],
-],
+includes={"MXSTEP":10000},
 )
 
 #on 32bit some arrays need shrinking
@@ -199,17 +224,85 @@ patches=[
 ],
 makecommands=["make -f Makefile_zgoubi_gfortran"],
 makecommands_zpop=["make -f Makefile_zpop_gfortran"],
-includes=[
-["MXSTEP.H", ["PARAMETER (MXSTEP = 10000)"]],
-[os.path.join("..", "zgoubi", "PARIZ.H"), ["PARAMETER (IZ = 61, ID=3, MMAP=8)", "PARAMETER (MXX=801, MXY=29)"]],
-],
+includes={"MXSTEP":10000, "MXX":801, "MXY":29},
 )
 if sys.platform == "win32":
 	zgoubi_versions["365_32bit"]["patches"][0] = "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks2_windows.diff"
 	zgoubi_versions["365"]["patches"][0] = "http://www.hep.man.ac.uk/u/sam/pyzgoubi/zgoubipatches/build_tweaks2_windows.diff"
 
-def install_zgoubi_all(version="365"):
+zgoubi_versions["427"] = dict(svnr=427,
+patches=[
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/build_tweaks3.diff",
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/r430_impmod.diff",
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/r430_rndm.diff",
+],
+makecommands=["make -f Makefile_zgoubi_gfortran"],
+makecommands_zpop=["make -f Makefile_zpop_gfortran"],
+includes={"MXSTEP":10000},
+)
+
+zgoubi_versions["431"] = dict(svnr=431,
+patches=[
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/build_tweaks_r431.diff",
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/makefile_funcd.diff",
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/r430_impmod.diff",
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/r430_rndm.diff",
+],
+makecommands=["make -f Makefile_zgoubi_gfortran"],
+makecommands_zpop=["make -f Makefile_zpop_gfortran"],
+includes={"MXSTEP":10000},
+)
+
+zgoubi_versions["437"] = dict(svnr=437,
+patches=[
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/build_tweaks_r437.diff",
+#"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/makefile_funcd.diff",
+#"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/r430_impmod.diff",
+#"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/r430_rndm.diff",
+],
+makecommands=["make -f Makefile_zgoubi_gfortran"],
+makecommands_zpop=["make -f Makefile_zpop_gfortran"],
+includes={"MXSTEP":10000},
+)
+
+zgoubi_versions["437_nonative"] = dict(svnr=437,
+patches=[
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/build_tweaks_r437_nonative.diff",
+#"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/makefile_funcd.diff",
+#"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/r430_impmod.diff",
+#"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/r430_rndm.diff",
+],
+makecommands=["make -f Makefile_zgoubi_gfortran"],
+makecommands_zpop=["make -f Makefile_zpop_gfortran"],
+includes={"MXSTEP":10000},
+)
+
+zgoubi_versions["535"] = dict(svnr=535,
+patches=[
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/build_tweaks_r532.diff",
+],
+makecommands=["make -f Makefile_zgoubi_gfortran"],
+makecleancommands=["make -f Makefile_zgoubi_gfortran clean"],
+makecommands_zpop=["make -f Makefile_zpop_gfortran"],
+includes={"MXSTEP":10000},
+)
+
+zgoubi_versions["570"] = dict(svnr=570,
+patches=[
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/build_tweaks_r558.diff",
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/zpop_pltopt_write.diff",
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/zgoubi_impfai_inquire.diff",
+],
+makecommands=["make -f Makefile_zgoubi_gfortran"],
+makecleancommands=["make -f Makefile_zgoubi_gfortran clean"],
+makecommands_zpop=["make -f Makefile_zpop_gfortran"],
+includes={"MXSTEP":10000},
+)
+
+
+def install_zgoubi_all(version="570", include_opts=None):
 	"This currently install a version of zgoubi known to work with pyzgoubi"
+	if include_opts is None: include_opts = {}
 	check_for_programs()
 	if sys.platform.startswith('linux'):
 		build_zpop = True
@@ -225,14 +318,20 @@ def install_zgoubi_all(version="365"):
 	get_zgoubi_svn()
 	set_zgoubi_version(zgoubi_versions[version]['svnr'])
 	apply_zgoubi_patches(zgoubi_versions[version]['patches'])
+
+	# edit any of the include files
+	include_opts_all = {}
 	if zgoubi_versions[version].has_key("includes"):
-		edit_includes(zgoubi_versions[version]["includes"])
+		include_opts_all.update(zgoubi_versions[version]["includes"])
+	include_opts_all.update(include_opts)
+	if include_opts_all:
+		edit_includes(include_opts_all)
 	
-	make_zgoubi(zgoubi_versions[version].get("makecommands", ['make']))
+	make_zgoubi(zgoubi_versions[version].get("makecommands", ['make']), zgoubi_versions[version].get("makecleancommands", ["make clean"]) )
 	if build_zpop:
 		makecommands_zpop = zgoubi_versions[version].get("makecommands_zpop", None)
 		if makecommands_zpop:
-			make_zgoubi(makecommands_zpop, clean=False)
+			make_zgoubi(makecommands_zpop)
 
 
 	install_zgoubi("_"+version, build_zpop)

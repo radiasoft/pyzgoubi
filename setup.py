@@ -1,66 +1,48 @@
 #!/usr/bin/env python
-from distutils.core import setup
-from distutils.sysconfig import get_python_lib
+#from distutils.core import setup
+from setuptools import setup 
 import sys
 import os
 import shutil
 import errno
 from glob import glob
 
-# if sphinx is available add a build_doc option
-# if not, make a fake option to warn you
-try:
-	from sphinx.setup_command import BuildDoc
-except:
-	from distutils.cmd import Command
-	class BuildDoc(Command):
-		description = "Please install sphinx to use this"
-		user_options = []
-		def initialize_options(self):
-			print "sphinx is not installed"
-			exit()
+MAIN_VERSION = '0.6.0'
 
-# sphinx gets upset if this dir does not exist
-try:
-	os.mkdir("doc/build")
-except OSError:
-	pass
+if not ( "--help" in sys.argv):
+	if ("install" in sys.argv) or ("sdist" in sys.argv) or ("bdist_wheel" in sys.argv):
+		# check that we have write access to zgoubi/version.py
+		try:
+			f = open("zgoubi/version.py","w")
+			f.close()
+			f =open("install.log","w")
+			f.close()
+			f =open("build/lib/zgoubi/version.py","w")
+			f.close()
+			os.remove("build/lib/zgoubi/version.py")
+		except IOError, exc:
+			if exc.errno == errno.EACCES:
+				print "ERROR: Permission denied updating zgoubi/version.py, build and/or install.log.\nIf they are owned by root, due to previously running install as root please remove them (eg. sudo ./setup.py clean --all ; sudo rm install.log zgoubi/version.py)."
+				exit(1)
 
-MAIN_VERSION = '0.4.9'
+		if (os.path.exists(".bzr") and
+			os.system("bzr version-info --format=python > zgoubi/version.py") == 0 and
+			"sdist" not in sys.argv):
+			# run from a bzr repo, can use version info
+			print "updated zgoubi/version.py"
+			vfile = open("zgoubi/version.py","a")
+		else:
+			vfile = open("zgoubi/version.py","w")
+			vfile.write("#!/usr/bin/env python\n")
+		vfile.write("MAIN_VERSION = '%s'\n"%MAIN_VERSION)
+		vfile.close()
 
-if ("install" in sys.argv) and not ( "--help" in sys.argv):
-	# check that we have write access to zgoubi/version.py
-	try:
-		f = open("zgoubi/version.py","w")
-		f.close()
-		f =open("install.log","w")
-		f.close()
-		f =open("build/lib/zgoubi/version.py","w")
-		f.close()
-		os.remove("build/lib/zgoubi/version.py")
-	except IOError, exc:
-		if exc.errno == errno.EACCES:
-			print "ERROR: Permission denied updating zgoubi/version.py, build and/or install.log.\nIf they are owned by root, due to previously running install as root please remove them (eg. sudo ./setup.py clean --all ; sudo rm install.log zgoubi/version.py)."
-			exit(1)
+		# generate definitions
+		print "generating definitions "
+		from zgoubi import makedefs
+		shutil.copyfile(os.path.join("defs","static_defs.py"), os.path.join("zgoubi","static_defs.py"))
 
-	if (os.path.exists(".bzr") and
-		os.system("bzr version-info --format=python > zgoubi/version.py") == 0 and
-		"sdist" not in sys.argv):
-		# run from a bzr repo, can use version info
-		print "updated zgoubi/version.py"
-		vfile = open("zgoubi/version.py","a")
-	else:
-		vfile = open("zgoubi/version.py","w")
-		vfile.write("#!/usr/bin/env python\n")
-	vfile.write("MAIN_VERSION = '%s'\n"%MAIN_VERSION)
-	vfile.close()
-
-	# generate definitions
-	print "generating definitions "
-	from zgoubi import makedefs
-	shutil.copyfile(os.path.join("defs","static_defs.py"), os.path.join("zgoubi","static_defs.py"))
-
-	makedefs.make_element_classes([os.path.join("defs","simple_elements.defs")],os.path.join("zgoubi","simple_defs.py"))
+		makedefs.make_element_classes([os.path.join("defs","simple_elements.defs")],os.path.join("zgoubi","simple_defs.py"))
 
 
 
@@ -76,11 +58,17 @@ setup(name='pyzgoubi',
 	            ('share/pyzgoubi/test',glob('tests/*.py')),
 	          #  ('share/pyzgoubi/doc', glob('doc'))
 	            ],
-	cmdclass={'build_doc': BuildDoc},
 	author="Sam Tygier",
-	author_email="sam.tygier@hep.manchester.ac.uk",
+	author_email="sam.tygier@manchester.ac.uk",
 	url="http://sourceforge.net/projects/pyzgoubi/",
-	license="GNU GENERAL PUBLIC LICENSE"
+	license="GNU GENERAL PUBLIC LICENSE",
+	description="PyZgoubi is an interface to the Zgoubi particle tracker written in python.",
+	classifiers=["Development Status :: 5 - Production/Stable",
+	             "Intended Audience :: Science/Research",
+				 "Topic :: Scientific/Engineering :: Physics",
+				 "License :: OSI Approved :: GNU General Public License (GPL)",
+				 "Programming Language :: Python :: 2.7"],
+	install_requires=["numpy>=1.8.0", "scipy>=0.14.0", "matplotlib>=1.2.0"],
 	)
 
 
@@ -121,8 +109,8 @@ if ("install" in sys.argv) and not ( "--help" in sys.argv):
 			bat_file.close()
 		else:
 			print "\nyou may need to add the following to your .bashrc"
-			print "export PYTHONPATH=$PYTHONPATH:%s"%lib_path
-			print "export PATH=$PATH:%s"%bin_path
+			print "export PYTHONPATH=%s:$PYTHONPATH"%lib_path
+			print "export PATH=%s:$PATH"%bin_path
 	except NameError:
 		print "Could not find all paths in logfile"
 

@@ -44,11 +44,11 @@ def coords_grid(min_c=None, max_c=None, step=None, dtype=float):
 	will give you 100 points in 2 dimensions between 0 and 1
 	"""
 
-	if min_c == None:
+	if min_c is None:
 		min_c = [0, 0]
-	if max_c == None:
+	if max_c is None:
 		max_c = [1, 1]
-	if step == None:
+	if step is None:
 		step = [1, 1]
 	
 	assert(len(min_c)==len(max_c)==len(step))
@@ -95,7 +95,7 @@ def get_cmd_param(key, default=None):
 			k, e, v = item.partition('=')
 			if (k == str(key)):
 				return v
-	if default != None:
+	if default is not None:
 		return default
 	message = "'" + str(key) + "' not given on the command line\nplease run with "+ str(key) +"=x as an argument"
 	zlog.error(message)
@@ -120,7 +120,7 @@ def get_cmd_param_bool(key, default=None):
 				zlog.error("Value for "+str(key)+" must be a bool (True or False)")
 				raise ValueError
 				
-	if default != None:
+	if default is not None:
 		if type(default) == type(True):
 			return default
 		else:
@@ -307,7 +307,7 @@ def show_file(file_path, mode):
 		command = 'xterm -e "less %s"'% file_path
 		os.system(command)
 
-def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, range_YTZP=None, count_YTZP=None, record_fname=None):
+def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, range_YTZP=None, count_YTZP=None, record_fname=None, extra_iterations=2):
 	"""Same as find_closed_orbit, but if init_YTZP is unstable, will generate a bunch or particles, with a spread of range_YTZP, and if any of those are stable will do a closed orbit search with that particle::
 
 		init_YTZP=[5,0,0,0], range_YTZP=[10,0,0,0], count_YTZP[50,0,0,0]
@@ -320,11 +320,11 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 	
 	"""
 	zlog.debug("enter function")
-	if range_YTZP == None:
+	if range_YTZP is None:
 		range_YTZP = [10, 10, 10, 10]
-	if init_YTZP == None:
+	if init_YTZP is None:
 		init_YTZP = [0, 0, 0, 0]
-	if count_YTZP == None:
+	if count_YTZP is None:
 		count_YTZP = [10, 10, 10, 10]
 	
 	if record_fname:
@@ -335,8 +335,8 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 	#first check center
 	if record_fname:
 		record_fh.write("#center\n")
-	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D, record_fname=record_fh)
-	if result != None:
+	result = find_closed_orbit(line=line, init_YTZP=init_YTZP, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D, record_fname=record_fh, extra_iterations=extra_iterations)
+	if result is not None:
 		zlog.debug("Found a closed orbit without needing range")
 		return result
 
@@ -401,14 +401,14 @@ def find_closed_orbit_range(line, init_YTZP=None, max_iterations=100, fai_label 
 			surviving_init_coord = [surviving_particle['Y0'], surviving_particle['T0'], surviving_particle['Z0'], surviving_particle['P0']]
 		
 			# use stable particle to find closed orbit
-			result = find_closed_orbit(line=line, init_YTZP=surviving_init_coord, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D, record_fname=record_fh)
-			if result != None:
+			result = find_closed_orbit(line=line, init_YTZP=surviving_init_coord, max_iterations=max_iterations, fai_label=fai_label, tol=tol, D=D, record_fname=record_fh, extra_iterations=extra_iterations)
+			if result is not None:
 				return result
 		zlog.warning("Despite finding surviving particles, none were stable")	
 		return None
 
 
-def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, record_fname=None, plot_search=False):
+def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None, tol = 1e-6, D=1, record_fname=None, plot_search=False, extra_iterations=2):
 	"""Find a closed orbit for the line. can optionally give a list of initial coordinates, init_YTZP, eg:
 	find_closed_orbit(line, init_YTZP=[1.2,2.1,0,0])
 	otherwise [0,0,0,0] are used.
@@ -418,9 +418,10 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 	It is recommend to have a REBELOTE, with several laps. The area of the phase space ellipse is approximated from the coordinates from the FAISCNL (or MARKER with fai_label), and the center is used for the new coordinates. Once the relative variation between iterations is less that the tolerance, the function returns the closed orbit coordinates. If a coordinate is close to zero (less than the tolerance) then it is compared absolutely instead of relatively.
 	
 	record_fname is used to record search details to a file that can be used with plot_find_closed_orbit().
+	extra_iterations allows some extra iterations to improve accuracy, even after tolerance reached
 	"""
 	zlog.debug("enter function")
-	if init_YTZP == None:
+	if init_YTZP is None:
 		init_YTZP = [0, 0, 0, 0]
 
 	if record_fname:
@@ -450,7 +451,7 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 	coords = []
 	tracks = []
 	laps = []
-	close_orbit_found = False
+	close_orbit_found = 0
 	for iteration in xrange(max_iterations):
 		zlog.debug("start iteration: "+str(iteration)+ " with coords "+str(current_YTZP))
 		coords.append(current_YTZP)
@@ -473,8 +474,7 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 		if not r.run_success() and lost_lap >= 5:
 			zlog.warning("Lost on lap %d"%lost_lap)
 
-		if lost_lap < 3:
-		#if not r.run_success():
+		if not r.run_success() and lost_lap < 3:
 			if plot_search:
 				import matplotlib.pyplot as pyplot
 				for ptrack in ptracks:
@@ -490,7 +490,7 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 			track = r.get_track('fai', ['Y', 'T', 'Z', 'P'])
 			
 			#use track data at location given by fai_label
-			if fai_label != None:
+			if fai_label is not None:
 				if iteration == 0:
 					label = flatten(r.get_track('fai', ['element_label1']))
 					label = [lab.rstrip() for lab in label]
@@ -537,20 +537,24 @@ def find_closed_orbit(line, init_YTZP=None, max_iterations=100, fai_label = None
 			else:
 				difs[x] = abs((prev_YTZP[x] - current_YTZP[x])/ prev_YTZP[x])
 
+		this_orbit_good = False
 		if difs.max() < tol:
-			close_orbit_found = True
+			this_orbit_good = True
 			close_orbit = current_YTZP
-			break
 
 		if area_h < tol and area_v < tol:
-			close_orbit_found = True
+			this_orbit_good = True
 			close_orbit = current_YTZP
-			break
+		
+		if this_orbit_good:
+			close_orbit_found += 1
+			if close_orbit_found > extra_iterations:
+				break
 	
 	for x in xrange(len(areas)):
 		print "it:", x, "\tYTZP", coords[x], "\tarea", areas[x], "\t laps", laps[x]
 
-	if close_orbit_found:
+	if close_orbit_found>0:
 		print "found closed orbit"
 		print "Y=%s, T=%s, Z=%s, P=%s" % tuple(current_YTZP)
 		return current_YTZP
@@ -620,7 +624,7 @@ def plot_find_closed_orbit(data_fname, outfile=None):
 			pylab.plot(x,y, 'x')
 		
 		
-		if outfile != None:
+		if outfile is not None:
 			pylab.savefig(outfile_pre+"track_"+axis+"."+outfile_ext)
 		else:
 			pylab.show()
@@ -628,7 +632,7 @@ def plot_find_closed_orbit(data_fname, outfile=None):
 		pylab.clf()
 		pylab.title("surviving particle start and ends")
 
-		if survivors != None:
+		if survivors is not None:
 			for surv in survivors[:10]:
 				if axis=='h':
 					x, y, x1, y1 = surv[[0,1,4,5]]
@@ -642,7 +646,7 @@ def plot_find_closed_orbit(data_fname, outfile=None):
 				pylab.plot([x,x1], [y,y1])
 
 
-			if outfile != None:
+			if outfile is not None:
 				pylab.savefig(outfile_pre+"survivor_"+axis+"."+outfile_ext)
 			else:
 				pylab.show()
@@ -690,7 +694,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		if t == 'MATRIX':
 			has_matrix = True
 			matrix = e
-	if not (has_object5 and (has_matrix or input_twiss_parameters != None)):
+	if not (has_object5 and (has_matrix or input_twiss_parameters is not None)):
 		raise BadLineError, "beamline need to have an OBJET with kobj=5 (OBJET5), and a MATRIX elementi to get tune"
 
 	#run Zgoubi
@@ -714,7 +718,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		rig  = r.get_track('plt', ['BORO'])[0][0]
 	
 	##Calculate Lorentz factor if mass and charge are known
-	#if mass_mev !=None and charge !=None:
+	#if mass_mev is not None and charge is not None:
 		#ke = rigidity_to_ke(mass_mev*1e6, rig*1e-3, charge)
 		#gamma_lorentz = ke_to_gamma(mass_mev*1e6, ke)
 	
@@ -1014,7 +1018,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	R56_list = [x*unit_list[4]/unit_list[5] for x in R56_list]
 	
 #! Get inital twiss paramters. If no input_twiss_parameters supplied, assume cell is periodic and find results using get_twiss_parameters
-	if input_twiss_parameters == None:
+	if input_twiss_parameters is None:
 		twissparam = r.get_twiss_parameters()
 	else:
 		twissparam = input_twiss_parameters
@@ -1040,6 +1044,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 	
 	if calc_dispersion:
 		del_p = 0.0001 #momentum shift
+		line = copy.copy(line)
 
 		#need to switch to objet2
 		ob2 = zg.OBJET2()
@@ -1054,10 +1059,10 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 
 		closedorb_YTZP = None
 		#Try to find closed orbit of off-momentum particle, other wise use dispersion to estimate closed orbit
-		if input_twiss_parameters == None:
+		if input_twiss_parameters is None:
 			closedorb_YTZP = find_closed_orbit(line, init_YTZP=[0,0,0,0], tol=1e-5, D=(1+ D0[ind0])*(1+del_p))
 
-		if closedorb_YTZP != None:
+		if closedorb_YTZP is not None:
 			ob2.clear()
 			ob2.add(Y=closedorb_YTZP[0], T=closedorb_YTZP[1],Z=0,P=0, D=(1+ D0[ind0])*(1+del_p))
 		else:
@@ -1066,7 +1071,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 			ob2.add(Y=Y0[ind0] + del_p*disp_y_0*cm_, T=T0[ind0] + del_p*disp_py_0*mm_, 
 				Z=Z0[ind0] + del_p*disp_z_0*cm_, P=P0[ind0] + del_p*disp_pz_0*mm_, D=(1+ D0[ind0])*(1+del_p))
 		
-		reb.set(NPASS=1)
+		reb.set(NPASS=0)
 		#restore full_tracking if necessary 
 		if track_type == 'plt':
 		    line.full_tracking(True)
@@ -1100,7 +1105,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		disp_pz_list = [xd*mm/del_p for xd in map(numpy.subtract, p_disp, P_alltracks[0])]
 			
 		##go on to calculate phase slip and transition gamma if enough information available
-		#if tof_ref != None:
+		#if tof_ref is not None:
 			##calculate off-momentum tof. Assume just one point
 			#tof_delp = r.get_track('fai', ['tof'])[0][0]
 			##calculate phase slip factor, often given the symbol eta
@@ -1108,7 +1113,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 
 
 			##calculate transition gamma if gamma_lorentz is known, i.e. if mass and charge are known
-			#if mass_mev != None and charge != None:
+			#if mass_mev is not None and charge is not None:
 				#momentum_compaction = phase_slip + (1/(gamma_lorentz**2))
 				#gamma_transition = (1/momentum_compaction)**0.5
 			#else:
@@ -1139,7 +1144,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 #! - The phase advance can be found by applying a Floquet transformation to the transfer matrix (S.Y.Lee eqn 2.65)
 
  
-	if file_result != None:
+	if file_result is not None:
 		fresults = open(file_result, 'w')
 		print >> fresults, '#%8s %5s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %9s' % ("s", "label", \
 			"mu_y", "beta_y", "alpha_y", "gamma_y","disp_y","disp_py",\
@@ -1237,7 +1242,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 				alpha_z_list.append(0.0)
 				gamma_z_list.append(0.0)
 
-			if file_result != None:
+			if file_result is not None:
 				print >> fresults, '%2f %5s %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f %9.6f' % (S_alltracks[0][i], label_ref[i], \
 					mu_y_list[i], beta_y_list[i], alpha_y_list[i], gamma_y_list[i],disp_y_list[i],disp_py_list[i],\
 					mu_z_list[i], beta_z_list[i], alpha_z_list[i], gamma_z_list[i],disp_z_list[i],disp_pz_list[i])
@@ -1256,7 +1261,7 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 			print
 		raise
 
-	if file_result != None:
+	if file_result is not None:
 		fresults.close()
 
 	#create structured numpy array to hold twiss profile results
@@ -1301,7 +1306,7 @@ def calc_phase_slip(line, tof_ref, del_p = 0.0001, init_YTZP = [0,0,0,0], tol_co
 	closedorb_YTZP = find_closed_orbit(line, init_YTZP=init_YTZP, tol= tol_co, D= D*(1+del_p))
 
 	phase_slip = None
-	if closedorb_YTZP != None:
+	if closedorb_YTZP is not None:
 		
 		objet.clear()
 		objet.add(Y=closedorb_YTZP[0], T=closedorb_YTZP[1], Z=0, P=0, D=D*(1+del_p))
@@ -1330,7 +1335,7 @@ def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier=False, co
 
        Set plot_fourier= True to show Fourier spectrum. Default is False
 	"""
-	if coords == None:
+	if coords is None:
 		coords = []
 
 	#check line has an objet2
@@ -1524,7 +1529,7 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 		print "check emit (h/v) ", emit_h, emit_v
 		print "ellipse_coords, coord_pick ",ellipse_coords, coord_pick
 
-		if coord_pick == None:
+		if coord_pick is None:
 			#obtain coordinates on phase space ellipses. Use beta, alpha values found at closed orbit
 			coords_YTZP_ini = emittance_to_coords(emit_h, emit_v, alphayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))
 		else:
@@ -1623,7 +1628,7 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 		coords_YTZP_full.append(coords_YTZP_full[0])
 
 
-		if coord_pick == None:
+		if coord_pick is None:
 			#obtain coordinates on phase space ellipses. Use beta, alpha values found at closed orbit
 			coords_YTZP_lim = emittance_to_coords(emit_plot_h, emit_plot_v, alphayz, betayz, beta_gamma_input, ncoords = abs(ellipse_coords))
 		else:
@@ -1879,7 +1884,7 @@ def misalign_element(line, element_indices, mean, sigma, sigma_cutoff, misalign_
 	element_indices can be determined using line.find_elements(element_name)
 
 	mean and sigma should be input in meters """
-	if misalign_dist == None:
+	if misalign_dist is None:
 		misalign_dist = []
 
 	import random
@@ -1919,7 +1924,7 @@ def gaussian_cutoff(npoints, mean, sigma, sigma_cutoff, seed = None):
 
 	import random
 
-	if seed != None:
+	if seed is not None:
 		random.seed(seed)
 
 	dist = []
@@ -1949,9 +1954,9 @@ def tune_diagram(tune_list, order=3, xlim=None, ylim=None):
 	The default value of order is 3. 
 	Written by Y. Giboudet
 	"""
-	if xlim == None:
+	if xlim is None:
 		xlim = [0, 1]
-	if ylim == None:
+	if ylim is None:
 		ylim = [0, 1]
 
 	import pylab
@@ -2032,7 +2037,7 @@ def tune_diagram(tune_list, order=3, xlim=None, ylim=None):
 
  
 def plot_data_xy(data, filename, labels=None, style='b-', xlim=None, ylim=None):
-	if labels == None:
+	if labels is None:
 		labels = ["", "", ""]
 
 	import pylab
@@ -2040,9 +2045,9 @@ def plot_data_xy(data, filename, labels=None, style='b-', xlim=None, ylim=None):
 	pylab.hold(False)
 	pylab.plot(data_a[:, 0], data_a[:, 1], style)
 	pylab.title(labels[0])
-	if xlim != None:
+	if xlim is not None:
 		pylab.xlim( (xlim[0], xlim[1]) )
-	if ylim != None:
+	if ylim is not None:
 		pylab.ylim( (ylim[0], ylim[1]) )
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])
@@ -2072,7 +2077,7 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 
 	import pylab
 
-	if labels == None:
+	if labels is None:
 		labels = ["", "", ""]
 	#check if data is a single list or a list of lists
 	single_x_data = False
@@ -2099,7 +2104,7 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 		legend = [legend]
 
 
-	if tick_multiple != None:
+	if tick_multiple is not None:
 		from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 		majorLocator   = MultipleLocator(tick_multiple)
 		ax = pylab.subplot(111)
@@ -2116,20 +2121,20 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 				else:
 					pylab.plot(data_x_list[index], data_y, style[index%len(style)])
 	pylab.title(labels[0])
-	if xlim != None:
+	if xlim is not None:
 		pylab.xlim( (xlim[0], xlim[1]) )
-	if ylim != None:
+	if ylim is not None:
 		pylab.ylim( (ylim[0], ylim[1]) )
 	pylab.xlabel(labels[1])
 	pylab.ylabel(labels[2])
 
 	if legend != [' ']:
-		if legend_title != None:
+		if legend_title is not None:
 			pylab.legend(loc=legend_location, title=legend_title)
 		else:
 			pylab.legend(loc=legend_location)
 
-	if tick_multiple != None:
+	if tick_multiple is not None:
 		ax.xaxis.set_major_locator(majorLocator)
 		
 	pylab.savefig(filename)

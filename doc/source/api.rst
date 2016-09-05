@@ -32,7 +32,7 @@ This contains the main PyZgoubi classes: Line and Results
 	:members:
 
 :mod:`zgoubi.common`
------------------------
+--------------------
 
 .. automodule:: zgoubi.common
 	:members:
@@ -57,6 +57,12 @@ This contains the main PyZgoubi classes: Line and Results
 .. automodule:: zgoubi.exceptions
 	:members:
 
+:mod:`zgoubi.gcp`
+-----------------
+
+.. automodule:: zgoubi.gcp
+	:members:
+
 
 :mod:`zgoubi.io`
 ----------------
@@ -65,7 +71,7 @@ This contains the main PyZgoubi classes: Line and Results
 	:members:
 
 :mod:`zgoubi.lab_plot`
-----------------
+----------------------
 
 .. automodule:: zgoubi.lab_plot
 	:members:

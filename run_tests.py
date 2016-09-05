@@ -66,15 +66,15 @@ print >> log, "installing to", install_dir
 #subprocess.Popen(["./setup.py", "clean", "--all"])
 clean_proc = subprocess.Popen(["python", "./setup.py", "clean", "--all"], stdout=log, stderr=subprocess.STDOUT)
 clean_proc.wait()
-install_res = subprocess.Popen(["python", "./setup.py", "install", "--prefix=%s"%install_dir], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+install_res = subprocess.Popen(["python", "./setup.py", "install", "--single-version-externally-managed", "--prefix=%s"%install_dir], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 for line in install_res.communicate()[0].split('\n'):
 	print >>log, line
 	if line.startswith('export PYTHONPATH='):
-		env_pythonpath = line.rpartition(':')[2]
+		env_pythonpath = line.rpartition('=')[2].rpartition(':')[0]
 		os.environ["PYTHONPATH"] = os.pathsep + env_pythonpath
 	if line.startswith('export PATH='):
-		env_path = line.rpartition(':')[2]
+		env_path = line.rpartition('=')[2].rpartition(':')[0]
 		os.environ["PATH"] = os.pathsep + env_path
 	if line:
 		last_line = line.strip()
@@ -133,7 +133,7 @@ for test_file in tests:
 	print >> log,"running test %s, %d of %d"%(test_file, tests_run, number_of_tests)
 	log.flush()
 	for zgoubi_bin in zgoubi_bins:
-		if zgoubi_bin == None:
+		if zgoubi_bin is None:
 			command = pyzgoubi_cmd + " " + full_test_file
 			test_name = test_file
 		else:
@@ -171,9 +171,9 @@ for test_file in tests:
 
 print "\nSummary:"
 print >> log,"\nSummary:"
-if zgoubi_bins[0] != None:
-	print "Using zgoubi binariesi:"
-	print>> log, "Using zgoubi binariesi:"
+if zgoubi_bins[0] is not None:
+	print "Using zgoubi binaries:"
+	print>> log, "Using zgoubi binaries:"
 	for zgoubi_bin in zgoubi_bins:
 		print "\t", zgoubi_bin
 		print>> log, "\t", zgoubi_bin

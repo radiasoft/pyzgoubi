@@ -160,8 +160,8 @@ def define_file(fname, allow_lookup=False):
 		
 
 	
-	col_names = header[2].strip().replace(" ", "").split(',')
-	col_types = header[3].strip().replace(" ", "").split(',')
+	col_names = header[2].strip().strip('#').replace(" ", "").split(',')
+	col_types = header[3].strip().strip('#').replace(" ", "").split(',')
 	
 	dupes = list(set ([x  for x in col_names if (col_names.count(x) > 1)]))
 	if dupes:

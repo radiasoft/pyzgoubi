@@ -1,20 +1,51 @@
-Changes from 0.4.1 -> 0.4.9
+Changes from 0.5.0 -> 0.6.0
+Fri 2016-09-02
 
-Version 0.4.9 is a prerelease for the 0.5 release. It introduces some changes that make break scripts writen for the 0.4.x versions.
+Version 0.6.0 is mostly a bug fix release, but removes some depricated functions.
+
+Labplot: fixes for POLARMESH, TOSCA, asymmetric widths, 
+Fixes for current and future numpy releases
+find_closed_orbit() can do extra_iterations to improve accuracy beyond the tolerance
+More robust error output from Line.run()
+TOSCA element, update options
+gcp: get_phase_space, get_cell_properties_nonperiodic
+Results object now has access for impdev files
+Many small fixes
+
+For full changes see http://pyzgoubi.bzr.sf.net/bzr/ or run:
+bzr log --include-merges -r tag:pyzgoubi-0.5.0..tag:pyzgoubi-0.6.0
+
+It is recommended that pyzgoubi 0.6.0 is used with Zgoubi 6.0.1, though almost all functionality works with Zgoubi back to 5.1.0
+
+Changes from 0.4.1 -> 0.5.0
+Thu 2015-03-26
+
+Version 0.5.0 is a major release. It introduces some changes that make break scripts written for the 0.4.x versions.
 
 New features and changes
 Get cell properties (gcp) module, contains functions for quick analysis of a periodic cell.
 Lab Plot module, for making plots in lab coordinates
-Element definisions are processed at install time not runtime
-Fixes for running on windows and Mac OS
+Element definitions are processed at install time not runtime
+Fixes for running on Windows and Mac OS
 Improve reliability of closed orbit search
-Fix file parsing when zgoubi gives oddly formated exponents (eg 1.5741247399232311-101)
+Fix file parsing when zgoubi gives oddly formatted exponents (eg 1.5741247399232311-101)
+Negation operator reverse a line (and some elements)
+Removed some deprecated functions
+Error message improvements
+get_twiss_profiles improvements
+Many small fixes
+
+This version of PyZgoubi has been tested with Zgoubi 5.1.0 through to current development versions SVN 535. Some features (binary IO do not work with 5.1.0 or older svn versions without patches listed below). To build a recent development version automatically use the command:
+pyzgoubi --install-zgoubi
+
+For full changes see http://pyzgoubi.bzr.sf.net/bzr/ or run:
+bzr log --include-merges -r tag:pyzgoubi-0.4.1..tag:pyzgoubi-0.5.0
 
 
 Changes from 0.4.0 -> 0.4.1
 Tue Nov  1 12:15:19 GMT 2011
 
-This release contains a years worth of updates for 0.4. It introduces a few new features, but should not break compatability with 0.4.0
+This release contains a years worth of updates for 0.4. It introduces a few new features, but should not break compatibility with 0.4.0
 
 New Features
 Add command to build a binary of Zgoubi, pyzgoubi --install-zgoubi
@@ -97,7 +128,7 @@ New Features
 
 Fixes
 * Possible cygwin fixes (Not fully tested, probably best to run in native python on windows)
-* Allow convering T and kGauss both directions
+* Allow converting T and kGauss both directions
 * Fixes to plot_data_xy_multi, scan_dynamic_aperture
 
 See http://pyzgoubi.bzr.sf.net/bzr/ for full changes.

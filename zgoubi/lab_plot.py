@@ -8,15 +8,25 @@ import numpy as np
 from zgoubi.core import zlog
 import scipy.interpolate
 import scipy.spatial
+import os
 
 
 null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL REBELOTE".split()
-rect_elements = "DRIFT MULTIPOL QUADRUPO BEND".split()
+rect_elements = "DRIFT MULTIPOL QUADRUPO BEND TOSCA".split()
+
+def get_param(element, name, fallback=None):
+	if hasattr(element, "plot_hints") and name in element.plot_hints:
+		return element.plot_hints[name]
+	elif hasattr(element, name):
+		return element.get(name)
+	elif fallback is not None:
+		return fallback
+	raise ValueError("Element: %s Type: %s has no atrribute or plot hint for %s"%(element.label1, element._zgoubi_name,name))
 
 
 
 class LabPlotElement(object):
-	def __init__(self, z_element, prev_coord, prev_angle, boro, sector_width):
+	def __init__(self, z_element, prev_coord, prev_angle, boro, sector_width, line):
 		self.z_element = z_element
 		self.prev_coord = list(prev_coord)
 		self.prev_angle = prev_angle
@@ -30,27 +40,46 @@ class LabPlotElement(object):
 		self.exit_coord = list(self.entry_coord) # coord of the exit of the ref line
 		self.exit_angle = self.entry_angle #  angle of the exit of the ref line
 
+		if self.element_type == "TOSCA":
+			if hasattr(self.z_element, "plot_hints") and "AT" in self.z_element.plot_hints:
+				print "polar"
+				# Then is is a polar TOSCA, so change type
+				self.element_type = "TOSCAp"
+			elif hasattr(self.z_element, "plot_hints") and "XL" in self.z_element.plot_hints:
+				# Then is rectagular TOSCA
+				pass
+			else:
+				raise ValueError("TOSCA does not supply enough information for plotting. Use set_plot_hint() to set AT or XL")
+
 		if self.element_type in null_elements:
 			# does not effect locations
 			pass
 
 		elif self.element_type in rect_elements:
 			# step by length, no angle change
-			self.length = self.z_element.XL
+			self.length = get_param(self.z_element,"XL")
+
 			self.exit_coord = self.transform(self.length,0)
 			self.entrance_wedge_angle = 0
 			self.exit_wedge_angle = 0
 
 			if self.element_type in "MULTIPOL QUADRUPO".split():
-				self.width =  self.z_element.R_0 * 2
+				self.width_p =  self.z_element.R_0
+				self.width_m =  self.z_element.R_0
 			else:
-				self.width = 20
+				width = get_param(self.z_element,"width", 20)
+				try:
+					self.width_p = float(width)/2
+					self.width_m = float(width)/2
+				except TypeError:
+					self.width_p = float(width[0])
+					self.width_m = float(width[1])
 
 			if self.element_type in "MULTIPOL QUADRUPO".split():
 				if self.z_element.KPOS != 1:
 					raise ValueError("Only %s with KPOS=1 is currently implemented"%self.element_type)
 			elif self.element_type in "BEND":
-				if boro == None : raise ValueError("Must set boro for %s"%self.element_type)
+				if boro is None : raise ValueError("Must set boro for %s"%self.element_type)
 				angle = asin(self.z_element.B1 * self.z_element.XL / 2 / boro)
 				self.entrance_wedge_angle = self.z_element.W_E - angle
 				self.exit_wedge_angle = self.z_element.W_S - angle 
@@ -75,15 +104,39 @@ class LabPlotElement(object):
 			self.exit_coord[1] += self.z_element.YCE * cos(self.exit_angle)
 
 
-		elif self.element_type in ["DIPOLE", "DIPOLES", "FFAG"]:
-			self.dip_at = radians(self.z_element.AT) # sector angle of magnet region
+		elif self.element_type in ["DIPOLE", "DIPOLES", "FFAG", "POLARMES", "TOSCAp"]:
+			if self.element_type in ["POLARMES"]:
+				# to get opening angle read the list of angles in the field map
+				self.fmap_file_path = self.z_element.FNAME
+				try:
+					fmap_file = open(self.fmap_file_path)
+				except IOError:
+					for fname in line.input_files:
+						if os.path.basename(fname) == self.z_element.FNAME:
+							self.fmap_file_path = fname
+							fmap_file = open(self.fmap_file_path)
+				for n in xrange(4): dummy = fmap_file.readline()
+				phi_line = fmap_file.readline()
+				phi_line = phi_line.split()
+				self.dip_at = float(phi_line[-1])
+			else:
+				self.dip_at = radians(get_param(self.z_element,"AT"))
+
 			self.dip_re = self.z_element.RE # radius at entry
 			self.dip_rs = self.z_element.RS # radius at exit
 			self.dip_te = self.z_element.TE # radius at entry
 			self.dip_ts = self.z_element.TS # radius at exit
-			self.width = min(self.dip_re, 500) # FIXME need proper method for setting widths
+
+			width = min(self.dip_re, 250)*2 # default
 			if sector_width:
-				self.width = float(sector_width)
+				width = sector_width # override with function argument
+			width = get_param(self.z_element,"width",width) # override with plot_hint
+			try:
+				self.width_p = float(width)/2
+				self.width_m = float(width)/2
+			except TypeError:
+				self.width_p = float(width[0])
+				self.width_m = float(width[1])
 
 			if self.dip_te != 0 or self.dip_ts != 0:
 				raise ValueError("Non zero TE or TS not implemented for %s"%self.element_type)
@@ -107,35 +160,12 @@ class LabPlotElement(object):
 					sa = sub_element["THETA_S"]
 
 					self.sub_boundaries.append(dict(e=e, s=s, ea=ea, sa=sa))
-			
-
-		elif self.element_type in ["POLARMES"]:
-			# to get opening angle read the list of angles in the field map
-			self.fmap_file_path = self.z_element.FNAME
-			fmap_file = open(self.fmap_file_path)
-			for n in xrange(4): line = fmap_file.readline()
-			phi_line = fmap_file.readline()
-			phi_line = phi_line.split()
-			self.dip_at = float(phi_line[-1])
-
-			self.dip_re = self.dip_rs = 0
-			self.width =  500
-			if sector_width:
-				self.width = float(sector_width)
-
-			self.entry_angle -= self.dip_at / 2
-			self.exit_angle -= self.dip_at
-
-			self.sector_center_coord = list(self.entry_coord)
-			self.exit_coord[0] = self.entry_coord[0]
-			self.exit_coord[1] = self.entry_coord[1]
-			
 
 		else:
 			raise ValueError("Can't handle element "+ self.element_type)
 	
 	def transform(self, x, y):
-		if self.element_type not in ["DIPOLE", "DIPOLES", "POLARMES", "FFAG"]:
+		if self.element_type not in ["DIPOLE", "DIPOLES", "POLARMES", "FFAG","TOSCAp"]:
 			x0, y0 = self.entry_coord # FIXME how to handle transform in changref
 			a0 = self.entry_angle
 
@@ -145,6 +175,8 @@ class LabPlotElement(object):
 			# coords are in polar
 			x0, y0 = self.sector_center_coord
 			a0 = self.prev_angle
+			if self.element_type == "TOSCAp":
+				a0-=self.dip_at/2
 
 			x1 = x0 + y * sin(-a0 + x)
 			y1 = y0 + y * cos(-a0 + x)
@@ -156,13 +188,16 @@ class LabPlotElement(object):
 			points = [t(0,0), t(self.length,0)]
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, **style["reference"])
-		if self.element_type in ["DIPOLE", "DIPOLES", "FFAG"]:
+		if self.element_type in ["DIPOLE", "DIPOLES", "FFAG", "POLARMES","TOSCAp"]:
 			re = self.dip_re
 			a = self.dip_at
+			ang_shift = 0
+			if self.element_type == "TOSCAp":
+				ang_shift = -self.dip_at/2
 			arcsteps = 20
 			points = []
 			for a1 in np.linspace(0,a,arcsteps):
-				points.append(t(a1, re))
+				points.append(t(a1+ang_shift, re))
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, **style["reference"])
 
@@ -172,47 +207,47 @@ class LabPlotElement(object):
 		if (self.element_type in rect_elements
 			and self.element_type != 'DRIFT'):
 			if self.entrance_wedge_angle == 0 and self.exit_wedge_angle == 0:
-				points = [t(0,self.width/2),
-						  t(0,-self.width/2),
-						  t(self.length,-self.width/2),
-						  t(self.length,self.width/2),
-						  t(0,self.width/2)]
+				points = [t(0,self.width_p),
+						  t(0,-self.width_m),
+						  t(self.length,-self.width_m),
+						  t(self.length,self.width_p),
+						  t(0,self.width_p)]
 			elif abs(self.entrance_wedge_angle) > pi/2:
 				raise ValueError("entrance_wedge_angle of %s greater than pi/2"%self.element_type)
 			elif abs(self.exit_wedge_angle) > pi/2:
 				raise ValueError("exit_wedge_angle of %s greater than pi/2"%self.element_type)
 			else:
-				entry_offset = self.width/2 * sin(self.entrance_wedge_angle)
-				exit_offset = self.width/2 * sin(self.exit_wedge_angle)
-				points = [t(0+entry_offset,self.width/2),
-						  t(0-entry_offset,-self.width/2),
-						  t(self.length+exit_offset,-self.width/2),
-						  t(self.length-exit_offset,self.width/2),
-						  t(0+entry_offset,self.width/2)]
+				entry_offset_p = self.width_p * sin(self.entrance_wedge_angle)
+				exit_offset_p = self.width_p * sin(self.exit_wedge_angle)
+				entry_offset_m = self.width_m * sin(self.entrance_wedge_angle)
+				exit_offset_m = self.width_m * sin(self.exit_wedge_angle)
+				points = [t(0+entry_offset_p,self.width_p),
+						  t(0-entry_offset_m,-self.width_m),
+						  t(self.length+exit_offset_m,-self.width_m),
+						  t(self.length-exit_offset_p,self.width_p),
+						  t(0+entry_offset_p,self.width_p)]
 
 			xs, ys = zip(*points)
 			lpd.draw_line(xs, ys, **style["magnet_outline"])
 
-		if self.element_type in ["DIPOLE", "DIPOLES","POLARMES", "FFAG"]:
+		if self.element_type in ["DIPOLE", "DIPOLES","POLARMES", "FFAG","TOSCAp"]:
 			# in polar
 			re = self.dip_re
-			w = self.width
-			if self.element_type in ["POLARMES"]:
-				wp = self.width
-				wm = 0
-			else:
-				wp = self.width/2
-				wm = -self.width/2
+			wp = self.width_p
+			wm = -self.width_m
 			a = self.dip_at
+			ang_shift = 0
+			if self.element_type == "TOSCAp":
+				ang_shift = -self.dip_at/2
 			arcsteps = 20
-			points = [ t(0, re + wm),
-			           t(0, re + wp)]
+			points = [ t(0+ang_shift, re + wm),
+			           t(0+ang_shift, re + wp)]
 			for a1 in np.linspace(0,a,arcsteps):
-				points.append(t(a1, re + wp))
-			points.append(t(a, re + wp))
-			points.append(t(a, re + wm))
+				points.append(t(a1+ang_shift, re + wp))
+			points.append(t(a+ang_shift, re + wp))
+			points.append(t(a+ang_shift, re + wm))
 			for a1 in np.linspace(a,0,arcsteps):
-				points.append(t(a1, re + wm))
+				points.append(t(a1+ang_shift, re + wm))
 
 			xs, ys = zip(*points)
 
@@ -243,9 +278,10 @@ class LabPlotElement(object):
 
 		
 class LabPlotDrawer(object):
-	def __init__(self, mode="matplotlib", aspect="equal"):
+	def __init__(self, mode="matplotlib", aspect="equal", plot_extents=None):
 		self.mode = mode
 		self.aspect = aspect
+		self.plot_extents = plot_extents
 		
 		if self.mode == "matplotlib":
 			global matplotlib,plt, Line2D
@@ -257,6 +293,8 @@ class LabPlotDrawer(object):
 			self.fig.clf()
 			self.ax = self.fig.add_subplot(111)
 			self.ax.set_aspect(self.aspect, adjustable='datalim')
+			if plot_extents is not None:
+				self.ax.set_aspect(self.aspect, adjustable='box')
 		else:
 			raise ValueError("Can't handle mode "+ self.mode)
 
@@ -289,6 +327,9 @@ class LabPlotDrawer(object):
 			version = matplotlib.__version__.split(".")
 			if int(version[0]) >= 1 and int(version[1]) >= 1:
 				plt.tight_layout()
+			if self.plot_extents:
+				self.ax.set_xlim(self.plot_extents[0:2])
+				self.ax.set_ylim(self.plot_extents[2:4])
 
 	def show(self):
 		if self.mode == "matplotlib":
@@ -297,7 +338,10 @@ class LabPlotDrawer(object):
 
 	def save(self,fname):
 		if self.mode == "matplotlib":
-			plt.savefig(fname)
+			if self.plot_extents is not None:
+				plt.savefig(fname, bbox_inches="tight")
+			else:
+				plt.savefig(fname)
 		else: ValueError("Can't handle mode "+ self.mode)
 
 
@@ -307,8 +351,8 @@ class LabPlot(object):
 	"""
 	def __init__(self, line, boro=None, sector_width=None, aspect="equal", style=None):
 		"""Creates a new plot from the line.
-		If using an element that adjusts it shape based on BORO, then it must be passed in
-		if sector_width is a number it used for the width of sector elements
+		If using an element that adjusts it shape based on BORO, then it must be passed in.
+		If sector_width is a number it used for the width of sector elements, alternatively if sector_width is a list of 2 values they are used as the distance to the boundary in the positive and negative directions
 
 		"""
 		
@@ -349,7 +393,7 @@ class LabPlot(object):
 					#zlog.warn("Repeated label '%s'"%label)
 			else:
 				label = ""
-			lpelem = LabPlotElement(elem, position, angle, boro=self.boro, sector_width=self.sector_width)
+			lpelem = LabPlotElement(elem, position, angle, boro=self.boro, sector_width=self.sector_width, line=self.line)
 			self.elements.append(lpelem)
 			self.element_label1.append(label)
 			angle = lpelem.exit_angle
@@ -366,11 +410,13 @@ class LabPlot(object):
 		for k,v in style.items():
 			self.style[k].update(v)
 
-	def draw(self, draw_tracks=True, draw_field_points=False, draw_field_midplane=False, field_component='z', field_steps=100, field_int_mode="kd"):
+	def draw(self, draw_tracks=True, draw_field_points=False, draw_field_midplane=False, field_component='z', field_steps=100, field_int_mode="kd", plot_extents=None):
 		"""Draw the plot in memory, then use :py:meth:`show()` to display to screen or :py:meth:`save()` to save to file.
+
+		plot_extents: list of extents [left, right, bottom, top]
 		
 		"""
-		self.lpd = LabPlotDrawer(aspect=self.aspect)
+		self.lpd = LabPlotDrawer(aspect=self.aspect, plot_extents=plot_extents)
 
 		if field_component not in ['x','y','z']:
 			raise ValueError("field_component should be 'y', 'z' or 'x'")
@@ -493,7 +539,7 @@ class LabPlot(object):
 			pids |= set(np.unique(ptrack['ID']))
 			passes  |= set(np.unique(ptrack['PASS']))
 			noels  |= set(np.unique(ptrack['NOEL']))
-		if ftrack == ptrack == None:
+		if ftrack is None and ptrack is None:
 			raise ValueError("Must pass a fai track or plt track (or both)")
 
 		pids = sorted(list(pids))
@@ -557,7 +603,11 @@ class LabPlot(object):
 						x = 0
 
 						# index error here may mean plt track passed as fai track, maybe there should be some way to check
-						xt, yt = self.elements[el_ind+1].transform(x,y)
+						try:
+							xt, yt = self.elements[el_ind+1].transform(x,y)
+						except IndexError:
+							#FIXME: need to understand why we hit this. see example5_kurri.py
+							pass
 						this_track.append([xt,yt,None,None,None])
 
 				#print this_track
