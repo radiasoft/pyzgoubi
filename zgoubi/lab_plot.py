@@ -367,6 +367,7 @@ class LabPlot(object):
 		self.sector_width = sector_width
 		self.aspect = aspect
 		self.style = {}
+		self.noel_offset = 0
 		self.style["track"] = dict(color="r", linestyle="-", linewidth=0.1)
 		self.style["magnet_outline"] = dict(color="b", linestyle="-", linewidth=1)
 		self.style["element_outline"] = dict(color="b", linestyle=":", linewidth=1)
@@ -377,6 +378,9 @@ class LabPlot(object):
 		
 		self._scan_line()
 
+	def set_noel_offset(self, offset):
+		"If the line passed to LabPlot is missing some initial elements line used for tracking, then set the offset to the number of missing elements so that the element numbers can be synced"
+		self.noel_offset = offset
 
 	def _scan_line(self):
 		"""Scan through the line, and make a note of where all the elements are.
@@ -566,21 +570,7 @@ class LabPlot(object):
 					if len(ftrack_ppn) == 0 and len(ptrack_ppn) == 0:
 						continue
 
-					label = ""
-					if len(ftrack_ppn) > 0: label=ftrack_ppn[0]['element_label1']
-					elif len(ptrack_ppn) > 0: label=ptrack_ppn[0]['element_label1']
-					else:
-						ValueError("No label at element number %s" % noel)
-					label = label.strip()
-
-					try:
-						el_ind = self.element_label1.index(label)
-					except ValueError:
-						raise ValueError("Track contains label '%s' not found in line. NOEL=%s"%(label, noel))
-
-					if label in self.duped_labels:
-						zlog.warn("Track point at element with duplicated label '%s'. Points may be drawn in wrong element"%label)
-
+					el_ind = noel - self.noel_offset - 1
 
 					for t in ptrack_ppn:
 						if t['IEX'] != 1: break
@@ -602,12 +592,7 @@ class LabPlot(object):
 						y = t['Y']
 						x = 0
 
-						# index error here may mean plt track passed as fai track, maybe there should be some way to check
-						try:
-							xt, yt = self.elements[el_ind+1].transform(x,y)
-						except IndexError:
-							#FIXME: need to understand why we hit this. see example5_kurri.py
-							pass
+						xt, yt = self.elements[el_ind+1].transform(x,y)
 						this_track.append([xt,yt,None,None,None])
 
 				#print this_track
