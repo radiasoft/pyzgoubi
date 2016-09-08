@@ -476,12 +476,13 @@ def get_cell_properties_nonperiodic(cell, min_ke, max_ke=None, ke_steps=1, parti
 	return orbit_data
 
 
-def get_cell_tracks(cell, data, particle, full_tracking=False, xterm=False):
+def get_cell_tracks(cell, data, particle, full_tracking=False, xterm=False, add_faiscnl=True):
 	"""Get tracks along the closed orbit for values in data
 	cell: periodic cell
 	data: the data structure return from get_cell_properties()
 	particle: see get_cell_properties()
 	full_tracking: record all steps in the magnet
+	add_faiscnl: insert a faiscnl (beam store) after each element
 
 	tracks are added in the data structures ftrack and ptrack fields
 	
@@ -495,16 +496,17 @@ def get_cell_tracks(cell, data, particle, full_tracking=False, xterm=False):
 			ref_Y,ref_T,ref_Z,ref_P = data[n]['Y0'], data[n]['T0'], data[n]['Z0'], data[n]['P0']
 
 		tracks = get_tracks(cell=cell, start_YTZP=[ref_Y,ref_T,ref_Z,ref_P],
-		                    particle=particle, ke=particle_ke, full_tracking=full_tracking, xterm=xterm)
+		                    particle=particle, ke=particle_ke, full_tracking=full_tracking, xterm=xterm, add_faiscnl=add_faiscnl)
 		data[n]['ftrack'] = tracks['ftrack']
 		data[n]['ptrack'] = tracks['ptrack']
 
 
-def get_tracks(cell, start_YTZP, particle, ke, full_tracking=False, return_zgoubi_files=False, xterm=False):
+def get_tracks(cell, start_YTZP, particle, ke, full_tracking=False, return_zgoubi_files=False, xterm=False, add_faiscnl=True):
 	"""Run a particle through a cell from a give starting point and return track from fai and plt files.
 	
 	This is mostly used by other functions in this module, but can be useful for debugging a lattice
 	
+	add_faiscnl: insert a faiscnl (beam store) after each element
 	"""
 	split = 1
 	tline = Line('test_line')
@@ -519,12 +521,12 @@ def get_tracks(cell, start_YTZP, particle, ke, full_tracking=False, return_zgoub
 	for e in cell.elements():
 		if split == 1:
 			tline.add(e)
-			if hasattr(e, "XL") or hasattr(e, "AT"):
+			if add_faiscnl and (hasattr(e, "XL") or hasattr(e, "AT")):
 				tline.add(FAISCNL(FNAME='zgoubi.fai',))
 		else:
 			for es in split_element(e, split):
 				tline.add(es)
-				if hasattr(e, "XL") or hasattr(e, "AT"):
+				if add_faiscnl and (hasattr(e, "XL") or hasattr(e, "AT")):
 					tline.add(FAISCNL(FNAME='zgoubi.fai',))
 
 	tline.add(DRIFT('end', XL=0))
@@ -879,7 +881,7 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 	
 	cell = copy.deepcopy(cell)
 	cell.full_tracking(True, drift_to_multi=True)
-	cell = uniquify_labels(cell)
+	#cell = uniquify_labels(cell)
 	
 	cell2 = Line("test_line")
 	#cell2.add(DRIFT("gcpstar", XL=0* cm_)) # not sure if needed, but they probably show up a bug in labplot when using an FFAG
@@ -895,16 +897,17 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 		boro = None
 	
 	lp = LabPlot(cell2, boro=boro, sector_width=sector_width, aspect=aspect)
+	lp.set_noel_offset(3) # get_cell_tracks adds 3 elements to start of line
 	if style:
 		lp.set_style(style)
 	
 
 	if draw_tracks:
-		get_cell_tracks(cell2, stable_data, particle, full_tracking=True)
+		get_cell_tracks(cell2, stable_data, particle, full_tracking=True, add_faiscnl=False)
 		for d in stable_data:
 			ftrack = d["ftrack"]
 			ptrack = d["ptrack"]
-			if ftrack is None or ptrack is None:
+			if ftrack is None and ptrack is None:
 				zlog.error("Failed to read fai or plt files")
 			lp.add_tracks(ftrack=ftrack, ptrack=ptrack, draw=1)
 	
@@ -913,7 +916,7 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 			raise ValueError("When using draw_field_midplane, you must set min_y, max_y and y_steps")
 
 		for Y in numpy.linspace(min_y, max_y, y_steps):
-			track = get_tracks(cell2, [Y, angle, 0, 0], particle, 1e15, full_tracking=True)
+			track = get_tracks(cell2, [Y, angle, 0, 0], particle, 1e15, full_tracking=True, add_faiscnl=False)
 			lp.add_tracks(ftrack=track["ftrack"], ptrack=track["ptrack"], draw=0, field=1)
 
 
