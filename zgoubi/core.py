@@ -119,6 +119,7 @@ if need_def_compile:
 	zlog.debug("Compiling definitions")
 	makedefs.make_element_classes(definitions_paths, compiled_defs_path)
 
+max_label_size = zgoubi_settings["max_label_size"]
 
 
 def yield_n_lines(fh, n):
@@ -213,6 +214,11 @@ class zgoubi_element(object):
 	def i2s(self, i):
 		"format integer for printing"
 		out = str(int(i))
+		return out
+
+	def l2s(self, l):
+		"format label for printing"
+		out = l[:max_label_size]
 		return out
 
 	def x2s(self, i):
