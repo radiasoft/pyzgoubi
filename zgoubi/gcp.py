@@ -134,36 +134,24 @@ class GCPData(numpy.ndarray):
 
 def part_info(particle):
 	"Look up a particle by name and return the zgoubi PARTICUL, mass and charge sign"
-	if particle == "p":
+	if isinstance(particle, PARTICUL):
+		part_ob = particle
+	elif particle == "p":
 		part_ob = PROTON()
-		mass = PROTON_MASS
-		charge_sign = 1
 	elif particle == "e":
 		part_ob = ELECTRON()
-		mass = ELECTRON_MASS
-		charge_sign = -1
 	elif particle == "mu-":
 		part_ob = IMMORTAL_MUON()
-		mass = MUON_MASS
-		charge_sign = -1
 	elif particle == "mu+":
 		part_ob = IMMORTAL_MUON()
-		mass = MUON_MASS
-		charge_sign = +1
 	elif particle == "pi+":
 		part_ob = IMMORTAL_PION()
-		mass = PION_MASS
-		charge_sign = +1
 	elif particle == "pi-":
 		part_ob = IMMORTAL_PION()
-		mass = PION_MASS
-		charge_sign = -1
-	elif particle == "Bismuth":
-		part_ob = PARTICUL(M=ATOMIC_MASS_UNIT*238/1e6, Q=PROTON_CHARGE*4)
-		mass = ATOMIC_MASS_UNIT*238
-		charge_sign = 1
 	else:
 		raise ValueError("Unknown particle")
+	mass = part_ob.M *1e6
+	charge_sign = part_ob.Q / -ELECTRON_CHARGE
 	return part_ob, mass, charge_sign
 
 
@@ -172,7 +160,7 @@ def get_cell_properties(cell, min_ke, max_ke=None, ke_steps=1, particle=None, to
 
 	cell: A PyZgoubi Line object containing the beamline elements
 	min_ke, max_ke, ke_steps: kinetic energy in eV. For a single step just set min_ke
-	particle: "p", "e", "mu-", "mu+", or "Bismuth"
+	particle: "p", "e", "mu-", "mu+" or a PARTICUL() instance
 	tol: tolerance when finding closed orbit
 	stop_at_first_unstable: If an energy is found to be unstable, give up
 	closed_orbit_range, closed_orbit_range_count, closed_orbit_init_YTZ: see zgoubi.utils.find_closed_orbit_range()
@@ -230,7 +218,7 @@ def get_cell_properties(cell, min_ke, max_ke=None, ke_steps=1, particle=None, to
 		orbit_data['stable_tm_ZP'][n] = False
 		orbit_data['stable'][n] = False
 		print "closed orbit, energy = ", particle_ke
-		rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
+		rigidity = ke_to_rigidity(particle_ke,mass) / charge_sign
 		ob.set(BORO=rigidity)
 		good_cos = (orbit_data['found_co']*1).sum()
 		if smart_co_search and good_cos >= 2:
@@ -280,7 +268,7 @@ def get_cell_properties(cell, min_ke, max_ke=None, ke_steps=1, particle=None, to
 	for n, particle_ke in enumerate(ke_list):
 		print "twiss, energy = ", particle_ke
 		
-		rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
+		rigidity = ke_to_rigidity(particle_ke,mass) / charge_sign
 		ob.set(BORO=rigidity)
 		
 		ref_Y,ref_T,ref_Z,ref_P = orbit_data['Y'][n],orbit_data['T'][n],orbit_data['Z'][n], orbit_data['P'][n]
@@ -358,7 +346,7 @@ def get_cell_properties_nonperiodic(cell, min_ke, max_ke=None, ke_steps=1, parti
 
 	cell: A PyZgoubi Line object containing the beamline elements
 	min_ke, max_ke, ke_steps: kinetic energy in eV. For a single step just set min_ke
-	particle: "p", "e", "mu-", "mu+", or "Bismuth"
+	particle: "p", "e", "mu-", "mu+", or a PARTICUL() instance
 	full_tracking=True is required in order get minimum and maximum magnetic fields along orbit
 
 	returns orbit_data, an array with ke_steps elements, with the following data
@@ -412,7 +400,7 @@ def get_cell_properties_nonperiodic(cell, min_ke, max_ke=None, ke_steps=1, parti
 	for n, particle_ke in enumerate(ke_list):
 		print "twiss, energy = ", particle_ke
 		
-		rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
+		rigidity = ke_to_rigidity(particle_ke,mass) / charge_sign
 		ob.set(BORO=rigidity)
 		
 		ref_Y,ref_T,ref_Z,ref_P = orbit_data['Y0'][n],orbit_data['T0'][n],orbit_data['Z0'][n], orbit_data['P0'][n]
@@ -532,7 +520,7 @@ def get_tracks(cell, start_YTZP, particle, ke, full_tracking=False, return_zgoub
 	tline.add(DRIFT('end', XL=0))
 	tline.add(END())
 
-	rigidity = ke_to_rigidity(ke,mass) * charge_sign
+	rigidity = ke_to_rigidity(ke,mass) / charge_sign
 	ob.set(BORO=rigidity)
 
 	ref_Y,ref_T,ref_Z,ref_P = start_YTZP
@@ -763,7 +751,7 @@ def get_twiss_params(cell, data, particle, output_prefix="results/twiss_profiles
 	for n, particle_ke in enumerate(data['KE']):
 		if not data[n]['stable']: continue
 		print "energy = ", particle_ke
-		rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
+		rigidity = ke_to_rigidity(particle_ke,mass) / charge_sign
 		ob.set(BORO=rigidity)
 
 		ref_Y,ref_T,ref_Z,ref_P = data[n]['Y'], data[n]['T'], data[n]['Z'], data[n]['P']
@@ -892,7 +880,7 @@ def plot_cell_tracks(cell, data, particle, output_file="results/track.pdf", show
 
 	# if line contains BENDS, then line will be drawn with first energy, but zgoubi will adjust angles for other particles
 	if len(data['KE']>0):
-		boro = ke_to_rigidity(data['KE'][0],mass) * charge_sign
+		boro = ke_to_rigidity(data['KE'][0],mass) / charge_sign
 	else:
 		boro = None
 	
@@ -1376,7 +1364,7 @@ def get_dynamic_aperture(cell, data, particle, npass, nangles=3, tol=0.01, quick
 	for n, particle_ke in enumerate(data['KE']):
 		if not data[n]['stable']: continue
 		print "energy = ", particle_ke
-		rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
+		rigidity = ke_to_rigidity(particle_ke,mass) / charge_sign
 		ob.set(BORO=rigidity)
 		# closed orbit
 		Yc, Tc, Zc, Pc = [data[n]['Y'], data[n]['T'],data[n]['Z'],data[n]['P'] ]
@@ -1450,7 +1438,7 @@ def get_phase_space(cell, data, particle, npass, emits=None):
 	#	if not data[n]['stable']: continue
 		if not data[n]['found_co']: continue
 		print "get_phase_space ke", particle_ke, "n"
-		rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
+		rigidity = ke_to_rigidity(particle_ke,mass) / charge_sign
 		ob = tline.get_objet()
 		ob.set(BORO=rigidity)
 		Yc, Tc, Zc, Pc = [data[n]['Y'], data[n]['T'],data[n]['Z'],data[n]['P'] ]
@@ -1508,7 +1496,7 @@ def plot_dynamic_aperture(cell, data, particle, npass, output_prefix="results/da
 		if not data[n]['stable']: continue
 		pyplot.clf()
 		print "energy = ", particle_ke
-		rigidity = ke_to_rigidity(particle_ke,mass) * charge_sign
+		rigidity = ke_to_rigidity(particle_ke,mass) / charge_sign
 		ob = tline.get_objet()
 		ob.set(BORO=rigidity)
 		Yc, Tc, Zc, Pc = [data[n]['Y'], data[n]['T'],data[n]['Z'],data[n]['P'] ]
