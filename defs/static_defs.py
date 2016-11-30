@@ -214,23 +214,43 @@ class OBJET5(zgoubi_element):
 		self.label1 = ""
 		self.label2 = ""
 		self._params['BORO'] = 0
-		self._params['particles'] = []
+		self._params['ellipses'] = None
 		for p in ['Y','T','Z','P','X','D']:
 			self._params[str('P'+p)] = 1
 			self._params[str(p+'R')] = 0
 		object.__setattr__(self, "ready", True)
 		self.set(settings)
 
+	def add_ellipse(self, **settings):
+		"Add a beam ellipse"
+		ellipse_twiss = dict(alpha_y=0, beta_y=0, alpha_z=0 ,beta_z=0, alpha_s=0, beta_s=0,
+		                     disp_y=0, disp_py=0, disp_z=0, disp_pz=0)
+		for k, v in settings.items():
+			ellipse_twiss[k] = v
+			
+		self._params['ellipses'] = ellipse_twiss
+		
+	def clear_ellipse(self):
+		"remove all particles"
+		self._params['ellipses'] = None
+
 	def output(self):
 		# local short cuts for long function names
 		f = self.f2s
 		i = self.i2s
+		kobj = 5
+
+		if self._params['ellipses']:
+			kobj = 5.01
 		
 		out = "'OBJET'" +nl
 		out += f(self.BORO) +nl
-		out += "5" + nl
+		out += str(kobj) + nl
 		out += f(self.PY) +' '+ f(self.PT) +' '+ f(self.PZ) +' '+ f(self.PP) +' '+ f(self.PX) +' '+ f(self.PD) +nl
 		out += f(self.YR) +' '+ f(self.TR) +' '+ f(self.ZR) +' '+ f(self.PR) +' '+ f(self.XR) +' '+ f(self.DR) +nl
+		if self._params['ellipses']:
+			e = self._params['ellipses']
+			out += f(e["alpha_y"]) +' '+ f(e["beta_y"]) +' '+f(e["alpha_z"]) +' '+f(e["beta_z"]) +' '+f(e["alpha_s"]) +' '+f(e["beta_s"]) +' '+f(e["disp_y"]) +' '+f(e["disp_py"]) +' '+f(e["disp_z"]) +' '+f(e["disp_pz"])
 		return out
 
 
