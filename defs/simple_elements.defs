@@ -27,6 +27,9 @@ V, sig_s : 2E
 !IOPT==7
 L, h : 2E
 V, sig_s :2E
+!IOPT==10
+L, f : 2E
+V, sig_s, OPT :2E,I
 
 CHAMBR
 CHAMBR
