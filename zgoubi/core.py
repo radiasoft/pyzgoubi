@@ -935,6 +935,18 @@ class Results(object):
 	def save_impdev(self, path):
 		"save impdev file to path"
 		return self._save_file("zgoubi.impdev.out", path)
+	
+	def opticsout_fh(self):
+		"return file handle for optics out file"
+		return self._get_fh("zgoubi.OPTICS.out")
+	def opticsout(self):
+		"return optics out file as string"
+		return self._get_str("zgoubi.OPTICS.out")
+	def save_opticsout(self, path):
+		"save optics out file to path"
+		return self._save_file("zgoubi.OPTICS.out", path)
+	
+
 
 	def _bad_float(self, text):
 		"""A wrapper around float to deal with zgoubi output numbers like
