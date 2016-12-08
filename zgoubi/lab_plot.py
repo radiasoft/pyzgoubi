@@ -11,7 +11,7 @@ import scipy.spatial
 import os
 
 
-null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL REBELOTE".split()
+null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL REBELOTE MARKER".split()
 rect_elements = "DRIFT MULTIPOL QUADRUPO BEND TOSCA".split()
 
 def get_param(element, name, fallback=None):
@@ -76,8 +76,15 @@ class LabPlotElement(object):
 					self.width_m = float(width[1])
 
 			if self.element_type in "MULTIPOL QUADRUPO".split():
-				if self.z_element.KPOS != 1:
-					raise ValueError("Only %s with KPOS=1 is currently implemented"%self.element_type)
+				if self.z_element.KPOS == 1:
+					pass
+				elif self.z_element.KPOS == 2:
+					if self.z_element.XCE != 0 or self.z_element.ALE != 0:
+						raise ValueError("Only %s with KPOS=2 with YCE is currently implemented"%self.element_type)
+					self.entry_coord[0] += self.z_element.YCE * -sin(self.entry_angle)
+					self.entry_coord[1] += self.z_element.YCE * cos(self.entry_angle)
+				else:
+					raise ValueError("Only %s with KPOS=1 or 2 is currently implemented"%self.element_type)
 			elif self.element_type in "BEND":
 				if boro is None : raise ValueError("Must set boro for %s"%self.element_type)
 				angle = asin(self.z_element.B1 * self.z_element.XL / 2 / boro)
