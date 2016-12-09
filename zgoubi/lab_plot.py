@@ -12,7 +12,7 @@ import os
 
 
 null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL REBELOTE MARKER".split()
-rect_elements = "DRIFT MULTIPOL QUADRUPO BEND TOSCA".split()
+rect_elements = "DRIFT MULTIPOL QUADRUPO BEND TOSCA CAVITE".split()
 
 def get_param(element, name, fallback=None):
 	if hasattr(element, "plot_hints") and name in element.plot_hints:
@@ -57,7 +57,12 @@ class LabPlotElement(object):
 
 		elif self.element_type in rect_elements:
 			# step by length, no angle change
-			self.length = get_param(self.z_element,"XL")
+			if self.element_type == "CAVITE":
+				self.length = 0
+				if self.z_element.IOPT == 10: # IOPT=10 has length in m
+					self.length = get_param(self.z_element,"L") *100
+			else:
+				self.length = get_param(self.z_element,"XL")
 
 			self.exit_coord = self.transform(self.length,0)
 			self.entrance_wedge_angle = 0
@@ -83,6 +88,12 @@ class LabPlotElement(object):
 						raise ValueError("Only %s with KPOS=2 with YCE is currently implemented"%self.element_type)
 					self.entry_coord[0] += self.z_element.YCE * -sin(self.entry_angle)
 					self.entry_coord[1] += self.z_element.YCE * cos(self.entry_angle)
+				elif self.z_element.KPOS == 3:
+					if self.z_element.ALE == 0 or self.z_element.XCE != 0 or self.z_element.YCE != 0:
+						raise ValueError("Only %s with KPOS=3 with ALE is currently implemented"%self.element_type)
+					self.entry_angle += self.z_element.ALE
+					self.exit_angle += self.z_element.ALE
+					self.exit_coord = self.transform(self.length,0)
 				else:
 					raise ValueError("Only %s with KPOS=1 or 2 is currently implemented"%self.element_type)
 			elif self.element_type in "BEND":
