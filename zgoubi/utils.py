@@ -1416,7 +1416,7 @@ def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier=False, co
 
 	return yfouriertune, zfouriertune
 
-def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass, D_mom, beta_gamma_input = 1, ellipse_coords = 1, coord_pick = 0, twiss_parameters = [], plot_data = False, add_initial = True, linestyle = ['k+','r+', 'g+', 'b+', 'm+','c+']):
+def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass, D_mom, beta_gamma_input = 1, ellipse_coords = 1, coord_pick = 0, twiss_parameters = [], plot_data = False, add_initial = True, plot_style = ['k+','r+', 'g+', 'b+', 'm+','c+']):
 	""" Check a list of emittances (emit_list, units Pi m rad) to see if tracking succeeds. Can be used to establish the dynamic aperture. If the elements in emit_list are increasing then will stop tracking once it finds the lowest emittance where a particle is lost. On the other hand, if the elements in emit_list are decreasing then will stop tracking once it reaches the first point where tracking succeeds without loss. 
 
 	Required input:
@@ -1446,7 +1446,7 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 	
 		add_initial - Add phase space ellipse for last stable case (if plot_data is True).
 		
-		linestyle - color and style of points shown in plot_data. Default is ['k+','r+', 'g+', 'b+', 'm+','c+']
+		plot_style - color and style of points shown in plot_data. Default is ['k+','r+', 'g+', 'b+', 'm+','c+']
 		
 		Returns [index_lost, coord_index], fourier_tune_emit, coords_YTZP_ini]  where 
 		index_lost is the index in emit_list where particle is lost (0 if no loss). 
@@ -1679,10 +1679,10 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 		    style_list = []
 		    lenini = 0
 		    
-		#linestyle = ['k+','r+', 'g+', 'b+', 'm+','c+']
-		#linestyle = ['k.','g.']
+		#plot_estyle = ['k+','r+', 'g+', 'b+', 'm+','c+']
+		#plot_style = ['k.','g.']
 		for i in range(len(Y_data)-lenini):
-			style_list.append(linestyle[i%(len(linestyle)])
+			style_list.append(plot_style[i%(len(plot_style))])
 		#style_list[0] = 'r.' #custom setting for ipac12
 
 		plot_data_xy_multi(Y_data, T_data, 'yt_phasespace', labels=["Horizontal phase space", "y [cm]", "y' [mrad]"], style=style_list)
