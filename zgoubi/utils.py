@@ -1265,11 +1265,13 @@ def get_twiss_profiles(line, file_result=None, input_twiss_parameters=None, calc
 		fresults.close()
 
 	#create structured numpy array to hold twiss profile results
-	twiss_profiles = numpy.zeros(len(label_ref), dtype=[('s','f8'),('label','a10'),('mu_y','f8'),('beta_y','f8'),('alpha_y','f8'),('gamma_y','f8'),\
+	twiss_profiles = numpy.zeros(len(label_ref), dtype=[('s','f8'),('x','f8'),('label','a10'),('mu_y','f8'),('beta_y','f8'),('alpha_y','f8'),('gamma_y','f8'),\
 						('disp_y','f8'),('disp_py','f8'),('mu_z','f8'),('beta_z','f8'),('alpha_z','f8'),('gamma_z','f8'),('disp_z','f8'),('disp_pz','f8')])
 
 	#fill structured array
 	twiss_profiles['s'] = [s*cm for s in S_alltracks[0]]
+	if X_exists:
+		twiss_profiles['x'] = X_alltracks[0]
 	twiss_profiles['label'] = label_ref
 	twiss_profiles['mu_y'] = mu_y_list
 	twiss_profiles['beta_y'] = beta_y_list
@@ -1531,7 +1533,7 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 	coords_YTZP_ini_list = []
 	index = 0
 	for emit_h, emit_v in zip(emit_list_h, emit_list_v):
-		print "check emit (h/v) ", emit_h, emit_v
+		print "check amplitudes (h/v pi mm mrad) ", 1e6*emit_h, 1e6*emit_v
 		print "ellipse_coords, coord_pick ",ellipse_coords, coord_pick
 
 		if coord_pick is None:
@@ -1616,7 +1618,7 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 			
 		for ia in range(len(Y_data)):
 		    for ib in range(len(Y_data[ia])):
-		        print >>fout, ia, Y_data[ia][ib],T_data[ia][ib],Z_data[ia][ib],Z_data[ia][ib]
+		        print >>fout, ia, Y_data[ia][ib],T_data[ia][ib],Z_data[ia][ib],P_data[ia][ib]
 		fout.close()
 		    
 
