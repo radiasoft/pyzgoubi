@@ -1330,10 +1330,17 @@ def calc_momentum_compaction(phase_slip, gamma_lorentz):
 
 	return momentum_compaction, gamma_transition
 
-def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier=False, coords=None):
-	"""Calculate tune using FFT. nfourierturns determines the number of passes through the lattice.
+def fourier_tune(line, initial_YTZP, D_in, npass, plot_fourier=False, coords=None):
+	"""Calculate tune using FFT. nturns determines the number of passes through the lattice.
        Can supply set of horizontal and vertical coordinates in coords = [ycoords,zcoords], otherwise
          routine will calculate coordinates
+
+
+		initial_YTZP: track line from this set of coordinates if coords is not supplied.
+		npass: number of passes through line if tracking (i.e. if coords not supplied)
+		D_in: relative momentum of tracked particle.
+
+		coords: If supplied, no tracking needed. Simply take FFT of coords.
 
        Set plot_fourier= True to show Fourier spectrum. Default is False
 	"""
@@ -1366,9 +1373,9 @@ def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier=False, co
 	if coords == []:
 		objet.clear()	# remove existing particles
 		#start at closed orbit with a small amplitude added to vertical component to get tune readings
-		objet.add(Y=initial_YTZP[0], T=initial_YTZP[1], Z=initial_YTZP[2]+1e-5, P=initial_YTZP[3], LET='A', D=D_in)
+		objet.add(Y=initial_YTZP[0], T=initial_YTZP[1], Z=initial_YTZP[2], P=initial_YTZP[3], LET='A', D=D_in)
 
-		reb.set(NPASS=nfourierturns-1)	
+		reb.set(NPASS=npass-1)	
 		r = line.run(xterm = False)
 		YZ = r.get_track('fai', ['Y', 'Z'])
 		ycoords = numpy.transpose(YZ)[0]
@@ -1415,7 +1422,9 @@ def fourier_tune(line, initial_YTZP, D_in, nfourierturns, plot_fourier=False, co
 		pylab.ylim((0, max(zampfreq[1:-1])))
 		pylab.ylabel("FFT(z)")
 		pylab.savefig('fspectrum')
-
+		pylab.show()
+		pylab.clf()
+		
 	return yfouriertune, zfouriertune
 
 def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass, D_mom, beta_gamma_input = 1, ellipse_coords = 1, coord_pick = 0, twiss_parameters = [], plot_data = False, add_initial = True, plot_style = ['k+','r+', 'g+', 'b+', 'm+','c+']):
