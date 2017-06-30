@@ -1584,18 +1584,27 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 			rebelote_completed = r.test_rebelote()
 
 			lost = not rebelote_completed
-    
+			
+			try:
+				nc = len(r.get_track('fai', ['Y']))
+			except:
+				nc = 0
+
 			if(lost):
 				print "tracking failed at emit_h, emit_v = ", emit_h, emit_v
 				coord_index_lost = coord_index
-				#break
-				#return [index_lost, coord_index],fourier_tune_emit
-
-			if plot_data and not lost:
-				YTZP_list.append(r.get_track('fai', ['Y', 'T', 'Z', 'P']))
+				
+			if nc > 2:
 				coords_in = [flatten(r.get_track('fai', ['Y'])), flatten(r.get_track('fai', ['Z']))]
 				fourier_tune_result = fourier_tune(line, [], 1, 1, coords = coords_in)
-				fourier_tune_emit.append(fourier_tune_result)
+				fourier_tune_result = fourier_tune_result + (nc,)
+				fourier_tune_emit.append(fourier_tune_result)					
+
+			if plot_data and nc > 2: #not lost
+				YTZP_list.append(r.get_track('fai', ['Y', 'T', 'Z', 'P']))
+
+
+			
 
 		#condition to end scan
 		if reverse_search and not lost:
@@ -2061,7 +2070,7 @@ def plot_data_xy(data, filename, labels=None, style='b-', xlim=None, ylim=None):
 
 	import pylab
 	data_a = numpy.array(data)
-	pylab.hold(False)
+	#pylab.hold(False)
 	pylab.plot(data_a[:, 0], data_a[:, 1], style)
 	pylab.title(labels[0])
 	if xlim is not None:
@@ -2112,7 +2121,7 @@ def plot_data_xy_multi(data_x_list, data_y_list, filename, labels=None, style=''
 	except TypeError:
 		single_y_data = True
 
-	pylab.hold(True)
+	#pylab.hold(True)
 
 	if type(style) != list:
 		style = [style]
