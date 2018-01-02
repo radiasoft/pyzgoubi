@@ -1756,6 +1756,8 @@ class Results(object):
 		for line in self.res_fh():
 			if "MAIN PROGRAM : Execution ended upon key  END" in line:
 				return True
+			elif "Execution ended normally, upon keyword END or FIN" in line:
+				return True
 		return False
 		
 
