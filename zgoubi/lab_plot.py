@@ -490,12 +490,12 @@ class LabPlot(object):
 				#print values.shape
 				#print xmin,xmax,ymin,ymax
 
-				nxsteps = field_steps *2
+				nxsteps = int(field_steps * 2)
 				xstep_size = (xmax-xmin) / nxsteps
-				nysteps = max(1, (ymax-ymin) / xstep_size )
+				nysteps = int(max(1, (ymax-ymin) / xstep_size))
 
 				kd = scipy.spatial.cKDTree(points)
-				
+
 				field_map = np.zeros([nxsteps, nysteps])
 				for nx,x in enumerate(np.linspace(xmin,xmax,nxsteps)):
 					for ny,y in enumerate(np.linspace(ymin,ymax,nysteps)):
