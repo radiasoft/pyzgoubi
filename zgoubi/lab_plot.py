@@ -222,8 +222,7 @@ class LabPlotElement(object):
 	
 	def draw_outline(self, lpd, style):
 		t = self.transform
-		if (self.element_type in rect_elements
-			and self.element_type != 'DRIFT'):
+		if ((self.element_type in rect_elements) and (self.width_p != 0 and self.width_m != 0 )) :
 			if self.entrance_wedge_angle == 0 and self.exit_wedge_angle == 0:
 				points = [t(0,self.width_p),
 						  t(0,-self.width_m),
@@ -375,13 +374,7 @@ class LabPlot(object):
 		"""
 		
 		self.line = line
-		self.elements = []
-		self.element_label1 = []
-		self.tracks = []
-		self.mag_tracks = []
-		self.field_map_data = []
 		self.boro = boro
-		self.duped_labels = []
 		self.sector_width = sector_width
 		self.aspect = aspect
 		self.style = {}
@@ -395,6 +388,7 @@ class LabPlot(object):
 			self.set_style(style)
 		
 		self._scan_line()
+		self.lpd = None
 
 	def set_noel_offset(self, offset):
 		"If the line passed to LabPlot is missing some initial elements line used for tracking, then set the offset to the number of missing elements so that the element numbers can be synced"
@@ -404,6 +398,12 @@ class LabPlot(object):
 		"""Scan through the line, and make a note of where all the elements are.
 		
 		"""
+		self.elements = []
+		self.element_label1 = []
+		self.tracks = []
+		self.mag_tracks = []
+		self.field_map_data = []
+		self.duped_labels = []
 		angle = 0
 		position = [0, 0]
 
@@ -438,7 +438,8 @@ class LabPlot(object):
 		plot_extents: list of extents [left, right, bottom, top]
 		
 		"""
-		self.lpd = LabPlotDrawer(aspect=self.aspect, plot_extents=plot_extents)
+		if self.lpd is None:
+			self.lpd = LabPlotDrawer(aspect=self.aspect, plot_extents=plot_extents)
 
 		if field_component not in ['x','y','z']:
 			raise ValueError("field_component should be 'y', 'z' or 'x'")
