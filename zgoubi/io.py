@@ -163,6 +163,9 @@ def define_file(fname, allow_lookup=False):
 	col_names = header[2].strip().strip('#').replace(" ", "").split(',')
 	col_types = header[3].strip().strip('#').replace(" ", "").split(',')
 	
+	if col_names[-1]=='S':
+		col_names[-1] = 'SL' #CDK temporary fix to avoid duplicaiting 'S' in Zgoubi rev 955.
+
 	dupes = list(set ([x  for x in col_names if (col_names.count(x) > 1)]))
 	if dupes:
 		raise ValueError, "Duplicate columns in:" + str(fname) + "\n" + " ".join(dupes)
@@ -272,7 +275,6 @@ def read_file(fname):
 						new_row.append(s)
 
 					file_data2[n] = numpy.array(tuple(new_row), dtype= numpy.dtype(data_type))
-
 
 	if file_def["file_mode"] == "binary":
 		rec_len = file_def["record_length"]
