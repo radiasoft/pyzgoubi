@@ -299,10 +299,9 @@ makecommands_zpop=["make -f Makefile_zpop_gfortran"],
 includes={"MXSTEP":10000},
 )
 
-zgoubi_versions["964"] = dict(svnr=964,
+zgoubi_versions["967"] = dict(svnr=967,
 patches=[
 "http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/build_tweaks_r962.diff",
-"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/fix_robjet_nhdr.diff",
 ],
 makecommands=["make"],
 makecleancommands=["make clean"],
