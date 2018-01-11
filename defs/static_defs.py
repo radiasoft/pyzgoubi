@@ -149,7 +149,7 @@ class OBJET3(zgoubi_element):
 		out = "'OBJET'" +nl
 		out += f(self.BORO) +nl
 		if self.FTYPE == 'unformatted':
-			out += "3.01" + nl
+			out += "3.01" + " HEADER_4"+ nl
 		elif self.FTYPE == 'formatted':
 			out += "3" + nl
 		else:
@@ -188,7 +188,7 @@ class OBJET_bunch(zgoubi_element):
 		i = self.i2s
 		out = "'OBJET'" +nl
 		out += f(self.bunch.get_bunch_rigidity() *1000) + nl # convert from T.m to kG.cm
-		out += "3.01" +nl
+		out += "3.01" + " HEADER_4"+ nl
 		out += "1 " + i(len(self.bunch)) + " 1" + nl
 		out += "1 1 1" + nl
 		out += "100 1000 100 1000 100 1 1 *" + nl
