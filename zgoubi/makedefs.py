@@ -124,12 +124,13 @@ def make_element_class(defs):
 	output_code += "\t\tI=self.i2s\n"
 	output_code += "\t\tE=self.f2s\n"
 	output_code += "\t\tA=str\n"
+	output_code += "\t\tL=self.l2s\n"
 	output_code += "\t\tX=self.x2s\n"
 
 	output_code += "\t\tout = ''\n"
 	output_code += "\t\tnl = '\\n'\n"
 	output_code += "\t\tsq = '\\''\n"
-	output_code += "\t\tout += sq + '%s' + sq + ' ' + self._params['label1'][:8] + ' ' + self._params['label2'][:8]  + nl \n" % (zname)
+	output_code += "\t\tout += sq + '%s' + sq + ' ' + L(self._params['label1']) + ' ' + L(self._params['label2'])  + nl \n" % (zname)
 	
 	add_func_code += "\tdef add(self, **settings):\n"
 	add_func_code += "\t\tparams = {}\n"

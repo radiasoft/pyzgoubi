@@ -49,7 +49,7 @@ qd3 = QUADRUPO('qd3', XL=50, B_0=qd3_b0 * kgauss_, R_0=bore_rad * cm_, XPAS=xpas
 angle = 2*pi/16
 hbf_xl = 300 * 2* sin(angle/2) / angle
 hbf_b1 =   2 * ke_to_rigidity(35e6, PROTON_MASS) / hbf_xl * sin(angle /2)
-hbf = BEND('hbf', XL=hbf_xl, B1= hbf_b1, X_E=0, X_S=0, XPAS=xpas, KPOS=3)
+hbf = BEND('hbf', XL=hbf_xl, B1= hbf_b1, X_E=0, X_S=0, XPAS=hbf_xl/20.0, KPOS=3)
 
 arc1 = Line('arc1')
 arc1.add(qf1,d1,hbf,d1,qd1,d1,hbf,d1,qf2)

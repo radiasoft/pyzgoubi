@@ -119,6 +119,7 @@ if need_def_compile:
 	zlog.debug("Compiling definitions")
 	makedefs.make_element_classes(definitions_paths, compiled_defs_path)
 
+max_label_size = zgoubi_settings["max_label_size"]
 
 
 def yield_n_lines(fh, n):
@@ -213,6 +214,11 @@ class zgoubi_element(object):
 	def i2s(self, i):
 		"format integer for printing"
 		out = str(int(i))
+		return out
+
+	def l2s(self, l):
+		"format label for printing"
+		out = l[:max_label_size]
 		return out
 
 	def x2s(self, i):
@@ -929,6 +935,18 @@ class Results(object):
 	def save_impdev(self, path):
 		"save impdev file to path"
 		return self._save_file("zgoubi.impdev.out", path)
+	
+	def opticsout_fh(self):
+		"return file handle for optics out file"
+		return self._get_fh("zgoubi.OPTICS.out")
+	def opticsout(self):
+		"return optics out file as string"
+		return self._get_str("zgoubi.OPTICS.out")
+	def save_opticsout(self, path):
+		"save optics out file to path"
+		return self._save_file("zgoubi.OPTICS.out", path)
+	
+
 
 	def _bad_float(self, text):
 		"""A wrapper around float to deal with zgoubi output numbers like
@@ -1754,7 +1772,7 @@ class Results(object):
 
 		"""
 		for line in self.res_fh():
-			if "MAIN PROGRAM : Execution ended upon key  END" in line:
+			if "MAIN PROGRAM : Execution ended upon key  END" in line or "ZGOUBI RUN COMPLETED" in line:
 				return True
 			elif "Execution ended normally, upon keyword END or FIN" in line:
 				return True

@@ -204,9 +204,13 @@ def define_file(fname, allow_lookup=False):
 		types.append(ntype)
 		units.append(nunit)
 	
+	# Zgoubi SVN r290 switch labels from a8 to a10
 	if file_mode == 'binary' and byte_count != record_length:
-		# Zgoubi SVN r290 switch labels from a8 to a10
 		types = ['a10' if t == 'a8' else t  for t in types]
+
+	# If it still does not fit, try a20, as of Zgoubi SVN r665
+	if file_mode == 'binary' and byte_count != record_length:
+		types = ['a20' if t == 'a8' else t  for t in types]
 
 	
 	definition =  {'names':names, 'types':types, 'units':units, 'file_mode':file_mode, 'file_type':file_type, 'signature':signature}
