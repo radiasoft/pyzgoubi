@@ -226,7 +226,7 @@ TOSCA
 IC, IL : 2I
 BNORM, XN, YN, ZN : 4E
 TIT : A80
-IX, IY, IZ, MOD : 4I  #zgoubi manual says 3I, i think its a mistake
+IX, IY, IZ, MOD : 3I, 1E  #zgoubi manual says 3I, i think its a mistake
 FNAME : A8000
 ID, A, B, C, Ap, Bp, Cp, App, Bpp, Cpp : I, 9E  # if ID < 0 there should be more ABCs etc.
 IORDRE : I
