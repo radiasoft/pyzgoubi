@@ -1,0 +1,8 @@
+*.log
+build
+zgoubi/version.py
+*.py[cod]
+*.swp
+*~
+zgoubi/simple_defs.py
+zgoubi/static_defs.py

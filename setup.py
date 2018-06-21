@@ -68,7 +68,8 @@ setup(name='pyzgoubi',
 				 "Topic :: Scientific/Engineering :: Physics",
 				 "License :: OSI Approved :: GNU General Public License (GPL)",
 				 "Programming Language :: Python :: 2.7"],
-	install_requires=["numpy>=1.8.0", "scipy>=0.14.0", "matplotlib>=1.2.0"],
+	# install_requires tends to install new versions, even if not needed, so comment out
+	#install_requires=["numpy>=1.8.0", "scipy>=0.13.0", "matplotlib>=1.2.0"],
 	)
 
 

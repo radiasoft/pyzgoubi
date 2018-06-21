@@ -2,6 +2,7 @@
 import os.path
 from zgoubi.core import zgoubi_element
 from zgoubi.constants import *
+import copy
 
 nl="\n"
 
@@ -148,7 +149,7 @@ class OBJET3(zgoubi_element):
 		out = "'OBJET'" +nl
 		out += f(self.BORO) +nl
 		if self.FTYPE == 'unformatted':
-			out += "3.01" + nl
+			out += "3.01" + " HEADER_4"+ nl
 		elif self.FTYPE == 'formatted':
 			out += "3" + nl
 		else:
@@ -187,7 +188,7 @@ class OBJET_bunch(zgoubi_element):
 		i = self.i2s
 		out = "'OBJET'" +nl
 		out += f(self.bunch.get_bunch_rigidity() *1000) + nl # convert from T.m to kG.cm
-		out += "3.01" +nl
+		out += "3.01" + " HEADER_4"+ nl
 		out += "1 " + i(len(self.bunch)) + " 1" + nl
 		out += "1 1 1" + nl
 		out += "100 1000 100 1000 100 1 1 *" + nl
@@ -213,23 +214,43 @@ class OBJET5(zgoubi_element):
 		self.label1 = ""
 		self.label2 = ""
 		self._params['BORO'] = 0
-		self._params['particles'] = []
+		self._params['ellipses'] = None
 		for p in ['Y','T','Z','P','X','D']:
 			self._params[str('P'+p)] = 1
 			self._params[str(p+'R')] = 0
 		object.__setattr__(self, "ready", True)
 		self.set(settings)
 
+	def add_ellipse(self, **settings):
+		"Add a beam ellipse"
+		ellipse_twiss = dict(alpha_y=0, beta_y=0, alpha_z=0 ,beta_z=0, alpha_s=0, beta_s=0,
+		                     disp_y=0, disp_py=0, disp_z=0, disp_pz=0)
+		for k, v in settings.items():
+			ellipse_twiss[k] = v
+			
+		self._params['ellipses'] = ellipse_twiss
+		
+	def clear_ellipse(self):
+		"remove all particles"
+		self._params['ellipses'] = None
+
 	def output(self):
 		# local short cuts for long function names
 		f = self.f2s
 		i = self.i2s
+		kobj = 5
+
+		if self._params['ellipses']:
+			kobj = 5.01
 		
 		out = "'OBJET'" +nl
 		out += f(self.BORO) +nl
-		out += "5" + nl
+		out += str(kobj) + nl
 		out += f(self.PY) +' '+ f(self.PT) +' '+ f(self.PZ) +' '+ f(self.PP) +' '+ f(self.PX) +' '+ f(self.PD) +nl
 		out += f(self.YR) +' '+ f(self.TR) +' '+ f(self.ZR) +' '+ f(self.PR) +' '+ f(self.XR) +' '+ f(self.DR) +nl
+		if self._params['ellipses']:
+			e = self._params['ellipses']
+			out += f(e["alpha_y"]) +' '+ f(e["beta_y"]) +' '+f(e["alpha_z"]) +' '+f(e["beta_z"]) +' '+f(e["alpha_s"]) +' '+f(e["beta_s"]) +' '+f(e["disp_y"]) +' '+f(e["disp_py"]) +' '+f(e["disp_z"]) +' '+f(e["disp_pz"])
 		return out
 
 
@@ -295,99 +316,59 @@ class MCOBJET3(zgoubi_element):
 # define some useful particles
 # constants defined in zgoubi_constants.py
 
-class zgoubi_particul(zgoubi_element):
+from simple_defs import PARTICUL
+class zgoubi_particul(PARTICUL):
 	def __neg__(self):
 		"Return an anti-particle, by inverting charge"
 		new_particul = copy.copy(self)
-		new_particul.anti *= -1
+		self._params["Q"] *= -1
+			
 		return new_particul
 
 class ELECTRON(zgoubi_particul):
 	def __init__(self):
-		self.anti = 1 # 1=particle, -1=anti particle
-		self._params = {}
-		self.label1 = ""
-		self.label2 = ""
-		self._zgoubi_name = "PARTICUL"
+		super(self.__class__, self).__init__()
 		self._class_name = "ELECTRON"
-		
-	def output(self):
-		f = self.f2s
-		i = self.i2s
-		
-		out = "'PARTICUL'" +nl
-		out += f(ELECTRON_MASS/1e6) +' '+ f(self.anti * ELECTRON_CHARGE) +' '+ f(ELECTRON_ANOM_MAG_MOM) +' '+ f(ELECTRON_MEAN_LIFE) +' 0' +nl
-		return out
+		self.set(M=ELECTRON_MASS/1e6)
+		self.set(Q=ELECTRON_CHARGE)
+		self.set(G=ELECTRON_ANOM_MAG_MOM)
+		self.set(tau=ELECTRON_MEAN_LIFE)
 
 class PROTON(zgoubi_particul):
 	def __init__(self):
-		self.anti = 1 # 1=particle, -1=anti particle
-		self._params = {}
-		self.label1 = ""
-		self.label2 = ""
-		self._zgoubi_name = "PARTICUL"
+		super(self.__class__, self).__init__()
 		self._class_name = "PROTON"
-		
-	def output(self):
-		f = self.f2s
-		i = self.i2s
-		
-		out = "'PARTICUL'" +nl
-		out += f(PROTON_MASS/1e6) +' '+ f(self.anti * PROTON_CHARGE) +' '+ f(PROTON_ANOM_MAG_MOM) +' '+ f(PROTON_MEAN_LIFE) +' 0' +nl
-		return out
+		self.set(M=PROTON_MASS/1e6)
+		self.set(Q=PROTON_CHARGE)
+		self.set(G=PROTON_ANOM_MAG_MOM)
+		self.set(tau=PROTON_MEAN_LIFE)
 
 class MUON(zgoubi_particul):
 	def __init__(self):
-		self.anti = 1 # 1=particle, -1=anti particle
-		self._params = {}
-		self.label1 = ""
-		self.label2 = ""
-		self._zgoubi_name = "PARTICUL"
+		super(self.__class__, self).__init__()
 		self._class_name = "MUON"
-               
-	def output(self):
-		f = self.f2s
-		i = self.i2s
-
-		out = "'PARTICUL'" +nl
-		out += f(MUON_MASS/1e6) +' '+ f(self.anti * MUON_CHARGE) +' '+ f(MUON_ANOM_MAG_MOM) +' '+ f(MUON_MEAN_LIFE) +' 0' +nl
-		return out
+		self.set(M=MUON_MASS/1e6)
+		self.set(Q=MUON_CHARGE)
+		self.set(G=MUON_ANOM_MAG_MOM)
+		self.set(tau=MUON_MEAN_LIFE)
 
 class IMMORTAL_MUON(zgoubi_particul):
-	"non decaying muon"
 	def __init__(self):
-		self.anti = 1 # 1=particle, -1=anti particle
-		self._params = {}
-		self.label1 = ""
-		self.label2 = ""
-		self._zgoubi_name = "PARTICUL"
+		super(self.__class__, self).__init__()
 		self._class_name = "IMMORTAL_MUON"
-               
-	def output(self):
-		f = self.f2s
-		i = self.i2s
-
-		out = "'PARTICUL'" +nl
-		out += f(MUON_MASS/1e6) +' '+ f(self.anti * MUON_CHARGE) +' '+ f(MUON_ANOM_MAG_MOM) +' '+ f(0) +' 0' +nl
-		return out
+		self.set(M=MUON_MASS/1e6)
+		self.set(Q=MUON_CHARGE)
+		self.set(G=MUON_ANOM_MAG_MOM)
+		self.set(tau=0)
 
 class IMMORTAL_PION(zgoubi_particul):
-	"non decaying pion +/-"
 	def __init__(self):
-		self.anti = 1 # 1=particle, -1=anti particle
-		self._params = {}
-		self.label1 = ""
-		self.label2 = ""
-		self._zgoubi_name = "PARTICUL"
+		super(self.__class__, self).__init__()
 		self._class_name = "IMMORTAL_PION"
-               
-	def output(self):
-		f = self.f2s
-		i = self.i2s
-
-		out = "'PARTICUL'" +nl
-		out += f(PION_MASS/1e6) +' '+ f(self.anti * PION_CHARGE) +' '+ f(0) +' '+ f(0) +' 0' +nl
-		return out
+		self.set(M=PION_MASS/1e6)
+		self.set(Q=PION_CHARGE)
+		self.set(G=0)
+		self.set(tau=0)
 
 
 class CHANGREF_NEW(zgoubi_element):

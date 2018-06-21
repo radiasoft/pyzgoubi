@@ -11,8 +11,8 @@ import scipy.spatial
 import os
 
 
-null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL REBELOTE".split()
-rect_elements = "DRIFT MULTIPOL QUADRUPO BEND TOSCA".split()
+null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL REBELOTE MARKER".split()
+rect_elements = "DRIFT MULTIPOL QUADRUPO BEND TOSCA CAVITE".split()
 
 def get_param(element, name, fallback=None):
 	if hasattr(element, "plot_hints") and name in element.plot_hints:
@@ -57,7 +57,12 @@ class LabPlotElement(object):
 
 		elif self.element_type in rect_elements:
 			# step by length, no angle change
-			self.length = get_param(self.z_element,"XL")
+			if self.element_type == "CAVITE":
+				self.length = 0
+				if self.z_element.IOPT == 10: # IOPT=10 has length in m
+					self.length = get_param(self.z_element,"L") *100
+			else:
+				self.length = get_param(self.z_element,"XL")
 
 			self.exit_coord = self.transform(self.length,0)
 			self.entrance_wedge_angle = 0
@@ -76,8 +81,21 @@ class LabPlotElement(object):
 					self.width_m = float(width[1])
 
 			if self.element_type in "MULTIPOL QUADRUPO".split():
-				if self.z_element.KPOS != 1:
-					raise ValueError("Only %s with KPOS=1 is currently implemented"%self.element_type)
+				if self.z_element.KPOS == 1:
+					pass
+				elif self.z_element.KPOS == 2:
+					if self.z_element.XCE != 0 or self.z_element.ALE != 0:
+						raise ValueError("Only %s with KPOS=2 with YCE is currently implemented"%self.element_type)
+					self.entry_coord[0] += self.z_element.YCE * -sin(self.entry_angle)
+					self.entry_coord[1] += self.z_element.YCE * cos(self.entry_angle)
+				elif self.z_element.KPOS == 3:
+					if self.z_element.ALE == 0 or self.z_element.XCE != 0 or self.z_element.YCE != 0:
+						raise ValueError("Only %s with KPOS=3 with ALE is currently implemented"%self.element_type)
+					self.entry_angle += self.z_element.ALE
+					self.exit_angle += self.z_element.ALE
+					self.exit_coord = self.transform(self.length,0)
+				else:
+					raise ValueError("Only %s with KPOS=1 or 2 is currently implemented"%self.element_type)
 			elif self.element_type in "BEND":
 				if boro is None : raise ValueError("Must set boro for %s"%self.element_type)
 				angle = asin(self.z_element.B1 * self.z_element.XL / 2 / boro)
@@ -204,8 +222,7 @@ class LabPlotElement(object):
 	
 	def draw_outline(self, lpd, style):
 		t = self.transform
-		if (self.element_type in rect_elements
-			and self.element_type != 'DRIFT'):
+		if ((self.element_type in rect_elements) and (self.width_p != 0 and self.width_m != 0 )) :
 			if self.entrance_wedge_angle == 0 and self.exit_wedge_angle == 0:
 				points = [t(0,self.width_p),
 						  t(0,-self.width_m),
@@ -357,16 +374,11 @@ class LabPlot(object):
 		"""
 		
 		self.line = line
-		self.elements = []
-		self.element_label1 = []
-		self.tracks = []
-		self.mag_tracks = []
-		self.field_map_data = []
 		self.boro = boro
-		self.duped_labels = []
 		self.sector_width = sector_width
 		self.aspect = aspect
 		self.style = {}
+		self.noel_offset = 0
 		self.style["track"] = dict(color="r", linestyle="-", linewidth=0.1)
 		self.style["magnet_outline"] = dict(color="b", linestyle="-", linewidth=1)
 		self.style["element_outline"] = dict(color="b", linestyle=":", linewidth=1)
@@ -376,12 +388,22 @@ class LabPlot(object):
 			self.set_style(style)
 		
 		self._scan_line()
+		self.lpd = None
 
+	def set_noel_offset(self, offset):
+		"If the line passed to LabPlot is missing some initial elements line used for tracking, then set the offset to the number of missing elements so that the element numbers can be synced"
+		self.noel_offset = offset
 
 	def _scan_line(self):
 		"""Scan through the line, and make a note of where all the elements are.
 		
 		"""
+		self.elements = []
+		self.element_label1 = []
+		self.tracks = []
+		self.mag_tracks = []
+		self.field_map_data = []
+		self.duped_labels = []
 		angle = 0
 		position = [0, 0]
 
@@ -416,7 +438,8 @@ class LabPlot(object):
 		plot_extents: list of extents [left, right, bottom, top]
 		
 		"""
-		self.lpd = LabPlotDrawer(aspect=self.aspect, plot_extents=plot_extents)
+		if self.lpd is None:
+			self.lpd = LabPlotDrawer(aspect=self.aspect, plot_extents=plot_extents)
 
 		if field_component not in ['x','y','z']:
 			raise ValueError("field_component should be 'y', 'z' or 'x'")
@@ -468,12 +491,12 @@ class LabPlot(object):
 				#print values.shape
 				#print xmin,xmax,ymin,ymax
 
-				nxsteps = field_steps *2
+				nxsteps = int(field_steps * 2)
 				xstep_size = (xmax-xmin) / nxsteps
-				nysteps = max(1, (ymax-ymin) / xstep_size )
+				nysteps = int(max(1, (ymax-ymin) / xstep_size))
 
 				kd = scipy.spatial.cKDTree(points)
-				
+
 				field_map = np.zeros([nxsteps, nysteps])
 				for nx,x in enumerate(np.linspace(xmin,xmax,nxsteps)):
 					for ny,y in enumerate(np.linspace(ymin,ymax,nysteps)):
@@ -566,21 +589,7 @@ class LabPlot(object):
 					if len(ftrack_ppn) == 0 and len(ptrack_ppn) == 0:
 						continue
 
-					label = ""
-					if len(ftrack_ppn) > 0: label=ftrack_ppn[0]['element_label1']
-					elif len(ptrack_ppn) > 0: label=ptrack_ppn[0]['element_label1']
-					else:
-						ValueError("No label at element number %s" % noel)
-					label = label.strip()
-
-					try:
-						el_ind = self.element_label1.index(label)
-					except ValueError:
-						raise ValueError("Track contains label '%s' not found in line. NOEL=%s"%(label, noel))
-
-					if label in self.duped_labels:
-						zlog.warn("Track point at element with duplicated label '%s'. Points may be drawn in wrong element"%label)
-
+					el_ind = noel - self.noel_offset - 1
 
 					for t in ptrack_ppn:
 						if t['IEX'] != 1: break
@@ -602,12 +611,7 @@ class LabPlot(object):
 						y = t['Y']
 						x = 0
 
-						# index error here may mean plt track passed as fai track, maybe there should be some way to check
-						try:
-							xt, yt = self.elements[el_ind+1].transform(x,y)
-						except IndexError:
-							#FIXME: need to understand why we hit this. see example5_kurri.py
-							pass
+						xt, yt = self.elements[el_ind+1].transform(x,y)
 						this_track.append([xt,yt,None,None,None])
 
 				#print this_track

@@ -22,6 +22,7 @@ config.set('pyzgoubi', 'tmp_dir', tempfile.gettempdir())
 config.set('pyzgoubi', 'extra_defs_files', '')
 config.set('pyzgoubi', 'zgoubi_path', "zgoubi")
 config.set('pyzgoubi', 'log_level', "warn")
+config.set('pyzgoubi', 'max_label_size', 20)
 
 
 
@@ -47,6 +48,8 @@ if not zgoubi_settings['log_level'] in ['WARN', 'ERROR', 'DEBUG', 'INFO', 'WARNI
 	print "invalid setting for log_level '%s' in settings.ini"%zgoubi_settings['log_level']
 	print "should be one of 'WARN', 'ERROR', 'DEBUG', 'INFO', 'WARNING', 'CRITICAL'"
 	exit(2)
+
+zgoubi_settings['max_label_size'] = int(config.get('pyzgoubi', 'max_label_size'))
 
 # create example defs file
 example_defs_path = os.path.join(config_dir, "user_elements.defs")
