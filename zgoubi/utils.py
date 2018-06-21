@@ -1574,12 +1574,12 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 
 			objet.clear()	# remove existing particles
 			objet.add(Y=current_YTZP[0], T=current_YTZP[1], Z=current_YTZP[2], P=current_YTZP[3], LET='A', D=D_mom)
-
-			#pure-x
-			#objet.add(Y=current_YTZP[0], T=current_YTZP[1], Z= 0.0, P= 0.0, LET='A', D=D_mom)
-				
+	
 			#run Zgoubi
 			r = line.run(xterm= False)
+			
+			#r.save_dat("zgoubi_i"+str(index)+".dat")
+			#r.save_fai("zgoubi_i"+str(index)+".fai")
     
 			rebelote_completed = r.test_rebelote()
 
@@ -1639,7 +1639,6 @@ def scan_dynamic_aperture(line, emit_list_h, emit_list_v, closedorb_YTZP, npass,
 		        print >>fout, ia, Y_data[ia][ib],T_data[ia][ib],Z_data[ia][ib],P_data[ia][ib]
 		fout.close()
 		    
-
 		plot_data_xy_multi(Y_data, Z_data, 'yz_space', labels=["YZ coords", "y [cm]", "z [cm]"], style=['k+'])
 
 		#obtain coordinates on phase space ellipse using closed orbit twiss parameters
