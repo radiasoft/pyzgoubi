@@ -272,6 +272,10 @@ def read_file(fname):
 							ns = s[:-4] + 'E' + s[-4:]
 							zlog.debug("Replaced %s with %s (%s)"%(s, ns, float(ns)))
 							s = ns
+							
+						if len(new_row) == 44:
+							break
+							
 						new_row.append(s)
 
 					file_data2[n] = numpy.array(tuple(new_row), dtype= numpy.dtype(data_type))
