@@ -273,11 +273,9 @@ def read_file(fname):
 							zlog.debug("Replaced %s with %s (%s)"%(s, ns, float(ns)))
 							s = ns
 							
-						if len(new_row) == 44:
-							break
-							
 						new_row.append(s)
 
+					new_row = new_row[:len(data_type)]
 					file_data2[n] = numpy.array(tuple(new_row), dtype= numpy.dtype(data_type))
 
 	if file_def["file_mode"] == "binary":
