@@ -12,10 +12,10 @@ KPOS, XCE, YCE, ALE : I,3E
 
 CAVITE
 CAVITE
-IOPT : I
+IOPT : E
 !IOPT==0
 X, X : 2E
-!IOPT==1
+!IOPT==1	
 L, h : 2E
 V, X : 2E
 !IOPT==2
@@ -27,7 +27,13 @@ V, sig_s : 2E
 !IOPT==6
 L, ke0 : 2E
 V, sig_s :2E
+!IOPT==6.1
+L, ke0 : 2E
+V, sig_s :2E
 !IOPT==7
+L, f : 2E
+V, sig_s :2E
+!IOPT==7.1
 L, f : 2E
 V, sig_s :2E
 !IOPT==10
