@@ -28,7 +28,7 @@ V, sig_s : 2E
 L, ke0 : 2E
 V, sig_s :2E
 !IOPT==6.1
-L, ke0 : 2E
+f, ke0 : 2E
 V, sig_s :2E
 !IOPT==7
 L, f : 2E
