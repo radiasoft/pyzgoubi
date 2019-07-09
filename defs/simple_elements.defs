@@ -91,6 +91,18 @@ DRIFT
 DRIFT
 XL: E
 
+ELMULT
+ELMULT
+IL : I
+XL, R_0, E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8, E_9, E_10: 12E
+X_E, LAM_E, FE_2, FE_3, FE_4, FE_5, FE_6, FE_7, FE_8, FE_9, FE_10: 11E
+NCE, C_0, C_1, C_2, C_3, C_4, C_5 : I,6E
+X_S, LAM_S, S_2, S_3, S_4, S_5, S_6, S_7, S_8, S_9, S_10 : 11E
+NCS, CS_0, CS_1, CS_2, CS_3, CS_4, CS_5 : I,6E
+R_1, R_2, R_3, R_4, R_5, R_6, R_7, R_8, R_9, R_10: 10E
+XPAS : X
+KPOS, XCE, YCE, ALE : I,3E
+
 END
 END
 

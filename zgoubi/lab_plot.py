@@ -12,7 +12,7 @@ import os
 
 
 null_elements = "END FAISCEAU FAISCNL FAISTORE MCOBJET OBJET PARTICUL REBELOTE MARKER".split()
-rect_elements = "DRIFT MULTIPOL QUADRUPO BEND TOSCA CAVITE".split()
+rect_elements = "DRIFT MULTIPOL QUADRUPO BEND TOSCA CAVITE ELMULT".split()
 
 def get_param(element, name, fallback=None):
 	if hasattr(element, "plot_hints") and name in element.plot_hints:
