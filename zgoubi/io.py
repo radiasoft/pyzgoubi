@@ -307,7 +307,7 @@ def read_file(fname):
 
 			rec = full_rec[4:-4]
 			if rec == "": break
-			file_data2[n] = rec
+			file_data2[n] = numpy.frombuffer(rec, dtype=data_type)
 
 	return file_data2
 
