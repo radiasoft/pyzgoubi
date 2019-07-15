@@ -13,13 +13,13 @@ PyZgoubi follows standard Python install methods, but requires a few packages to
 General Requirements
 ^^^^^^^^^^^^^^^^^^^^
 
-PyZgoubi requires Python 2.5-2.7. It also requires the python math and science packages, Numpy and SciPy. For some graphical functions it uses Matplotlib.
+PyZgoubi requires Python 2.7. It also requires the python math and science packages, Numpy and SciPy. For some graphical functions it uses Matplotlib.
 
 Linux
 """""
 On linux Python 2 is usually already installed. Other packages can be installed using the package manager, for example on Fedora/Red Hat/Scientific::
 
-  sudo yum install numpy scipy python-matplotlib
+  sudo yum install python2-numpy python2-scipy python2-matplotlib
 
 Or on Ubuntu/Debian::
 
@@ -47,19 +47,19 @@ Some additional packages are useful if you want to run development versions of P
 
 * GCC/GFortran, for building Zgoubi
 * Subversion, source code management for Zgoubi
-* Bazaar, source code management for PyZgoubi
+* Git, source code management for PyZgoubi
 * MinGW, on windows required for building Zgoubi
 
 Linux
 """""
 
-GCC/GFortran, Subversion and Bazaar can be installed with the package manager,for example on Fedora/Red Hat/Scientific::
+GCC/GFortran, Subversion and Git can be installed with the package manager,for example on Fedora/Red Hat/Scientific::
 
-  sudo yum install gcc gcc-gfortran subversion bzr patch
+  sudo yum install gcc gcc-gfortran subversion git patch
 
 Or on Ubuntu/Debian::
 
-  sudo apt-get install gcc gfortran subversion bzr
+  sudo apt-get install gcc gfortran subversion git
 
 Windows
 """""""
@@ -211,7 +211,7 @@ To install are release version download the tar.gz file from the `PyZgoubi websi
 Or to get a development version::
 
   cd ~/zgoubi/src
-  bzr branch bzr://pyzgoubi.bzr.sourceforge.net/bzrroot/pyzgoubi/trunk pyzgoubi-trunk
+  git clone https://git.code.sf.net/p/pyzgoubi/code-git pyzgoubi-trunk
   cd pyzgoubi-trunk
 
 Then to install::
@@ -244,7 +244,7 @@ To keep everything neat its is work making a folder to keep PyZgoubi source code
 
 To get the current developement (you need Bazaar installed) version run::
 
-  C:\Users\sam\pyzgoubi\source>bzr branch bzr://pyzgoubi.bzr.sourceforge.net/bzrroot/pyzgoubi/trunk pyzgoubi-trunk
+  C:\Users\sam\pyzgoubi\source>git clone https://git.code.sf.net/p/pyzgoubi/code-git pyzgoubi-trunk
   C:\Users\sam\pyzgoubi>cd pyzgoubi-trunk
   C:\Users\sam\pyzgoubi\source\pyzgoubi-trunk>python setup.py install --prefix=C:\Users\sam\pyzgoubi\install
 

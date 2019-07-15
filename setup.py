@@ -7,7 +7,7 @@ import shutil
 import errno
 from glob import glob
 
-MAIN_VERSION = '0.6.0'
+MAIN_VERSION = '0.7.0'
 
 if not ( "--help" in sys.argv):
 	if ("install" in sys.argv) or ("sdist" in sys.argv) or ("bdist_wheel" in sys.argv):
@@ -25,15 +25,9 @@ if not ( "--help" in sys.argv):
 				print "ERROR: Permission denied updating zgoubi/version.py, build and/or install.log.\nIf they are owned by root, due to previously running install as root please remove them (eg. sudo ./setup.py clean --all ; sudo rm install.log zgoubi/version.py)."
 				exit(1)
 
-		if (os.path.exists(".bzr") and
-			os.system("bzr version-info --format=python > zgoubi/version.py") == 0 and
-			"sdist" not in sys.argv):
-			# run from a bzr repo, can use version info
-			print "updated zgoubi/version.py"
-			vfile = open("zgoubi/version.py","a")
-		else:
-			vfile = open("zgoubi/version.py","w")
-			vfile.write("#!/usr/bin/env python\n")
+
+		vfile = open("zgoubi/version.py","w")
+		vfile.write("#!/usr/bin/env python\n")
 		vfile.write("MAIN_VERSION = '%s'\n"%MAIN_VERSION)
 		vfile.close()
 
