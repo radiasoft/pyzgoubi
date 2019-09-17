@@ -158,6 +158,22 @@ KIRD, RESOL: 2I
 XPAS: E
 KPOS, RE, TE, RS, TS: I,4E
 
+MAP2D
+MAP2D
+IC, IL : 2I
+BNORM, XN, YN : 3E
+TIT : A80
+IX, JY : 2I
+FNAME : A8000
+ID, A, B, C, Ap, Bp, Cp, App, Bpp, Cpp : I, 9E  # if ID < 0 there should be more ABCs etc.
+IORDRE : I
+XPAS : X
+KPOS: I
+!KPOS==1
+XCE, YCE, ALE : 3E
+!KPOS==2
+RE, TE, RS, TS: 4E
+
 MARKER
 MARKER
 
