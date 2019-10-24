@@ -117,6 +117,8 @@ def define_file(fname, allow_lookup=False):
 		file_type = "fai"
 	elif "TRAJECTORIES" in first_bytes:
 		file_type = "plt"
+	elif "SPIN" in first_bytes:
+		file_type = "spn"
 
 	fh.seek(0)
 	if file_mode == 'ascii':
