@@ -35,10 +35,16 @@ mt4_time = t1-t0
 
 #print t_bunch.particles()[0]
 
-
-st_end = st_bunch.particles()[['Y', 'P', 'Z', 'T', 'D']].view(float).reshape([-1, 5])
-mt2_end = mt2_bunch.particles()[['Y', 'P', 'Z', 'T', 'D']].view(float).reshape([-1, 5])
-mt4_end = mt4_bunch.particles()[['Y', 'P', 'Z', 'T', 'D']].view(float).reshape([-1, 5])
+try:
+	# Numpy 1.16 changes how a view() interacts with padding, so use safer structured_to_unstructured
+	from numpy.lib.recfunctions import structured_to_unstructured
+	st_end = structured_to_unstructured(st_bunch.particles()[['Y', 'P', 'Z', 'T', 'D']])
+	mt2_end = structured_to_unstructured(mt2_bunch.particles()[['Y', 'P', 'Z', 'T', 'D']])
+	mt4_end = structured_to_unstructured(mt4_bunch.particles()[['Y', 'P', 'Z', 'T', 'D']])
+except ImportError:
+	st_end = st_bunch.particles()[['Y', 'P', 'Z', 'T', 'D']].view(float).reshape([-1, 5])
+	mt2_end = mt2_bunch.particles()[['Y', 'P', 'Z', 'T', 'D']].view(float).reshape([-1, 5])
+	mt4_end = mt4_bunch.particles()[['Y', 'P', 'Z', 'T', 'D']].view(float).reshape([-1, 5])
 
 print "%r" % st_end[0]
 print "%r" % mt2_end[0]

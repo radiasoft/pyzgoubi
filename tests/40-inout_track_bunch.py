@@ -21,12 +21,19 @@ for x in xrange(10):
 
 #print t_bunch.particles()[0]
 
+try:
+	# Numpy 1.16 changes how a view() interacts with padding, so use safer structured_to_unstructured
+	from numpy.lib.recfunctions import structured_to_unstructured
+	start = structured_to_unstructured(b_orig.particles()[['Y', 'P', 'Z', 'T', 'D']])
+	end = structured_to_unstructured(t_bunch.particles()[['Y', 'P', 'Z', 'T', 'D']])
+except ImportError:
+	start = b_orig.particles()[['Y', 'P', 'Z', 'T', 'D']].view(float).reshape([-1, 5])
+	end = t_bunch.particles()[['Y', 'P', 'Z', 'T', 'D']].view(float).reshape([-1, 5])
 
-start = b_orig.particles()[['Y', 'P', 'Z', 'T', 'D']].view(float).reshape([-1, 5])
-end = t_bunch.particles()[['Y', 'P', 'Z', 'T', 'D']].view(float).reshape([-1, 5])
 
-print "%r" % start[0]
-print "%r" % end[0]
+for n, c in enumerate(zip(start[:10], end[:10])):
+	print "%s %s -> %s"%(n, list(c[0]), list(c[1]))
+	print abs((c[0] - c[1]) / numpy.maximum(c[0], c[1]))
 
 errors = abs((start - end) / numpy.maximum(start, end))
 print "%r" % errors[0][0]
