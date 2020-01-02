@@ -81,9 +81,16 @@ def set_zgoubi_version(version=None):
 	"Set downloaded SVN to a given version. or, if no version given, to latest version"
 	ret = subprocess.call(['svn', 'revert', '-R', '.'], cwd=zgoubi_build_dir2)
 	if version is None:
+		ret = subprocess.call(['svn', 'switch', '^/trunk'], cwd=zgoubi_build_dir2)
 		ret = subprocess.call(['svn', 'update', '--non-interactive'], cwd=zgoubi_build_dir2)
-	else:
-		ret = subprocess.call(['svn', 'update', '-r', '%s'%version, '--non-interactive'], cwd=zgoubi_build_dir2)
+	elif "svnr" in version:
+		rev =  version["svnr"]
+		ret = subprocess.call(['svn', 'switch', '^/trunk'], cwd=zgoubi_build_dir2)
+		ret = subprocess.call(['svn', 'update', '-r', '%s'%rev, '--non-interactive'], cwd=zgoubi_build_dir2)
+	elif "svntag" in version:
+		tag = version["svntag"]
+		ret = subprocess.call(['svn', 'switch', '^/tags/'+tag], cwd=zgoubi_build_dir2)
+		ret = subprocess.call(['svn', 'update', '--non-interactive'], cwd=zgoubi_build_dir2)
 	if ret != 0:
 		raise ZgoubiBuildError("SVN update failed")
 	ret = subprocess.call(['svn', 'revert', '-R', '.'], cwd=zgoubi_build_dir2)
@@ -309,6 +316,30 @@ makecommands_zpop=["make MakeFiles/Makefile_zpop_gfortran"],
 includes={"MXSTEP":10000},
 )
 
+zgoubi_versions["6.0.1"] = dict(svntag="zgoubi-6.0.1",
+patches=[
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/build_tweaks_r558.diff",
+#"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/zpop_pltopt_write.diff",
+#"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/zgoubi_impfai_inquire.diff",
+],
+makecommands=["make -f Makefile_zgoubi_gfortran"],
+makecleancommands=["make -f Makefile_zgoubi_gfortran clean"],
+makecommands_zpop=["make -f Makefile_zpop_gfortran"],
+includes={"MXSTEP":10000},
+)
+
+zgoubi_versions["6.0.2"] = dict(svntag="zgoubi-6.0.2",
+patches=[
+"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/build_tweaks_r558.diff",
+#"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/zpop_pltopt_write.diff",
+#"http://www.hep.man.ac.uk/u/samt/pyzgoubi/zgoubipatches/zgoubi_impfai_inquire.diff",
+],
+makecommands=["make -f Makefile_zgoubi_gfortran"],
+makecleancommands=["make -f Makefile_zgoubi_gfortran clean"],
+makecommands_zpop=["make -f Makefile_zpop_gfortran"],
+includes={"MXSTEP":10000},
+)
+
 def install_zgoubi_all(version="570", include_opts=None):
 	"This currently install a version of zgoubi known to work with pyzgoubi"
 	if include_opts is None: include_opts = {}
@@ -325,7 +356,7 @@ def install_zgoubi_all(version="570", include_opts=None):
 		raise ZgoubiBuildError("Unknown version: "+ version+ "\nTry "+ " ".join(zgoubi_versions.keys()))
 	print "Preparing to install zgoubi:", version
 	get_zgoubi_svn()
-	set_zgoubi_version(zgoubi_versions[version]['svnr'])
+	set_zgoubi_version(zgoubi_versions[version])
 	apply_zgoubi_patches(zgoubi_versions[version]['patches'])
 
 	# edit any of the include files
