@@ -1,7 +1,9 @@
 Changes from 0.6.0 -> 0.7.0
 ===========================
+Fri 2020-03-01
 
 PyZgoubi has transition from using Bazaar to Git. New repo can be found at https://sourceforge.net/p/pyzgoubi/code-git
+Add MAP2D element
 Lab_plot: Fixes for CAVITE, MARKER, MULTIPOL
 LabPlot: allow overplotting, e.g. for separator recombiners
 Add opticsout(), opticsout_fh() and save_opticsout() to Results for zgoubi.OPTICS.out
