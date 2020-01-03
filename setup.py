@@ -92,7 +92,10 @@ if ("install" in sys.argv) and not ( "--help" in sys.argv):
 		print "Could not see install log, install may have failed."
 		print "Can't give help with setting up path"
 		sys.exit(1)
-		
+
+	if lib_path.endswith(".egg"):
+		lib_path = os.path.dirname(lib_path)
+
 	try:
 		if sys.platform == "win32":
 			print "Add the following to your PATH variable in user Environment Variables control panel"
