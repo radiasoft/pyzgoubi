@@ -8,6 +8,7 @@ date-released: 2020-01-03
 license: GPL-2.0-or-later
 url: http://www.hep.manchester.ac.uk/u/samt/pyzgoubi/
 repository-code: https://sourceforge.net/projects/pyzgoubi/
+doi: 10.5281/zenodo.3597425
 
 authors:
   - family-names: Tygier

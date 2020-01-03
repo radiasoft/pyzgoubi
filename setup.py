@@ -7,7 +7,7 @@ import shutil
 import errno
 from glob import glob
 
-MAIN_VERSION = '0.7.0'
+MAIN_VERSION = '0.8.0a1'
 
 if not ( "--help" in sys.argv):
 	if ("install" in sys.argv) or ("sdist" in sys.argv) or ("bdist_wheel" in sys.argv):
