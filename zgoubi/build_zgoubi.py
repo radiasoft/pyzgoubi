@@ -340,7 +340,7 @@ makecommands_zpop=["make -f Makefile_zpop_gfortran"],
 includes={"MXSTEP":10000},
 )
 
-def install_zgoubi_all(version="570", include_opts=None):
+def install_zgoubi_all(version="6.0.2", include_opts=None):
 	"This currently install a version of zgoubi known to work with pyzgoubi"
 	if include_opts is None: include_opts = {}
 	check_for_programs()
