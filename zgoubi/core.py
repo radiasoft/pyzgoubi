@@ -143,35 +143,6 @@ def read_n_lines(fh, n):
 		lines.append(fh.readline())
 	return lines
 
-def trans_to_regex(fmt):
-	"Transform a printf style format in to a regular expression"
-	fmt = fmt.replace('%c', '(.)')
-	fmt = re.sub(r'%(\d+)c', r'(.{\1})', fmt)
-	fmt = fmt.replace('%d', r'([-+]?\d+)')
-	fmt = fmt.replace('%e', r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
-	fmt = fmt.replace('%E', r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
-	fmt = fmt.replace('%f', r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
-	fmt = fmt.replace('%g', r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
-	fmt = fmt.replace('%i', r'([-+]?(?:0[xX][\dA-Fa-f]+|0[0-7]*|\d+))')
-	fmt = fmt.replace('%o', '(0[0-7]*)')
-	fmt = fmt.replace('%s', r'(\S+)')
-	fmt = fmt.replace('%u', r'(\d+)')
-	fmt = fmt.replace('%x', r'(0[xX][\dA-Fa-f]+")')
-	fmt = fmt.replace('%X', r'(0[xX][\dA-Fa-f]+")')
-	#print "fmt=", fmt
-	return re.compile(fmt)
-
-def scanf(in_str, fmt):
-	"something like scanf, used to read the fai and plt files in Results.get_all()"
-	if type(fmt) == type(re.compile('')):
-		res = fmt.search(in_str)
-	else:
-		res = trans_to_regex(fmt).search(in_str)
-	if res is None:
-		return None
-	else:
-		return res.groups()
-
 # a base class for all the beam line objects
 class zgoubi_element(object):
 	"A base class for zgoubi elements"
