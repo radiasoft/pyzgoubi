@@ -905,25 +905,7 @@ class Results(object):
 	def save_opticsout(self, path):
 		"save optics out file to path"
 		return self._save_file("zgoubi.OPTICS.out", path)
-	
 
-
-	def _bad_float(self, text):
-		"""A wrapper around float to deal with zgoubi output numbers like
-		2.67116100-102 when it means 2.67116100e-102
-		
-
-		"""
-		try:
-			return float(text)
-		except ValueError:
-			assert('-' in text[1:])
-			error = 'cant make float from "' + text + '". '
-			error += 'assuming it to be zero'
-			zlog.warn(error)
-			return 0
-		
-		
 	def get_all_bin(self, file='bplt'):
 		if file == 'bplt':
 			return io.read_file(os.path.join(self.rundir, 'b_zgoubi.plt'))
