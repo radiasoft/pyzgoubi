@@ -269,10 +269,6 @@ class Line(object):
 		self.last_result = None
 		self.no_more_xterm = False
 		self.input_files = []
-		
-		self.shutil = shutil # need to keep a reference to shutil
-							# otherwise the intepreter may have thrown it away
-							# by the time the __del__() is run
 		self.has_run = False
 		self.full_line = False # has an OBJET, dont allow full lines to be added to each other
 								# only a full line outputs its name into zgoubi.dat
@@ -668,18 +664,11 @@ class Line(object):
 		"clean up temp directories"
 		for result in self.results:
 			obj = result()
-			#print "in Line.clean", obj
+
 			if obj is not None:
 				obj.clean()
 
 		self.results = []
-		#for dir in self.tmp_folders:
-		#	print "removing", dir
-		#	print shutil
-		#	self.shutil.rmtree(dir)
-		
-		#self.tmp_folders = [] # and blank list
-		
 
 	def add_input_files(self, file_paths=None, pattern=None):
 		"""Add some extra input files to the directory where zgoubi is run.
@@ -794,7 +783,7 @@ class Results(object):
 		#self.line = line
 		self.rundir = rundir
 		self.element_types = element_types
-		self.shutil = shutil
+		self.shutil = shutil # need to keep a reference to shutil
 
 	def clean(self):
 		"clean up temp directory"
