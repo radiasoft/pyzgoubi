@@ -4,6 +4,7 @@ Changes from 0.7.1 -> 0.8.0
 Removed support for Zgoubi version before 6.0
 Remove obsolete and deprecated functions,
 * trans_to_regex, scanf, search_pattern, readArray, _bad_float
+  in_bounds, check_bounds, get_extremes, list_particles
 
 Changes from 0.6.0 -> 0.7.1
 ===========================
