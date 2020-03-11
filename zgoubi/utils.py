@@ -70,23 +70,6 @@ def coords_grid(min_c=None, max_c=None, step=None, dtype=float):
 
 	return numpy.array(coords, dtype=dtype)
 
-
-def search_pattern(step, range, start=0):
-	# this has been in the code since pre-sourceforge, i dont think it is used, and i dont think it works right if start!=0
-	warnings.warn("utils.search_pattern()"+dep_warn, DeprecationWarning)
-	current = start
-	while True:
-		yield current
-		if (current > 0):
-			current = 0-current
-		elif (current < 0):
-			current = (0 - current) + step
-		else: # zero case
-			current += step
-		if (abs(current)>range):
-			break
-
-
 def get_cmd_param(key, default=None):
 	"get things formated like key=value from the commandline. returns the requested value"
 	#print sys.argv
@@ -129,45 +112,6 @@ def get_cmd_param_bool(key, default=None):
 	message = "'" + str(key) + "' not given on the command line\nplease run with "+ str(key) +"=x as an argument"
 	zlog.error(message)
 	raise ValueError
-
-
-def readArray(filename, skipchar = '#', dtype=float):
-	"""
-	# PURPOSE: read an array from a file. Skip empty lines or lines
-	#          starting with the comment delimiter (defaulted to '#').
-	#
-	# OUTPUT: a float numpy array
-	#
-	# EXAMPLE: >>> data = readArray("/home/albert/einstein.dat")
-	#          >>> x = data[:,0]        # first column
-	#          >>> y = data[:,1]        # second column
-	from http://www.scipy.org/Cookbook/InputOutput
-
-	Note: please switch to using numpy functions: numpy.savetxt(), numpy.loadtxt() or numpy.genfromtxt()
-
-	"""
-
-	warnings.warn("utils.readArray()"+dep_warn, DeprecationWarning)
-
-	myfile = open(filename, "r")
-	contents = myfile.readlines()
-	myfile.close()
-
-	data = []
-	for line in contents:
-		stripped_line = line.lstrip()
-		if (len(stripped_line) != 0):
-			if (stripped_line[0] != skipchar):
-				items = stripped_line.split()
-				data.append(map(float, items))
-
-	a = numpy.array(data, dtype=dtype)
-	(Nrow, Ncol) = a.shape
-	if ((Nrow == 1) or (Ncol == 1)): a = numpy.ravel(a)
-
-	#print >> sys.stderr, "Read",Nrow,"rows in",Ncol,"columns in file", filename
-	return(a)
-
 
 def flatten(x):
 	"""flatten(sequence) -> list

@@ -143,35 +143,6 @@ def read_n_lines(fh, n):
 		lines.append(fh.readline())
 	return lines
 
-def trans_to_regex(fmt):
-	"Transform a printf style format in to a regular expression"
-	fmt = fmt.replace('%c', '(.)')
-	fmt = re.sub(r'%(\d+)c', r'(.{\1})', fmt)
-	fmt = fmt.replace('%d', r'([-+]?\d+)')
-	fmt = fmt.replace('%e', r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
-	fmt = fmt.replace('%E', r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
-	fmt = fmt.replace('%f', r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
-	fmt = fmt.replace('%g', r'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)')
-	fmt = fmt.replace('%i', r'([-+]?(?:0[xX][\dA-Fa-f]+|0[0-7]*|\d+))')
-	fmt = fmt.replace('%o', '(0[0-7]*)')
-	fmt = fmt.replace('%s', r'(\S+)')
-	fmt = fmt.replace('%u', r'(\d+)')
-	fmt = fmt.replace('%x', r'(0[xX][\dA-Fa-f]+")')
-	fmt = fmt.replace('%X', r'(0[xX][\dA-Fa-f]+")')
-	#print "fmt=", fmt
-	return re.compile(fmt)
-
-def scanf(in_str, fmt):
-	"something like scanf, used to read the fai and plt files in Results.get_all()"
-	if type(fmt) == type(re.compile('')):
-		res = fmt.search(in_str)
-	else:
-		res = trans_to_regex(fmt).search(in_str)
-	if res is None:
-		return None
-	else:
-		return res.groups()
-
 # a base class for all the beam line objects
 class zgoubi_element(object):
 	"A base class for zgoubi elements"
@@ -298,10 +269,6 @@ class Line(object):
 		self.last_result = None
 		self.no_more_xterm = False
 		self.input_files = []
-		
-		self.shutil = shutil # need to keep a reference to shutil
-							# otherwise the intepreter may have thrown it away
-							# by the time the __del__() is run
 		self.has_run = False
 		self.full_line = False # has an OBJET, dont allow full lines to be added to each other
 								# only a full line outputs its name into zgoubi.dat
@@ -697,18 +664,11 @@ class Line(object):
 		"clean up temp directories"
 		for result in self.results:
 			obj = result()
-			#print "in Line.clean", obj
+
 			if obj is not None:
 				obj.clean()
 
 		self.results = []
-		#for dir in self.tmp_folders:
-		#	print "removing", dir
-		#	print shutil
-		#	self.shutil.rmtree(dir)
-		
-		#self.tmp_folders = [] # and blank list
-		
 
 	def add_input_files(self, file_paths=None, pattern=None):
 		"""Add some extra input files to the directory where zgoubi is run.
@@ -823,7 +783,7 @@ class Results(object):
 		#self.line = line
 		self.rundir = rundir
 		self.element_types = element_types
-		self.shutil = shutil
+		self.shutil = shutil # need to keep a reference to shutil
 
 	def clean(self):
 		"clean up temp directory"
@@ -945,97 +905,18 @@ class Results(object):
 	def save_opticsout(self, path):
 		"save optics out file to path"
 		return self._save_file("zgoubi.OPTICS.out", path)
-	
 
-
-	def _bad_float(self, text):
-		"""A wrapper around float to deal with zgoubi output numbers like
-		2.67116100-102 when it means 2.67116100e-102
-		
-
-		"""
-		try:
-			return float(text)
-		except ValueError:
-			assert('-' in text[1:])
-			error = 'cant make float from "' + text + '". '
-			error += 'assuming it to be zero'
-			zlog.warn(error)
-			return 0
-		
-		
 	def get_all_bin(self, file='bplt'):
-		
 		if file == 'bplt':
 			return io.read_file(os.path.join(self.rundir, 'b_zgoubi.plt'))
 		elif file == 'bfai':
-			try:
-				return io.read_file(os.path.join(self.rundir, 'b_zgoubi.fai'))
-			except io.OldFormatError:
-				pass
+			return io.read_file(os.path.join(self.rundir, 'b_zgoubi.fai'))
 
-			fh = self.b_fai_fh()
-			file_len = os.path.getsize(os.path.join(self.rundir, 'b_zgoubi.fai'))
-			head_len = 352
-			chunk_len = 251
-			assert((file_len-head_len)%chunk_len == 0), "File size does not seem right for a binary fai file. File length is %s"%file_len
-		else:
-			raise ValueError("get_all_bin() expects name to be 'bplt' or 'bfai'")
-
-		warnings.warn("Support for reading zgoubi <6.0 formats will be removed in the future")
-		plt_data = []
-		for pos in xrange(head_len, file_len, chunk_len):
-			fh.seek(pos)
-			chunk = fh.read(chunk_len)
-			particle = {}
-			# in vim use to create this next bit of code 
-			# :r!devtools/format_to_code.py devtools/fai.format
-
-			fmt = '=icidddddddddddddddiiixxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxdi10s10s10sii'
-			chunk_part = chunk[0: struct.calcsize(fmt)]
-			bits = struct.unpack(fmt, chunk_part)
-			particle['LET'] = bits[1]
-			particle['IEX'] = bits[2]
-			particle['D0'] = bits[3]
-			particle['Y0'] = bits[4]
-			particle['T0'] = bits[5]
-			particle['Z0'] = bits[6]
-			particle['P0'] = bits[7]
-			particle['X0'] = bits[8]
-			particle['D'] = bits[9]
-			particle['Y'] = bits[11]
-			particle['T'] = bits[12]
-			particle['Z'] = bits[13]
-			particle['P'] = bits[14]
-			particle['S'] = bits[15]
-			particle['tof'] = bits[16]
-			particle['KE'] = bits[17]
-			particle['ID'] = bits[18]
-			particle['IREP'] = bits[19]
-			particle['SORT'] = bits[20]
-			particle['BORO'] = bits[21]
-			particle['PASS'] = bits[22]
-			particle['element_type'] = bits[23].strip()
-			particle['element_label1'] = bits[24].strip()
-			particle['element_label2'] = bits[25].strip()
-			particle['NOEL'] = bits[26]
-
-			plt_data.append(particle)
-		return plt_data
-		
-	def get_all(self, file='plt', id=None):
+	def get_all(self, file='plt'):
 		"""Read all the data out of the file.
-		Set file to plt or fai
-		if using the new headered data formats will return a numpy array with named columns, otherwise returns a list of dicts. each dict has the particle coordinates at a point
+		Set file can be plt, fai, spn, bplt or bfai
+		Returns a numpy array with named columns
 		"""
-		#if (isinstance(file_nh, str)):
-		#	fh = open(file_nh)
-		#elif (isinstance(file_nh, file)):
-		#	fh = file_nh
-		#else:
-		#	error = "get_all(file_nh), file_nh should be string or file handle. "
-		#	error += "It actually was"+ str(type(file_nh))
-		#	raise TypeError, error
 
 		if file == 'plt':
 			fh = self.plt_fh()
@@ -1045,227 +926,13 @@ class Results(object):
 			fh = self.spn_fh()
 		elif file == 'bfai':
 			return self.get_all_bin(file=file)
+		elif file == 'bplt':
+			return self.get_all_bin(file=file)
 		else:
 			#open previously saved file
 			fh = open(file)
-			#decide what type of file we have, look at extension
-			fileext = os.path.splitext(file)[1]
-			if fileext == '.plt':
-				file = 'plt'
-			elif fileext == '.fai':
-				file = 'fai'
-			elif fileext == '.spn':
-				file = 'spn'
-			else:
-				raise ValueError("get_all() expects '.plt', '.fai' or '.spn' extension")
-			
 
-		header = list(read_n_lines(fh, 4))
-		#print "header", header
-		#Versions of Zgoubi up to 236 had just '...' in lines 3 and 4 of the fai file 
-		test_version = header[2][0:3]
-		old_format = False
-		if test_version == '...':
-			old_format = True
-			warnings.warn("Support for reading zgoubi <6.0 formats will be removed in the future")
-		else:
-			return io.read_file(fh)
-
-		#for n,x in enumerate([9,3,5,10,8]):
-		#   for i in xrange(x):
-		#       print '"['+str(n)+','+str(i)+']",',
-
-
-		l0_re =     trans_to_regex('%c +%d +%f +%f +%f +%f +%f +%f +%f')
-		l1_re =     trans_to_regex('%f +%f +%f')
-		l2_re =     trans_to_regex('%f +%f +%f +%f +%f')
-		l3_re =     trans_to_regex('%d +%d +%f +%f +%f +%f +%f +%f +%f +%f')
-		l3_re_plt = trans_to_regex('%d +%d +%d +%f +%f +%f +%f +%f +%f +%f')
-		l4_re =     trans_to_regex('%f +%d %8c %8c%8c +%d')
-		l4_re_plt = trans_to_regex('%f +%f +%f +%f +%d %8c %8c%8c +%d')
-
-		l0_spn =    trans_to_regex('%d +%f +%f +%f +%f +%f +%f +%f +%f')
-		l1_spn =    trans_to_regex('%f +%d +%d +%d %8c +%d')
-
-		#no of lines per fai, plt or spn data point
-		if file != 'spn':
-			if old_format:
-				n_lines = 5
-			else:
-				n_lines = 1
-		else:
-			n_lines = 2
-
-		plt_data = []
-		for lines in yield_n_lines(fh, n_lines):
-			
-			if id is not None:
-				try:
-					if lines[3].split()[1] != id:
-						continue # escape quickly if this is not a point we are interested in
-				except:
-					print lines
-					continue
-
-			if len(lines) == n_lines: # dont go through this if we have just few dangling lines on the end of the file
-				# fill dictionary with the bits that have been identified
-				#
-				p = {}
-				# for compatability with new routines that expect numpy arrays
-				if file=="fai" and old_format:
-					p = numpy.zeros([1], dtype=[('element_label2', 'S8'), ('element_label1', 'S8'), ('BORO', '<f8'), ('X0', '<f8'), ('tof', '<f8'), ('SORT', '<f8'), ('IEX', '<i8'), ('P0', '<f8'), ('D', '<f8'), ('D-1', '<f8'), ('IREP', '<i8'), ('P', '<f8'), ('S', '<f8'), ('T0', '<f8'), ('PASS', '<i8'), ('Y', '<f8'), ('X', '<f8'), ('Z', '<f8'), ('ID', '<f8'), ('KE', '<f8'), ('Z0', '<f8'), ('element_type', 'S8'), ('LET', 'S1'), ('Y0', '<f8'), ('D0', '<f8'), ('D0-1', '<f8'), ('T', '<f8')])
-				if file=="plt" and old_format:
-					p = numpy.zeros([1], dtype=[('element_label2', 'S8'), ('element_label1', 'S8'), ('KART', '<f8'), ('BORO', '<f8'), ('X0', '<f8'), ('tof', '<f8'), ('By', '<f8'), ('Bz', '<f8'), ('SORT', '<f8'), ('IEX', '<i8'), ('P0', '<f8'), ('D', '<f8'), ('IREP', '<i8'), ('P', '<f8'), ('S', '<f8'), ('T0', '<f8'), ('PASS', '<i8'), ('Y', '<f8'), ('X', '<f8'), ('Z', '<f8'), ('ID', '<f8'), ('D-1', '<f8'), ('Z0', '<f8'), ('element_type', 'S8'), ('LET', 'S1'), ('D0-1', '<f8'), ('Y0', '<f8'), ('D0', '<f8'), ('T', '<f8')])
-
-				if old_format:
-
-					# line 0
-					if file == 'spn':
-						l0 = scanf(lines[0], l0_spn)
-						p['SPIN_X'] = float(l0[5])
-						p['SPIN_Y'] = float(l0[6])
-						p['SPIN_Z'] = float(l0[7])
-					else:
-						l0 = scanf(lines[0], l0_re)
-						p['LET'] = l0[0] 
-						p['IEX'] = int(l0[1]) #flag
-						p['D0'] = float(l0[2]) #initial D-1
-						p['D0-1'] = float(l0[2]) #initial D-1
-						p['Y0'] = self._bad_float(l0[3]) #initial Y
-						p['T0'] = self._bad_float(l0[4]) #initial T (remember that T is dY/dX not time)
-						p['Z0'] = float(l0[5]) #initial Z
-						p['P0'] = float(l0[6]) #initial P
-						p['X0'] = self._bad_float(float(l0[7])) # path length at origin of structure ?
-
-					# line 1
-					if file == 'spn':
-						l1 = scanf(lines[1], l1_spn)
-						p['PASS'] = int(l1[3])
-					else:
-						l1 = scanf(lines[1], l1_re)
-						p['D'] = float(l1[0]) #D-1
-						p['D-1'] = float(l1[0]) #D-1
-						p['Y'] = self._bad_float(l1[1]) #current corrods
-						p['T'] = self._bad_float(l1[2])
-
-					#line 2
-					if file != 'spn':
-						l2 = scanf(lines[2], l2_re)
-						p['Z'] = self._bad_float(l2[0])
-						p['P'] = self._bad_float(l2[1])
-						p['S'] = self._bad_float(l2[2])
-						p['tof'] = self._bad_float(l2[3]) # time of flight
-						if file == 'plt': # a strange bug prehaps. anyways this makes it so that you get microseconds
-							p['tof'] = p['tof'] / 1e5
-						if file == 'fai':
-							p['KE'] = self._bad_float(l2[4]) # Kinetic energy
-					
-					#line 3
-					# see 20080501 in lab book
-					if file == 'plt':
-						l3 = scanf(lines[3], l3_re_plt)
-						p['KART'] = int(l3[0])
-						p['ID'] = l3[1]
-						p['IREP'] = l3[2]
-						p['SORT'] = l3[3]
-						p['X'] = float(l3[4])
-						p['By'] = float(l3[6])
-						p['Bz'] = float(l3[7])
-					elif file == 'fai':
-						l3 = scanf(lines[3], l3_re)
-						p['ID'] = l3[0]
-						p['IREP'] = l3[1]
-						p['SORT'] = l3[2]
-						p['X'] = -1 # X is not defined in FAI file, particle is always at end of the element
-
-					#if  particle['X'] > 1e18: # this comes out as a silly giant number in some cases, maybe due to FAICNL or something
-					#	particle['X'] = 0 
-
-					#line4
-					if file == 'plt':
-						l4 = scanf(lines[4], l4_re_plt)
-						p['BORO'] = float(l4[3])
-						p['PASS'] = int(l4[4])
-						p['element_type'] = l4[5].strip()
-						p['element_label1'] = l4[6].strip()
-						p['element_label2'] = l4[7].strip()
-					elif file == 'fai':
-						l4 = scanf(lines[4], l4_re)
-						p['BORO'] = float(l4[0])
-						p['PASS'] = int(l4[1])
-						p['element_type'] = l4[2].strip()
-						p['element_label1'] = l4[3].strip()
-						p['element_label2'] = l4[4].strip()
-				else:
-					#new format - first separate the strings at end of l0 from the rest
-					l0 = lines[0].split("\'")
-					#remove spurious ' ' strings
-					for elem in l0:
-						if elem == ' ':
-							l0.remove(elem)
-					l0_stringpart = l0[1:-1]
-					#split the numerical part of l0
-					l0 = l0[0].split()
-
-					p['IEX'] = int(l0[0])
-					p['D0'] = float(l0[1]) #initial D-1
-					p['Y0'] = self._bad_float(l0[2]) #initial Y
-					p['T0'] = self._bad_float(l0[3]) #initial T (remember that T is dY/dX not time)
-					p['Z0'] = float(l0[4]) #initial Z
-					p['P0'] = float(l0[5]) #initial P
-					p['X0'] = self._bad_float(float(l0[6])) # path length at origin of structure ?
-					p['tof0'] = self._bad_float(l0[7]) # time of flight
-					p['D'] = float(l0[8])
-					p['Y'] = self._bad_float(l0[9])
-					p['T'] = self._bad_float(l0[10])
-					p['Z'] = self._bad_float(l0[11])
-					p['P'] = self._bad_float(l0[12])
-					p['S'] = self._bad_float(l0[13])
-					p['tof'] = self._bad_float(l0[14]) # time of flight in microseconds
-					if file == 'fai':
-						p['KE'] = self._bad_float(l0[15]) # Kinetic energy
-						p['E'] = self._bad_float(l0[16]) # Total energy
-						p['ID'] = int(l0[17])
-						p['IREP'] = int(l0[18])
-						p['SORT'] = float(l0[19])
-						p['AMQ'] = l0[20:25]
-						p['RET'] = float(l0[25])
-						p['DPR'] = float(l0[26])
-						p['PS'] = float(l0[27])
-						p['BORO'] = float(l0[28])
-						p['PASS'] = int(l0[29])
-						p['NOEL'] = int(l0[30])
-						p['element_type'] = l0_stringpart[0].strip('\'')
-						p['element_label1'] = l0_stringpart[1].strip('\'')
-						p['element_label2'] = l0_stringpart[2].strip('\'')
-						p['LET'] = l0_stringpart[3].strip('\'')
-					elif file == 'plt':
-						p['beta'] = self._bad_float(l0[15]) # Relativistic beta
-						p['DS'] = self._bad_float(l0[16]) # Relativistic beta
-						p['ID'] = int(l0[18])
-						p['IREP'] = int(l0[19])
-						p['SORT'] = float(l0[20])
-						p['X'] = float(l0[21])
-						p['Bx'] = float(l0[22])
-						p['By'] = float(l0[23])
-						p['Bz'] = float(l0[24])
-						p['RET'] = float(l0[25])
-						p['DPR'] = float(l0[26])
-						p['PS'] = float(l0[27])
-						p['BORO'] = float(l0[39])
-						p['PASS'] = int(l0[40])
-						p['NOEL'] = int(l0[41])
-						p['element_type'] = l0_stringpart[0].strip()
-						p['element_label1'] = l0_stringpart[1].strip()
-						p['element_label2'] = l0_stringpart[2].strip()
-						p['LET'] = l0_stringpart[3].strip()
-
-				
-				plt_data.append(p)
-		if (file=="fai" or file=="plt") and old_format:
-			plt_data = numpy.array(plt_data, dtype=plt_data[0].dtype)
-			plt_data =  plt_data.reshape([-1])
-		return plt_data
+		return io.read_file(fh)
 
 
 	def get_track(self, file, coord_list, multi_list=None):
@@ -1415,164 +1082,6 @@ class Results(object):
 
 		return last_bunch
 
-
-	def get_extremes(self, file, element_label=None, coord='Y', id=None):
-		"""
-		Get the max and min positions of a certain coordinate, in a certain element
-		"""
-		# FIXME could be done better with numpy
-		all = self.get_all(file, id=id)
-		if element_label is None:
-			el_points = all
-		else:
-			el_points = [p for p in all if (p['element_label1'] == element_label or p['element_label2'] == element_label)]
-
-		
-		if len(el_points) == 0:
-			print "no points for particle id:", id, "element_label", element_label
-			raise NoTrackError
-			
-		
-		mini = min([p[coord] for p in el_points])
-		maxi = max([p[coord] for p in el_points])
-
-		return mini, maxi
-
-	def list_particles(self, file):
-		if file == 'plt':
-			fh = self.plt_fh()
-		elif file == 'fai':
-			fh = self.fai_fh()
-		else:
-			raise ValueError("get_all() expects name to be 'plt' or 'fai'")
-
-		#ignore header lines
-		dummy = list(read_n_lines(fh, 4))
-		particle_ids = set()
-		for lines in yield_n_lines(fh, 5):
-			if len(lines) == 5: # dont go through this if we have just few dangling lines on the end of the file
-				#bits = [] # not computerscience bits. just the bits of data on each line
-				#bits.append(line.split()) # split them by whitespace
-				#particle_ids.add(int(bits[3][1]))
-				particle_ids.add(int(lines[3].split()[1]))
-		return particle_ids
-
-	def in_bounds(self, file, element_label, min_bound, max_bound, coord='Y', verbose=False, id=None):
-		"""
-		check if particle exceeded bounds in this element. pass bounds in zgoubi's default unit for that coordinate
-		"""
-		if id is not None:
-			part_list = [id]
-		else:
-			part_list = self.list_particles(file)
-
-		
-		for id in part_list:
-			try:
-				track_min, track_max = self.get_extremes(file, element_label, coord, id=id)
-			except NoTrackError:
-				print "No Track"
-				return True
-			in_b = True
-			if track_min <= min_bound:
-				if verbose: print track_min, "<=", min_bound, "hit lower bound, in element", element_label
-				in_b = False
-				
-			if track_max >= max_bound:
-				if verbose: print track_max, ">=", max_bound, "hit upper bound, in element", element_label
-				in_b = False
-
-		return in_b
-
-	def check_bounds(self, file, min_bounds, max_bounds, coord='Y', part_ids=None, assume_in_order=False):
-		"""read whole file. for each chunk, check if it is an element with bounds, if yes check if it is inside
-		record crashes, by particle id
-		min_bounds and max_bounds should be of the form {'label': bound, 'label': bound}
-		returns numpy arrays
-		note: lost particles dont crash
-		"""
-		if part_ids is None:
-			particle_ids = self.list_particles(file)
-		else:
-			particle_ids = part_ids
-		if file == 'plt':
-			fh = self.plt_fh()
-		elif file == 'fai':
-			fh = self.fai_fh()
-		else:
-			raise ValueError("get_all() expects name to be 'plt' or 'fai'")
-
-		header = list(read_n_lines(fh, 4))
-		
-		crashes = numpy.zeros(len(particle_ids), dtype=int)
-		not_crashes = numpy.zeros(len(particle_ids), dtype=int)
-		laps = numpy.zeros(len(particle_ids), dtype=int)
-		crash_lap = numpy.zeros(len(particle_ids), dtype=int)
-		crash_lap += 100000
-		
-		for lines in yield_n_lines(fh, 5):
-			if len(lines) != 5:
-				continue
-			bits = {} # not computerscience bits. just the bits of data on each line
-			particle = {}
-			#for line in lines:
-			#	bits.append(line.split()) # split them by whitespace
-			bits[1] = lines[1].split()
-			bits[3] = lines[3].split()
-			bits[4] = lines[4].split()
-			
-			particle['ID'] = bits[3][1]
-			particle['Y'] = float(bits[1][1])
-			particle['T'] = float(bits[1][2])
-			
-			if assume_in_order:
-				if crashes[int(particle['ID'])-1] > 0:
-					continue
-			
-			#the last line of each chunk is a pain.
-			#lets find the first none numeric element and work from that
-			for n, test_string in enumerate(bits[4]):
-				try:
-					float(test_string)
-				except ValueError:
-					first_non_numeric = n
-					break
-
-			#particle['BORO'] = bits[4][first_non_numeric -2]
-			particle['PASS'] = bits[4][first_non_numeric -1]
-			#print bits[4]
-			laps[int(particle['ID'])-1] = max(laps[int(particle['ID'])-1], int(particle['PASS'])) # store the biggest lap seen
-			#particle['element_type'] = bits[4][first_non_numeric]
-			#set these to empty, and fill them in later if possible
-			particle['element_label1'] = ""
-			particle['element_label2'] = ""
-			#particle['element_number'] = bits[4][len(bits[4]) -1]
-			if (len(bits[4]) - first_non_numeric) == 4: # 2 labels
-				particle['element_label1'] = bits[4][first_non_numeric + 1]
-				particle['element_label2'] = bits[4][first_non_numeric + 2]
-			if (len(bits[4]) - first_non_numeric) == 3: # 1 labels
-				particle['element_label1'] = bits[4][first_non_numeric + 1]
-			
-			has_crashed = False
-			for k, v in min_bounds.items():
-				if particle['element_label1'] == k or particle['element_label2'] == k:
-					if particle['Y'] <= v:
-						#crash
-						has_crashed = True
-			for k, v in max_bounds.items():
-				if particle['element_label1'] == k or particle['element_label2'] == k:
-					if particle['Y'] >= v:
-						#crash
-						has_crashed = True
-			if has_crashed:
-				# zgoubi counts from 1, we count from zero
-				crashes[int(particle['ID'])-1] += 1
-				crash_lap[int(particle['ID'])-1] = min(crash_lap[int(particle['ID'])-1], int(particle['PASS'])) # record the first crash
-			else:
-				not_crashes[int(particle['ID'])-1] += 1
-
-		return crashes, not_crashes, laps, crash_lap
-	
 	def parse_matrix(self):
 		"""Parse data from output of MATRIX element
 
