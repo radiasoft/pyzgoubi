@@ -23,13 +23,13 @@ class Bunch(object):
 	"""Object to store a bunch of particles efficiently using numpy.
 	All values are in SI units, m, rad, eV, s
 	Can be use to create a bunch of particles with all there coordinates set to zero (appart from the D coordinate which is set to 1)::
-	
+
 		my_bunch = Bunch(nparticles=100, ke=1e6, mass=PROTON_MASS, charge=1)
-	
+
 	It can also be used to create a bunch from some existing coordinates stored in a numpy array::
-	
+
 		 my_bunch = Bunch(ke=1e6, mass=PROTON_MASS, charge=1, particles=existing_coords)
-	
+
 	"""
 	min_data_def = [
 	('D', numpy.float64), # these coorspond to zgoubi D,Y,T,Z,P,S, but in SI units
@@ -109,7 +109,7 @@ class Bunch(object):
 	def raw_particles(self):
 		"""Returns the numpy array that holds the coordinates, as a 2d numpy array and a list of comumn names. It is possible that the column names may change or reorder, so if you use this you may want to protect against it with something like
 		::
-		
+
 			assert(pbunch.raw_particles()[1] == ["D","Y","T","Z","P","S","TOF","X"])
 
 		"""
@@ -126,23 +126,23 @@ class Bunch(object):
 			               ke=None, rigidity=0, mass=0, charge=1):
 		"""Generate a halo bunch, i.e. an elipse outline in x-xp (Y-T) and in y-yp (Z-P). S and D are set to 0 and 1 respectively.
 		example::
-		
+
 			my_bunch = Bunch.gen_halo_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
-		
+
 		creates a halo bunch called my_bunch with 1000 particles of the given parameters.
 
 		"""
 
 		if emit_y < 0 or emit_z < 0 or beta_y < 0 or beta_z < 0:
-			print "Emittance or beta can't be negative"
-			print "emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z"
-			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
-			raise ValueError
+			print("Emittance or beta can't be negative")
+			print("emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z")
+			print(emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z)
+			raise ValueError()
 
 		npart = int(npart)
 
-		ry = sqrt(emit_y) 
-		rz = sqrt(emit_z) 
+		ry = sqrt(emit_y)
+		rz = sqrt(emit_z)
 
 		if seed is not None:
 			numpy.random.seed(seed)
@@ -158,19 +158,19 @@ class Bunch(object):
 		coords[:, 3] = rz * numpy.sin(u2)
 
 		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
-		
+
 		for n, coord in enumerate(coords):
 			#	new_coord = numpy.dot(coord, matrix)
 			coords[n] = numpy.dot(matrix, coord)
-		
+
 		bunch = numpy.zeros([npart], Bunch.min_data_def)
-		
+
 		bunch['Y'] = coords[:, 0]
 		bunch['T'] = coords[:, 1]
 		bunch['Z'] = coords[:, 2]
 		bunch['P'] = coords[:, 3]
 		bunch['D'] = 1
-		
+
 		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=bunch)
 
 	@staticmethod
@@ -178,18 +178,18 @@ class Bunch(object):
 			               ke=None, rigidity=0, mass=0, charge=1):
 		"""Generate a uniform (KV) bunch, i.e. a surface of a 4D hypershere in x-xp-y-yp (Y-T-Z-P). S and D are set to 0 and 1 respectively.
 		example::
-		
+
 			my_bunch = Bunch.gen_kv_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
-		
+
 		creates a KV bunch called my_bunch with 1000 particles of the given parameters.
 
 		"""
 
 		if emit_y < 0 or emit_z < 0 or beta_y < 0 or beta_z < 0:
-			print "Emittance or beta can't be negative"
-			print "emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z"
-			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
-			raise ValueError
+			print("Emittance or beta can't be negative")
+			print("emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z")
+			print(emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z)
+			raise ValueError()
 
 		if seed is not None:
 			numpy.random.seed(seed)
@@ -203,7 +203,7 @@ class Bunch(object):
 		#u2 = numpy.random.random_sample([npart]) * pi * 2
 
 		coords = numpy.zeros([npart, 6], numpy.float64)
-	
+
 		# From Chris Prior.
 		y = numpy.random.uniform(-1, 1, [npart])
 		y2 = numpy.arccos(y) / 2
@@ -216,37 +216,37 @@ class Bunch(object):
 		coords[:, 3] = rz * numpy.sin(y2) * numpy.sin(the)
 
 		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
-		
+
 		for n, coord in enumerate(coords):
 			#	new_coord = numpy.dot(coord, matrix)
 			coords[n] = numpy.dot(matrix, coord)
-		
+
 		bunch = numpy.zeros([npart], Bunch.min_data_def)
-		
+
 		bunch['Y'] = coords[:, 0]
 		bunch['T'] = coords[:, 1]
 		bunch['Z'] = coords[:, 2]
 		bunch['P'] = coords[:, 3]
 		bunch['D'] = 1
-		
+
 		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=bunch)
 	@staticmethod
 	def gen_waterbag_x_xp_y_yp(npart, emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z, seed=None,
 			               ke=None, rigidity=0, mass=0, charge=1):
 		"""Generate a waterbag bunch, i.e. a filled hypersphere in x-xp-y-yp (Y-T-Z-P). S and D are set to 0 and 1 respectively.
 		example::
-		
+
 			my_bunch = Bunch.gen_waterbag_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
-		
+
 		creates a waterbag bunch called my_bunch with 1000 particles of the given parameters.
 
 		"""
 
 		if emit_y < 0 or emit_z < 0 or beta_y < 0 or beta_z < 0:
-			print "Emittance or beta can't be negative"
-			print "emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z"
-			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
-			raise ValueError
+			print("Emittance or beta can't be negative")
+			print("emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z")
+			print(emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z)
+			raise ValueError()
 
 		if seed is not None:
 			numpy.random.seed(seed)
@@ -260,30 +260,30 @@ class Bunch(object):
 		#u2 = numpy.random.random_sample([npart]) * pi * 2
 
 		coords = numpy.zeros([npart, 6], numpy.float64)
-		
+
 		while True:
 			# fill a hypercube with 3.5 times as many particles as needed
 			a1 = numpy.random.uniform(-1, 1, [int(npart*3.5)])
 			a2 = numpy.random.uniform(-1, 1, [int(npart*3.5)])
 			a3 = numpy.random.uniform(-1, 1, [int(npart*3.5)])
 			a4 = numpy.random.uniform(-1, 1, [int(npart*3.5)])
-			
+
 			# discard ones that fall out of hypesphere
 			r = a1**2+a2**2+a3**2+a4**2
 			keep = r <= 1
-			
+
 			a1 = a1[keep]
 			a2 = a2[keep]
 			a3 = a3[keep]
 			a4 = a4[keep]
 
-			#print len(a1)
-			
+			#print(len(a1))
+
 			# it is possible that to many particles will be rejected
 			if len(a1) >= npart:
 				break
 
-		
+
 
 		coords[:, 0] = ry * a1[0:npart]
 		coords[:, 1] = ry * a2[0:npart]
@@ -291,19 +291,19 @@ class Bunch(object):
 		coords[:, 3] = rz * a4[0:npart]
 
 		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
-		
+
 		for n, coord in enumerate(coords):
 			#	new_coord = numpy.dot(coord, matrix)
 			coords[n] = numpy.dot(matrix, coord)
-		
+
 		bunch = numpy.zeros([npart], Bunch.min_data_def)
-		
+
 		bunch['Y'] = coords[:, 0]
 		bunch['T'] = coords[:, 1]
 		bunch['Z'] = coords[:, 2]
 		bunch['P'] = coords[:, 3]
 		bunch['D'] = 1
-		
+
 		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=bunch)
 
 	@staticmethod
@@ -311,18 +311,18 @@ class Bunch(object):
 			               ke=None, rigidity=0, mass=0, charge=1):
 		"""Generate a Gaussian bunch in x-xp (Y-T) and in y-yp (Z-P). S and D are set to 0 and 1 respectively.
 		example::
-		
+
 			my_bunch = Bunch.gen_kv_x_xp_y_yp(1000, 1e-3, 1e-3, 4, 5, 1e-3, 2e-2, ke=50e6, mass=PROTON_MASS, charge=1)
-		
+
 		creates a Gaussian bunch called my_bunch with 1000 particles of the given parameters.
 
 		"""
 
 		if emit_y < 0 or emit_z < 0 or beta_y < 0 or beta_z < 0:
-			print "Emittance or beta can't be negative"
-			print "emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z"
-			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
-			raise ValueError
+			print("Emittance or beta can't be negative")
+			print("emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z")
+			print(emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z)
+			raise ValueError()
 
 		if seed is not None:
 			numpy.random.seed(seed)
@@ -338,10 +338,10 @@ class Bunch(object):
 
 
 		matrix = Bunch._twiss_matrix(beta_y, beta_z, alpha_y, alpha_z)
-		
+
 		for n, coord in enumerate(coords):
 			coords[n] = numpy.dot(matrix, coord)
-		
+
 		bunch = numpy.zeros([npart], Bunch.min_data_def)
 
 		bunch['Y'] = coords[:, 0]
@@ -349,7 +349,7 @@ class Bunch(object):
 		bunch['Z'] = coords[:, 2]
 		bunch['P'] = coords[:, 3]
 		bunch['D'] = 1
-	
+
 		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=bunch)
 
 	@staticmethod
@@ -358,16 +358,16 @@ class Bunch(object):
 		emit_y, emit_z : horizontal and vertical plane geometric emittance (1 sigma)
 		beta_y, beta_z : horizontal and vertical betatron function
 		alpha_y, alpha_z : horizontal and vertical alpha
-		mom_spead : sigma of momentum spread (percentage) 
+		mom_spead : sigma of momentum spread (percentage)
 		bunch_length : sigma of bunch length (metres)
 		disp, disp_prime : dispersion and dispersion prime (D') in horizontal plane """
 
 
 		if emit_y < 0 or emit_z < 0 or beta_y < 0 or beta_z < 0:
-			print "Emittance or beta can't be negative"
-			print "emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z"
-			print emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z
-			raise ValueError
+			print("Emittance or beta can't be negative")
+			print("emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z")
+			print(emit_y, emit_z, beta_y, beta_z, alpha_y, alpha_z)
+			raise ValueError()
 
 
 		if seed is not None:
@@ -383,7 +383,7 @@ class Bunch(object):
 			s_dist = numpy.random.normal(0.0, bunch_length, npart)
 
 
-		#use numpy.random.multivariate_normal. 
+		#use numpy.random.multivariate_normal.
 		#set off-diagonal terms in covariance matrix to zero so that Y is uncorrelated with T (and Z with P)
 		cov_yt = [[emit_y, 0], [0, emit_y]]
 		ryrt = numpy.random.multivariate_normal((0, 0), cov_yt, (1, npart))[0]
@@ -406,9 +406,9 @@ class Bunch(object):
 		for n, coord in enumerate(coords):
 			#	new_coord = numpy.dot(coord, matrix)
 			coords[n] = numpy.dot(matrix, coord)
-		
+
 		bunch = numpy.zeros([npart], Bunch.min_data_def)
-		
+
 		bunch['Y'] = coords[:, 0]
 		bunch['T'] = coords[:, 1]
 		bunch['Z'] = coords[:, 2]
@@ -422,7 +422,7 @@ class Bunch(object):
 			bunch['S'] = s_dist
 		else:
 			bunch['S'] = 0.0
-		
+
 		return Bunch(ke=ke, rigidity=rigidity, mass=mass, charge=charge, particles=bunch)
 
 	@staticmethod
@@ -452,7 +452,7 @@ class Bunch(object):
 	def read_YTZPSD(fname, ke=None, rigidity=0, mass=0, charge=1):
 		"""Read in a bunch from a file. assumes columns are Y, T, Z, P, X, D, separated by white space::
 			my_bunch = Bunch.read_YTZPSD("mybunch.dat", ke=1e9, mass=ELECTRON_MASS, charge=-1)
-		
+
 		"""
 		dist = numpy.loadtxt(fname)
 		if ((dist.size % 6) != 0):
@@ -477,14 +477,14 @@ class Bunch(object):
 		if not numpy.all(numpy.isfinite(self.raw_particles()[0])):
 			zlog.error("Non finite coordinates in bunch. Called by %s()", inspect.stack()[1][3])
 			return False
-	
+
 		return True
 
 
 	def write_YTZPSD(self, fname, binary=False):
 		"Output a bunch, compatible with read_YTZPSD"
 		self.check_bunch()
-		
+
 		# it ought to be possible to do this:
 		#numpy.savetxt(fh, self.coords[['Y','T','Z','P','S','D']])
 		# but the field end up in the wrong order, see http://thread.gmane.org/gmane.comp.python.numeric.general/36933
@@ -527,7 +527,7 @@ class Bunch(object):
 			numpy.savetxt(fh, dist)
 		fh.close()
 
-	
+
 	def get_widths(self):
 		"Returns the width of the bunch in each dimension Y,T,Z,P,S,D"
 		self.check_bunch()
@@ -596,7 +596,7 @@ class Bunch(object):
 		for n in range(1, 5):
 			if n == 4 and longitudinal == False: continue
 			x, y, title = plot_specs[n]
-			
+
 			pylab.subplot(2, 2, n)
 			pylab.grid()
 			for abunch, f in zip(bunches, itertools.cycle(fmt)):
@@ -631,7 +631,7 @@ class Bunch(object):
 		rot_t = r_yt * numpy.cos(theta_yt)
 		emittance_h = rot_y.max()*rot_t.max()
 
-		
+
 		r_zp = numpy.sqrt(Zs**2 + Ps**2)
 		theta_zp = numpy.arctan2(Zs, Ps)
 		major_angle = theta_zp[r_zp.argmax()]
@@ -639,7 +639,7 @@ class Bunch(object):
 		rot_z = r_zp * numpy.sin(theta_zp)
 		rot_p = r_zp * numpy.cos(theta_zp)
 		emittance_v = rot_z.max() * rot_p.max()
-		#print "Emittance (h, v):", emittance_h, emittance_v
+		#print("Emittance (h, v):", emittance_h, emittance_v)
 		return (emittance_h, emittance_v)
 
 	def get_emittance_rms(self):
@@ -678,7 +678,7 @@ class Bunch(object):
 		Ps = self.coords['P'] - centers[3]
 		beta_h = (widths[0] / 2)**2 / emittance_h
 		beta_v = (widths[2] / 2)**2 / emittance_v
-		#print "beta", beta_h, beta_v
+		#print("beta", beta_h, beta_v)
 		#gamma_h = (widths[1] / 2)**2 / emittance_h
 		#gamma_v = (widths[3] / 2)**2 / emittance_v
 		# get T of particle with bigest Y
@@ -689,13 +689,13 @@ class Bunch(object):
 		z_p_max = Ps[Zs.argmax()]
 		z_p_min = Ps[Zs.argmin()]
 		alpha_v = (z_p_min - z_p_max) / 2 / sqrt(emittance_v / beta_v)
-		#print "gamma", gamma_h, gamma_v	
+		#print("gamma", gamma_h, gamma_v	)
 
 		# following is dangerous, due do stat fluctuations causing roots of negative numbers
 		#	alpha_h = sqrt((gamma_h*beta_h)-1 )
 		#	alpha_v = sqrt((gamma_v*beta_v)-1 )
 
-		#print "twiss (bh,ah,bv,av):", beta_h, alpha_h, beta_v, alpha_v
+		#print("twiss (bh,ah,bv,av):", beta_h, alpha_h, beta_v, alpha_v)
 		return beta_h, alpha_h, beta_v, alpha_v
 
 
@@ -720,5 +720,3 @@ class Bunch(object):
 		alpha_v = -(Zs*Ps).mean()/emittance_v
 
 		return beta_h, alpha_h, beta_v, alpha_v
-
-

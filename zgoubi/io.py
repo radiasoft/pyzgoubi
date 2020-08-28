@@ -101,7 +101,7 @@ def define_file(fname, allow_lookup=False):
 	first_bytes = fh.read(30)
 	# zgoubi's ascii files start with '# '
 	# the binary files start with an int that tells you the length of the next record
-	
+
 	if first_bytes[0:2] == "# ":
 		file_mode = 'ascii'
 	else:
@@ -111,8 +111,8 @@ def define_file(fname, allow_lookup=False):
 			fh = open_file_or_name(fname, mode="rb")
 			fh.seek(0)
 			first_bytes = fh.read(30)
-			
-	
+
+
 	if "COORDINATES" in first_bytes:
 		file_type = "fai"
 	elif "TRAJECTORIES" in first_bytes:
@@ -125,24 +125,24 @@ def define_file(fname, allow_lookup=False):
 		header = [fh.readline() for x in xrange(4)]
 	else:
 		header = [read_fortran_record(fh) for x in xrange(4)]
-	
+
 	if header[2].startswith("..."):
-		raise OldFormatError, "This is an old format that does not define column headings"
+		raise OldFormatError("This is an old format that does not define column headings")
 
 	header_length = sum([len(h) for h in header])
 	if file_size <= header_length+8*4:
-		raise EmptyFileError
+		raise EmptyFileError()
 
 	record_len = 0
 	if file_mode == 'binary':
 		header_length += 4*8 # extra bytes from record lengths
 		fh.seek(header_length)
 		record_len = struct.unpack("i", fh.read(4))[0]
-		print "record_len", record_len
+		print("record_len", record_len)
 
-	
+
 	signature = file_mode + file_type + header[2] + header[3] + str(record_len)
-	signature = hashlib.md5(signature).hexdigest()	
+	signature = hashlib.md5(signature).hexdigest()
 
 	if allow_lookup:
 		try:
@@ -156,23 +156,23 @@ def define_file(fname, allow_lookup=False):
 		record_length = len(read_fortran_record(fh)) +8
 
 		#file_length = len(whole_file)
-		#print "file_length", file_length
-		#print "header_length",header_length
-		#print "record_length", record_length
-		
+		#print("file_length", file_length)
+		#print("header_length",header_length)
+		#print("record_length", record_length)
+
 
 	col_names = header[2].strip().strip('#').replace(" ", "").split(',')
 	col_types = header[3].strip().strip('#').replace(" ", "").split(',')
-	
+
 	if col_names[-1]=='S':
 		col_names[-1] = 'SL' #CDK temporary fix to avoid duplicaiting 'S' in Zgoubi rev 955.
 
 	dupes = list(set ([x  for x in col_names if (col_names.count(x) > 1)]))
 	if dupes:
-		raise ValueError, "Duplicate columns in:" + str(fname) + "\n" + " ".join(dupes)
+		raise ValueError("Duplicate columns in:" + str(fname) + "\n" + " ".join(dupes))
 
 	if len(col_names) != len(col_types):
-		raise ValueError, "Length of col_names (%s) not equal to length of col_types (%s)" % (len(col_names), len(col_types))
+		raise ValueError("Length of col_names (%s) not equal to length of col_types (%s)" % (len(col_names), len(col_types)))
 
 	names = []
 	types = []
@@ -180,7 +180,7 @@ def define_file(fname, allow_lookup=False):
 	byte_count = 8 # count how long the field lengths add up to
 
 	for rname, rtype in zip(col_names, col_types):
-		#print "#", rname,"#" , rtype,"#"
+		#print("#", rname,"#" , rtype,"#")
 		ntype = "f8"
 		nunit = rtype
 		nbytes = 8
@@ -215,7 +215,7 @@ def define_file(fname, allow_lookup=False):
 		byte_count += 20
 
 	if file_mode == 'binary' and byte_count != record_length:
-		raise ValueError, "byte_count from header types does not match record_length in file"
+		raise ValueError("byte_count from header types does not match record_length in file")
 
 	definition =  {'names':names, 'types':types, 'units':units, 'file_mode':file_mode, 'file_type':file_type, 'signature':signature}
 	if file_mode == 'binary':
@@ -230,7 +230,7 @@ def define_file(fname, allow_lookup=False):
 def listreplace(l, old, new):
 	"Replace all occurrences of 'old' with 'new' in 'l'"
 	return [x if x != old else new for x in l]
-	
+
 def read_file(fname):
 	"Read a zgoubi output file. Return a numpy array with named column headers. The format is automatically worked out from the header information."
 	file_def = define_file(fname)
@@ -242,20 +242,20 @@ def read_file(fname):
 		fh = open_file_or_name(fname)
 	fh.seek(0)
 
-	
+
 	if file_def["file_mode"] == "ascii":
 		dummy = [fh.readline().strip() for dummy in xrange(4)]
-		file_data = [] 
+		file_data = []
 		# acsii files a space separated, but the quote around the stings are similar to in a csv file
 		# so use csv module to split the line into elements
 		#for row in csv.reader(fh, delimiter=" ", quotechar="'"):
 		for n, row in enumerate(csv.reader(fh, delimiter=" ", quotechar="'")):
 			#if n == 2: break
 			# there are sometimes more that 1 space between fields, csv interprets this as empty fields, so need to remove them
-			#print row
+			#print(row)
 			vals = [e for e in row if e ]
 			file_data.append(tuple(vals))
-		# use the data_type info to set the fields right, and convert to numpy array		
+		# use the data_type info to set the fields right, and convert to numpy array
 		try:
 			file_data2 = numpy.array(file_data, dtype= numpy.dtype(data_type))
 		except ValueError:
@@ -276,7 +276,7 @@ def read_file(fname):
 							ns = s[:-4] + 'E' + s[-4:]
 							zlog.debug("Replaced %s with %s (%s)"%(s, ns, float(ns)))
 							s = ns
-							
+
 						new_row.append(s)
 
 					new_row = new_row[:len(data_type)]
@@ -286,7 +286,7 @@ def read_file(fname):
 		rec_len = file_def["record_length"]
 		head_len = file_def["header_length"]
 		fh.seek(head_len)
-		
+
 		#types = file_def['types']
 		#types = listreplace(types, 'f8', 'd')
 		#types = listreplace(types, 'i4', 'i')
@@ -298,10 +298,10 @@ def read_file(fname):
 		file_size = os.path.getsize(fname)
 		num_records = (file_size - head_len) / rec_len
 		if num_records == 0:
-			raise EmptyFileError
-	
+			raise EmptyFileError()
+
 		file_data2 = numpy.zeros(num_records, dtype= numpy.dtype(data_type))
-		
+
 		for n in xrange(num_records):
 			full_rec = fh.read(rec_len)
 			#FIXME this check wastes some time in a bit of code that should be fast. maybe should only be on if debug is enabled
@@ -323,12 +323,12 @@ def store_def_all():
 	bf = define_file("binary.fai", allow_lookup=False)
 	bp = define_file("binary.plt", allow_lookup=False)
 
-	print
-	print "definition_lookup['%s'] = % s" % ( af['signature'], af)
-	print
-	print "definition_lookup['%s'] = % s" % ( bf['signature'], bf)
-	print
-	print "definition_lookup['%s'] = % s" % ( ap['signature'], ap)
-	print
-	print "definition_lookup['%s'] = % s" % ( bp['signature'], bp)
-	print
+	print()
+	print("definition_lookup['%s'] = % s" % ( af['signature'], af))
+	print()
+	print("definition_lookup['%s'] = % s" % ( bf['signature'], bf))
+	print()
+	print("definition_lookup['%s'] = % s" % ( ap['signature'], ap))
+	print()
+	print("definition_lookup['%s'] = % s" % ( bp['signature'], bp))
+	print()

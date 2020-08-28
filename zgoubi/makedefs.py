@@ -9,13 +9,13 @@ from string import ascii_letters, digits
 def expand_types(typestring):
 	"""convert 'I,3E,2I' to ['I','E','E','E','I','I']
 	This is used internally to parse the definitions file
-	
+
 	"""
 	types = []
 	chunks = [x.strip() for x in typestring.split(',')]
 	for chunk in chunks:
 		multi = "" # how many
-		#print chunk
+		#print(chunk)
 		ptype = ""  # int, float, strin
 		count = "" # sting len
 		chunk = list(chunk)
@@ -25,20 +25,20 @@ def expand_types(typestring):
 		if multi == "":
 			multi = '1'
 		ptype = chunk.pop(0) # first non digit is type
-		#print multi, ptype  
+		#print(multi, ptype  )
 		if (ptype in ['I', 'E', 'X']):
 			for x in range(int(multi)):
 				types.append(ptype)
 			continue
-		#print chunk		
+		#print(chunk		)
 		if (ptype == 'A'):
 			count = int(''.join(chunk)) # what is left must be count
 			for x in range(int(multi)):
 				types.append(ptype+str(count))
 			continue
-		print multi, ptype, count
-		print "can't parse", typestring
-		raise ValueError
+		print(multi, ptype, count)
+		print("can't parse", typestring)
+		raise ValueError()
 	return types
 
 
@@ -49,20 +49,20 @@ def make_element_classes(definitions_paths, compiled_path):
 	try:
 		out_file = open(compiled_path, 'w')
 	except IOError:
-		print "Cant create file: " + compiled_path + "\n"
-		print "Check that you have permission to modify files in that directory\n"
+		print("Cant create file: " + compiled_path + "\n")
+		print("Check that you have permission to modify files in that directory\n")
 		raise
-	
+
 	out_file.write("# Generated definitions file\n")
 	out_file.write("from zgoubi.core import zgoubi_element\n\n")
 
-		
+
 	def_lines = []
 	for file_path in definitions_paths:
 		try:
 			fh = open(file_path)
 		except IOError:
-			print "can't read", file_path
+			print("can't read", file_path)
 			continue
 
 		def_lines += fh.readlines()
@@ -76,7 +76,7 @@ def make_element_classes(definitions_paths, compiled_path):
 		if (line.strip() == "" and len(defs) > 0):
 			# if we read a blank line, and we have gathered some lines
 			# then we have a whole element
-		   
+
 			# create python class code from definition
 			out_file.write(make_element_class(defs))
 			out_file.write('\n')
@@ -91,26 +91,26 @@ def make_element_classes(definitions_paths, compiled_path):
 def make_element_class(defs):
 	"Convert the definition into a python class"
 	# class name is the name used for the python class
-	# zname is the zgoubi element name 
+	# zname is the zgoubi element name
 	class_name = defs[0]
 
 	# must be a valid identifier name
 	for letter in class_name:
 		if letter not in ascii_letters + digits:
-			raise ValueError, "invalid classname in definitions file: " + class_name
+			raise ValueError("invalid classname in definitions file: " + class_name)
 
 	if class_name[0] in digits:
-		raise ValueError, "invalid classname in definitions file: " + class_name
-		
+		raise ValueError("invalid classname in definitions file: " + class_name)
+
 	zname = defs[1]
 	class_code = ""
 	init_params_code = ""
 	output_code = ""
 	loop_output_code = ""
 	add_func_code = ""
-	
-#	print zname
-	
+
+#	print(zname)
+
 	class_code += "class %s(zgoubi_element):\n" % class_name
 	class_code += "\t_class_name='%s'\n" % class_name
 	class_code += "\t_zgoubi_name='%s'\n" % class_name
@@ -119,7 +119,7 @@ def make_element_class(defs):
 	class_code += "\t\tself._types={}\n"
 	class_code += "\t\tself._params['label1'] = label1\n"
 	class_code += "\t\tself._params['label2'] = label2\n"
-	
+
 	output_code += "\tdef output(self):\n"
 	output_code += "\t\tI=self.i2s\n"
 	output_code += "\t\tE=self.f2s\n"
@@ -131,16 +131,16 @@ def make_element_class(defs):
 	output_code += "\t\tnl = '\\n'\n"
 	output_code += "\t\tsq = '\\''\n"
 	output_code += "\t\tout += sq + '%s' + sq + ' ' + L(self._params['label1']) + ' ' + L(self._params['label2'])  + nl \n" % (zname)
-	
+
 	add_func_code += "\tdef add(self, **settings):\n"
 	add_func_code += "\t\tparams = {}\n"
-	
+
 	#get all params  and types
 	cond_code = ""
 	in_loop = has_loops = False
 	for l in defs[2:]:
 		# conditional output
-		#print '"', l, '"'
+		#print('"', l, '"')
 		if l.startswith('!'):
 			conditions = l[1:]
 			# parameter equals x type conditions
@@ -154,7 +154,7 @@ def make_element_class(defs):
 			elif '*{' in conditions:
 				loop_on = conditions.strip('!*{') # the param that holds number of parts
 				in_loop = has_loops = True
-		#		print "start loop, ", loop_on
+		#		print("start loop, ", loop_on)
 			elif l.strip() == "!}":
 				in_loop = False
 				output_code += "\t\tfor part in self._looped_data:\n"
@@ -173,8 +173,8 @@ def make_element_class(defs):
 			error = "In element %s:\n" % class_name
 			error += l + '\n'
 			error += str(len(names)) + " names, but only"+ str(len(types))+ " types\n"
-			raise ValueError, error
-		
+			raise ValueError(error)
+
 		for name, ptype in zip(names, types):
 			if not in_loop:
 				if ptype in ['I', 'E', 'X']:
@@ -184,8 +184,8 @@ def make_element_class(defs):
 					# let these types default to an empty string
 					init_params_code += "\t\tself._params['%s']=''\n" % name
 				else:
-					print "unknown type", ptype, "for", name, "in", class_name
-					raise ValueError
+					print("unknown type", ptype, "for", name, "in", class_name)
+					raise ValueError()
 			else:
 				if ptype in ['I', 'E', 'X']:
 					# let these types default to 0
@@ -194,12 +194,12 @@ def make_element_class(defs):
 					# let these types default to an empty string
 					add_func_code += "\t\tparams['%s']=''\n" % name
 				else:
-					print "unknown type", ptype, "for", name, "in", class_name
-					raise ValueError
+					print("unknown type", ptype, "for", name, "in", class_name)
+					raise ValueError()
 
-				
+
 			init_params_code += "\t\tself._types['%s']='%s'\n" % (name, ptype)
-		
+
 		#the lines that out put the parameters to zgoubi.dat
 		if not in_loop:
 			out_bits = []
@@ -211,14 +211,14 @@ def make_element_class(defs):
 			for name, ptype in zip(names, types):
 				out_bits.append("%s(part['%s'])" % (ptype[0], name))
 			loop_output_code += "\t\t\t%sout +=  %s +nl \n" % (cond_code, " + ' ' + ".join(out_bits))
-		
-		
+
+
 	output_code += "\t\treturn out\n"
 
 	init_params_code += "\t\tself.set(settings)\n"
 	if has_loops:
 		init_params_code += "\t\tself._looped_data = []\n"
-	
+
 		add_func_code += "\t\tfor k, v in settings.items():\n"
 		add_func_code += "\t\t\tif not params.has_key(k):\n"
 		add_func_code += "\t\t\t\traise ValueError('Sub element of %s does not have parameter %s'%(self._class_name, k))\n"
@@ -227,7 +227,7 @@ def make_element_class(defs):
 		add_func_code += "\t\tself._params['%s'] = len(self._looped_data)\n" % loop_on
 		add_func_code += "\tdef clear(self):\n"
 		add_func_code += "\t\tself._looped_data = []\n"
-	
+
 
 	code = ''
 	code += class_code
@@ -236,4 +236,3 @@ def make_element_class(defs):
 	if has_loops:
 		code += add_func_code
 	return code
-

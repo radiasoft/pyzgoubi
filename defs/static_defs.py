@@ -28,11 +28,11 @@ class OBJET1(zgoubi_element):
 	def output(self):
 		assert(self.IY * self.IT * self.IZ * self.IP * self.IX * self.ID < 10000)
 		assert(max(self.IY, self.IT, self.IZ, self.IP, self.IX,self.ID) < 41 )
-		
+
 		# local short cuts for long function names
 		f = self.f2s
 		i = self.i2s
-		
+
 		out = "'OBJET'" +nl
 		out += f(self.BORO) +nl
 		out += "1" + nl
@@ -59,57 +59,57 @@ class OBJET2(zgoubi_element):
 		object.__setattr__(self, "ready", True)
 		self.set(settings)
 		self.sorted = False
-		
+
 	def add(self, **settings):
 		"add a particle"
 		particle_coords = dict(Y=0, T=0, Z=0, P=0, X=0, D=1, LET=' ')
 		for k, v in settings.items():
 			particle_coords[k] = v
-			
+
 		self._params['particles'].append(particle_coords)
 		# keep list sorted by D, needed for output()
 		if self.sorted:
 			self._params['particles'].sort(key=itemgetter('D'))
-		
-		
+
+
 	def clear(self):
 		"remove all particles"
 		self._params['particles'] = []
-	
+
 	def output(self):
 		out=''
 		self.IMAX = len(self.particles)
 		assert(self.IMAX <= 10000)
 		assert(self.IMAX >= 1)
-		
+
 		#count unique 'D' values
 		if self.sorted:
 			self.IDMAX = len(set([x['D'] for x in self.particles]))
 		else:
 			self.IDMAX = self.IMAX
-		
+
 		# local short cuts for long function names
 		f = self.f2s
 		i = self.i2s
-		
+
 		out += "'OBJET'" +nl
 		out += f(self.BORO) +nl
 		out += "2" + nl
 		out += i(self.IMAX) +' '+ i(self.IDMAX) + nl
-		
+
 		for part in self.particles:
 			out += f(part['Y']) +' '+ f(part['T']) +' '+ f(part['Z']) +' '
 			out += f(part['P']) +' '+ f(part['X']) +' '+ f(part['D'])
 			#if (part['LET'] != ''):
 			out += " '"+ part['LET'] + "'"
 			out += nl
-		
+
 		# assume that we want to track all particles
 		for x in xrange(len(self.particles)):
 			out += i(1) + ' '
 			if ((x+1)%10 == 0):
 				out += nl # add a new line after 10 values
-		
+
 		#print out
 		return out
 
@@ -145,7 +145,7 @@ class OBJET3(zgoubi_element):
 		# local short cuts for long function names
 		f = self.f2s
 		i = self.i2s
-		
+
 		out = "'OBJET'" +nl
 		out += f(self.BORO) +nl
 		if self.FTYPE == 'unformatted':
@@ -153,7 +153,7 @@ class OBJET3(zgoubi_element):
 		elif self.FTYPE == 'formatted':
 			out += "3" + nl
 		else:
-			print "Error - specify FTYPE, formatted or unformatted"
+			print("Error - specify FTYPE, formatted or unformatted")
 			sys.exit(1)
 
 		out += i(self.IT1) +' '+ i(self.IT2) +' '+ i(self.ITStep) +nl
@@ -182,7 +182,7 @@ class OBJET_bunch(zgoubi_element):
 
 	def output(self):
 		if self.bunch is None:
-			raise BadLineError, "OBJET_bunch has no bunch set"
+			raise BadLineError("OBJET_bunch has no bunch set")
 
 		f = self.f2s
 		i = self.i2s
@@ -227,9 +227,9 @@ class OBJET5(zgoubi_element):
 		                     disp_y=0, disp_py=0, disp_z=0, disp_pz=0)
 		for k, v in settings.items():
 			ellipse_twiss[k] = v
-			
+
 		self._params['ellipses'] = ellipse_twiss
-		
+
 	def clear_ellipse(self):
 		"remove all particles"
 		self._params['ellipses'] = None
@@ -242,7 +242,7 @@ class OBJET5(zgoubi_element):
 
 		if self._params['ellipses']:
 			kobj = 5.01
-		
+
 		out = "'OBJET'" +nl
 		out += f(self.BORO) +nl
 		out += str(kobj) + nl
@@ -286,7 +286,7 @@ class MCOBJET3(zgoubi_element):
 		# local short cuts for long function names
 		f = self.f2s
 		i = self.i2s
-		
+
 		out = "'MCOBJET'" +nl
 		out += f(self.BORO) +nl
 		out += "3" + nl
@@ -316,13 +316,13 @@ class MCOBJET3(zgoubi_element):
 # define some useful particles
 # constants defined in zgoubi_constants.py
 
-from simple_defs import PARTICUL
+from zgoubi.simple_defs import PARTICUL
 class zgoubi_particul(PARTICUL):
 	def __neg__(self):
 		"Return an anti-particle, by inverting charge"
 		new_particul = copy.copy(self)
 		self._params["Q"] *= -1
-			
+
 		return new_particul
 
 class ELECTRON(zgoubi_particul):
@@ -452,7 +452,7 @@ class SPNTRK(zgoubi_element):
 
 		return out
 
-		
+
 class FAKE_ELEM(zgoubi_element):
 	def __init__(self, data=""):
 		self.data = data
@@ -464,5 +464,3 @@ class FAKE_ELEM(zgoubi_element):
 
 	def output(self):
 		return self.data+'\n'
-
-

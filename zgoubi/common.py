@@ -13,7 +13,7 @@ def mkdir_p(path):
 	"""
 	try:
 		os.makedirs(path)
-	except OSError, exc:
+	except OSError as exc:
 		if exc.errno == errno.EEXIST:
 			pass
 		else:
@@ -44,11 +44,10 @@ def twiss_param_array(**kwargs):
 	                        ('beta_z', 'f8'), ('alpha_z', 'f8'), ('gamma_z', 'f8'), ('disp_z', 'f8'), ('disp_pz', 'f8')])
 	for k,v in kwargs.items():
 		tp[k.lower()] = v
-	
+
 	if "beta_y" in kwargs and 'alpha_y' in kwargs and not 'gamma_y' in kwargs:
 		tp['gamma_y'] = (1+tp['alpha_y']**2) / tp['beta_y']
 	if "beta_z" in kwargs and 'alpha_z' in kwargs and not 'gamma_z' in kwargs:
 		tp['gamma_z'] = (1+tp['alpha_z']**2) / tp['beta_z']
 
 	return tp
-
